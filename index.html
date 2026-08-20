@@ -8760,6 +8760,11 @@ html, body{
       closeModal();
       return;
     }
+    if(window.kxCurrentDetailCanBid === false){
+      kxToast('ประกาศนี้ปิดรับข้อเสนอแล้ว');
+      closeModal();
+      return;
+    }
 
     var btn = document.querySelector('#offerModal .btn-submit');
     var wasText = btn ? btn.textContent : '';
@@ -8804,10 +8809,12 @@ html, body{
       console.error('submitOffer failed', err);
       // 23505 is the unique(post_id, bidder_id) constraint — one active quote
       // per bidder per post, which reads as an error but is really a rule
+      // the client already checked owner/closed/expired, so a policy refusal
+      // here means the post changed underneath us between load and submit
       var msg = err && err.code === '23505'
         ? 'คุณเสนอราคาประกาศนี้ไปแล้ว'
         : (err && err.message && /row-level security/i.test(err.message)
-            ? 'ไม่สามารถเสนอราคาให้ประกาศของตัวเองได้'
+            ? 'ไม่สามารถเสนอราคาได้ — ประกาศนี้อาจปิดรับหรือหมดเขตไปแล้ว'
             : 'ส่งใบเสนอราคาไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่อีกครั้ง'));
       kxToast(msg);
     }finally{
@@ -17858,22 +17865,67 @@ body.kx-auth .kx-burger{ display:none !important; }
     return 'เหลือ ' + days + ' วัน';
   }
 
-  function quoteCardHTML(q){
+  function quoteCardHTML(q, isOwner, decided){
     var bidder = q.profiles || {};
     var name = esc(bidder.company_name || 'ผู้เสนอราคา');
-    return '<div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;">' +
+    var pill = q.status === 'won'
+      ? '<span style="font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:999px;padding:3px 10px;">🏆 ผู้ชนะ</span>'
+      : q.status === 'lost'
+        ? '<span style="font-size:11px;font-weight:700;color:var(--ink-faint);background:var(--bg);border-radius:999px;padding:3px 10px;">ไม่ผ่าน</span>'
+        : '';
+    // Only the post's owner picks a winner, and only while nothing is decided
+    // yet — after that the buttons would just fail against the update policy.
+    var pickBtn = (isOwner && !decided)
+      ? '<button class="btn-choose" style="margin-top:8px;" onclick="kxPickWinner(\'' + q.id + '\',\'' + esc(name).replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
+      : '';
+    return '<div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid ' +
+        (q.status === 'won' ? 'var(--green)' : 'var(--line)') + ';border-radius:12px;margin-bottom:10px;' +
+        (q.status === 'lost' ? 'opacity:.6;' : '') + '">' +
       '<div style="width:38px;height:38px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + name.charAt(0).toUpperCase() + '</div>' +
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">' + name + '</div>' +
+        '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">' + name + ' ' + pill + '</div>' +
         '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px;">' + relTime(q.created_at) + '</div>' +
         (q.note ? '<div style="font-size:13px;color:var(--ink);margin-top:8px;">' + esc(q.note) + '</div>' : '') +
+        ((q.quote_attachments || []).length
+          ? '<div class="rfq-attach-grid" style="margin-top:8px;">' + q.quote_attachments.map(function(f){
+              return '<a class="file-chip ' + f.file_kind + '" target="_blank" rel="noopener" href="' + esc(f.file_url) + '">' +
+                '<span class="fc-ic">' + fileKindTag(f.file_kind) + '</span><span class="fc-name">' + esc(f.file_name) + '</span></a>';
+            }).join('') + '</div>'
+          : '') +
       '</div>' +
       '<div style="text-align:right;flex-shrink:0;">' +
         '<div style="font-size:11px;color:var(--ink-faint);">ราคาเสนอ</div>' +
         '<div style="font-size:17px;font-weight:800;color:var(--blue-700);">' + money(q.price) + '</div>' +
+        pickBtn +
       '</div>' +
     '</div>';
   }
+
+  /* Choosing a winner is three writes that have to agree with each other: the
+     chosen quote becomes 'won', every other quote on the post becomes 'lost',
+     and the post itself closes so no further bids can arrive. If any of them
+     fails the page reloads from the database rather than keeping whatever
+     half-applied state the DOM is showing. */
+  window.kxPickWinner = async function(quoteId, name, price){
+    var postId = window.kxCurrentDetailPostId;
+    if(!postId) return;
+    if(!confirm('เลือก ' + name + ' ที่ราคา ' + Math.round(price).toLocaleString('en-US') +
+                ' บาท เป็นผู้ชนะใช่หรือไม่?\n\nเมื่อยืนยันแล้ว ประกาศนี้จะปิดรับข้อเสนอเพิ่มเติม')) return;
+    try{
+      var won = await sb.from('quotes').update({ status:'won' }).eq('id', quoteId);
+      if(won.error) throw won.error;
+      var lost = await sb.from('quotes').update({ status:'lost' })
+        .eq('post_id', postId).neq('id', quoteId);
+      if(lost.error) throw lost.error;
+      var closed = await sb.from('posts').update({ status:'closed' }).eq('id', postId);
+      if(closed.error) throw closed.error;
+      kxToast('เลือกผู้ชนะเรียบร้อย');
+    }catch(err){
+      console.error('kxPickWinner failed', err);
+      kxToast('เลือกผู้ชนะไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่อีกครั้ง'));
+    }
+    await kxLoadPostDetail(postId, 'rfq');
+  };
 
   function renderRfqDetail(post){
     var root = document.getElementById('page-rfq-detail');
@@ -17909,8 +17961,24 @@ body.kx-auth .kx-burger{ display:none !important; }
         }).join('');
       } else attach.style.display = 'none';
     }
+    // Three separate states the bid button has to respect, and they don't mean
+    // the same thing: the owner closed it, the clock ran out, or it's open.
+    // The insert policy refuses the last two as well, so the UI matches it
+    // rather than offering a button that can only fail.
+    var isOwner   = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
+    var isClosed  = post.status !== 'open';
+    var isExpired = !!post.deadline && new Date(post.deadline).getTime() <= Date.now();
+    var canBid    = !isOwner && !isClosed && !isExpired;
+    var wonQuote  = quotes.filter(function(q){ return q.status === 'won'; })[0] || null;
+    var decided   = !!wonQuote;
+
     var statusTag = document.getElementById('rfqStatusTag');
-    if(statusTag) statusTag.textContent = post.status !== 'open' ? '🔒 ปิดรับข้อเสนอแล้ว' : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
+    if(statusTag){
+      statusTag.textContent = decided ? '🏆 ได้ผู้ชนะแล้ว'
+        : isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
+        : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
+        : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
+    }
 
     var qa = document.getElementById('rfqQaBlock'); if(qa) qa.style.display = 'none';
     var banner = document.getElementById('sealedBanner'); if(banner) banner.style.display = 'none';
@@ -17925,26 +17993,50 @@ body.kx-auth .kx-burger{ display:none !important; }
         : 'ยังไม่มีผู้เสนอราคาเข้ามา';
     }
     if(offerListEl){
-      offerListEl.innerHTML = quotes.length ? quotes.map(quoteCardHTML).join('')
+      offerListEl.innerHTML = quotes.length
+        ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
+            .map(function(q){ return quoteCardHTML(q, isOwner, decided); }).join('')
         : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>';
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
-    var closedPanel = document.getElementById('dealClosedPanel'); if(closedPanel) closedPanel.style.display = 'none';
     var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
 
-    // Your own post: เสนอราคา makes no sense and the insert policy would refuse
-    // it anyway, so the row becomes "this is yours" instead of a dead button.
-    var isOwner = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
+    var closedPanel = document.getElementById('dealClosedPanel');
+    if(closedPanel){
+      if(wonQuote){
+        var wn = (wonQuote.profiles && wonQuote.profiles.company_name) || 'ผู้ชนะ';
+        var wnEl = document.getElementById('winnerName');   if(wnEl) wnEl.textContent = wn;
+        var wpEl = document.getElementById('winnerPrice');  if(wpEl) wpEl.textContent = Math.round(wonQuote.price).toLocaleString('en-US');
+        var waEl = document.getElementById('winnerAv');     if(waEl) waEl.textContent = wn.charAt(0).toUpperCase();
+        var wpr = closedPanel.querySelector('.winner-price');
+        if(wpr) wpr.innerHTML = 'ราคาที่เสนอ <b id="winnerPrice">' + Math.round(wonQuote.price).toLocaleString('en-US') + '</b> บาท';
+        closedPanel.style.display = 'block';
+      } else closedPanel.style.display = 'none';
+    }
+
     var actionRow = document.getElementById('rfqActionRow');
     if(actionRow){
+      var note = function(txt){
+        return '<span style="font-size:13px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 14px;">' + txt + '</span>';
+      };
       actionRow.style.display = '';
-      actionRow.innerHTML = isOwner
-        ? '<span style="font-size:13px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 14px;">📌 นี่คือประกาศของคุณ — รอผู้ให้บริการเข้ามาเสนอราคา</span>'
-        : '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
+      if(isOwner){
+        actionRow.innerHTML = note(decided ? '📌 ประกาศของคุณ — เลือกผู้ชนะแล้ว'
+          : isClosed ? '📌 ประกาศของคุณ — ปิดรับข้อเสนอแล้ว'
+          : isExpired ? '📌 ประกาศของคุณ — หมดเขตรับข้อเสนอแล้ว'
+          : '📌 นี่คือประกาศของคุณ — รอผู้ให้บริการเข้ามาเสนอราคา');
+      }else if(!canBid){
+        actionRow.innerHTML = '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
+          note(decided ? '🏆 ประกาศนี้ได้ผู้ชนะแล้ว'
+            : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
+      }else{
+        actionRow.innerHTML = '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
           '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>';
+      }
     }
-    window.kxCurrentDetailPostId = post.id;
+    window.kxCurrentDetailPostId  = post.id;
     window.kxCurrentDetailOwnerId = post.owner_id;
+    window.kxCurrentDetailCanBid  = canBid;
   }
 
   function renderOfferDetail(post){
@@ -17996,7 +18088,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   window.kxLoadPostDetail = async function(id, kind){
     var res = await sb.from('posts')
-      .select('*, profiles!posts_owner_id_fkey(company_name), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,created_at,profiles!quotes_bidder_id_fkey(company_name))')
+      .select('*, profiles!posts_owner_id_fkey(company_name), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name))')
       .eq('id', id).maybeSingle();
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
     if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
