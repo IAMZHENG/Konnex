@@ -1,0 +1,7 @@
+# Konnex has no server-side code — Supabase is called directly from the browser — so
+# this deploys as a Worker that serves static assets only, no Worker script needed.
+name = "konnex"
+compatibility_date = "2026-01-01"
+
+[assets]
+directory = "./"

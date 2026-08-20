@@ -1,0 +1,9 @@
+# Keeps the deployed site to just what the app needs — the assets directory is the
+# whole repo root, so without this, repo internals and docs would be servable too.
+.git/
+.gitignore
+.assetsignore
+wrangler.toml
+README.md
+database/
+.claude/
