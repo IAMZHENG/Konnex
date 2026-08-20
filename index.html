@@ -8701,10 +8701,11 @@ html, body{
     if(e === 'dwg' || e === 'dxf') return 'dwg';
     return 'doc';
   }
-  // name, size and type — the bid row that gets built from these needs all three
+  // name, size and type for the row that gets rendered; `file` is the raw File
+  // itself, which submitOffer needs to actually upload the attachment
   function handleOfferFiles(fileList){
     Array.from(fileList).forEach(function(f){
-      offerFiles.push({ name:f.name, size:f.size, type:offerKind(f.name) });
+      offerFiles.push({ name:f.name, size:f.size, type:offerKind(f.name), file:f });
     });
     renderOfferFiles();
   }
@@ -8723,10 +8724,16 @@ html, body{
   }
   function removeOfferFile(i){ offerFiles.splice(i,1); renderOfferFiles(); }
 
-  /* Sending a bid has to land somewhere, and ใบเสนอราคา → ที่ส่ง is where sent bids
-     belong. The row is built to the same shape the page already filters on — a
-     data-status and a data-origin — so the status tabs pick it up without changes. */
-  function submitOffer(){
+  /* Sending a bid writes a real `quotes` row for the post currently open on
+     page-rfq-detail (kxCurrentDetailPostId), with any attached files uploaded
+     to Storage and recorded in quote_attachments.
+
+     The owner check here is UX, not security — it stops the mistake before it
+     costs a round trip and gives a clearer message than a policy violation
+     would. The enforcement lives in the quotes insert policy (see
+     database/quotes_owner_guard.sql): the anon key is public, so anything the
+     browser refuses can still be POSTed straight at the REST endpoint. */
+  async function submitOffer(){
     var priceEl = document.getElementById('offerPrice');
     var noteEl  = document.getElementById('offerNote');
     var errEl   = document.getElementById('offerPriceErr');
@@ -8741,64 +8748,71 @@ html, body{
     errEl.hidden = true;
     priceEl.classList.remove('bad');
 
-    var D = document.getElementById('page-rfq-detail');
-    var titleEl = D && D.querySelector('h1');
-    var title = titleEl ? titleEl.textContent.trim() : 'งานที่เสนอราคา';
-    var metaEls = D ? D.querySelectorAll('.meta-row span, .rfq-meta span') : [];
-    var loc = metaEls.length ? metaEls[0].textContent.trim() : '';
-    var ownerEl = D && D.querySelector('.kx-rfq-owner');
-    var buyer = ownerEl ? ownerEl.textContent.trim() : 'เจ้าของประกาศ';
-    var thumbEl = D && D.querySelector('.header-thumb');
-    var thumb = thumbEl ? thumbEl.getAttribute('src') : 'assets/img/rfq-thumb-1.jpg';
-
-    var d = new Date();
-  var MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    var when = d.getDate() + ' ' + MON[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-
-    var files = offerFiles.map(function(f){
-      return '<span class="bid-file ' + f.type + '">' +
-        (f.type === 'xls' ? '📊 ' : '📄 ') + offerEsc(f.name) + '</span>';
-    }).join('');
-
-    var row = document.createElement('div');
-    row.className = 'bid-row';
-    row.setAttribute('data-status', 'pending');
-    row.setAttribute('data-origin', 'rfq');
-    row.innerHTML =
-      '<img class="bid-thumb" src="' + offerEsc(thumb) + '" alt="" loading="lazy">' +
-      '<div class="bid-body">' +
-        '<div class="bid-title">' + offerEsc(title) + '</div>' +
-        '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">' +
-          offerEsc(buyer.charAt(0).toUpperCase()) + '</span>ผู้ซื้อ: ' + offerEsc(buyer) + '</div>' +
-        '<div class="bid-meta">' + (loc ? '<span>📍 ' + offerEsc(loc) + '</span><span class="sep">|</span>' : '') +
-          '<span>🕗 ' + when + '</span></div>' +
-        (files ? '<div class="bid-files">' + files + '</div>' : '') +
-      '</div>' +
-      '<div class="bid-price-col">' +
-        '<div class="price-lbl">ราคาที่เสนอ</div>' +
-        '<div class="price-num">' + price.toLocaleString('en-US') + '</div>' +
-      '</div>' +
-      '<div class="bid-status-col">' +
-        '<span class="status-pill pending"><span class="dot"></span>รอผล</span>' +
-        '<div class="bid-sub-label">ปิดรับข้อเสนอ</div>' +
-        '<div class="bid-sub-value">-</div>' +
-      '</div>';
-    if(noteEl && noteEl.value.trim()){
-      row.querySelector('.bid-body').insertAdjacentHTML('beforeend',
-        '<div class="bid-note">' + offerEsc(noteEl.value.trim()) + '</div>');
+    if(!window.kxSession){
+      kxToast('กรุณาเข้าสู่ระบบก่อนเสนอราคา');
+      closeModal(); navigateTo('page-auth');
+      return;
+    }
+    var postId = window.kxCurrentDetailPostId;
+    if(!postId){ kxToast('ไม่พบประกาศที่จะเสนอราคา'); return; }
+    if(window.kxCurrentDetailOwnerId === window.kxSession.user.id){
+      kxToast('ไม่สามารถเสนอราคาให้ประกาศของตัวเองได้');
+      closeModal();
+      return;
     }
 
-    var list = document.getElementById('bidList');
-    list.insertBefore(row, list.firstElementChild);
-    if(window.kxApplyIcons) window.kxApplyIcons(row);
+    var btn = document.querySelector('#offerModal .btn-submit');
+    var wasText = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
 
-    priceEl.value = ''; if(noteEl) noteEl.value = '';
-    offerFiles.length = 0; renderOfferFiles();
-    closeModal();
+    try{
+      var ins = await sb.from('quotes').insert({
+        post_id: postId,
+        bidder_id: window.kxSession.user.id,
+        price: price,
+        note: (noteEl && noteEl.value.trim()) || null
+      }).select().single();
+      if(ins.error) throw ins.error;
 
-    navigateTo('page-my-bids');
-    if(typeof applyBidFilters === 'function') applyBidFilters();
-    row.scrollIntoView({ block:'center' });
+      if(offerFiles.length){
+        var rows = [];
+        for(var i = 0; i < offerFiles.length; i++){
+          var f = offerFiles[i];
+          if(!f.file) continue;
+          rows.push({
+            quote_id: ins.data.id,
+            file_name: f.name,
+            file_kind: f.type,
+            file_size: f.size,
+            file_url: await kxUploadFile('attachments', f.file)
+          });
+        }
+        if(rows.length){
+          var attIns = await sb.from('quote_attachments').insert(rows);
+          if(attIns.error) throw attIns.error;
+        }
+      }
+
+      priceEl.value = ''; if(noteEl) noteEl.value = '';
+      offerFiles.length = 0; renderOfferFiles();
+      closeModal();
+
+      kxToast('ส่งใบเสนอราคาเรียบร้อย');
+      navigateTo('page-my-bids');
+      if(window.kxLoadMyBids) await window.kxLoadMyBids();
+    }catch(err){
+      console.error('submitOffer failed', err);
+      // 23505 is the unique(post_id, bidder_id) constraint — one active quote
+      // per bidder per post, which reads as an error but is really a rule
+      var msg = err && err.code === '23505'
+        ? 'คุณเสนอราคาประกาศนี้ไปแล้ว'
+        : (err && err.message && /row-level security/i.test(err.message)
+            ? 'ไม่สามารถเสนอราคาให้ประกาศของตัวเองได้'
+            : 'ส่งใบเสนอราคาไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่อีกครั้ง'));
+      kxToast(msg);
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = wasText; }
+    }
   }
   window.submitOffer = submitOffer;
 </script>
@@ -16498,14 +16512,17 @@ body.kx-auth .kx-burger{ display:none !important; }
   // folder and hands back the URL the <img>/<a> tags actually use. RLS on the tables
   // is what protects the data; the bucket itself is public because every image and
   // attachment on an open post is meant to be seen by anyone browsing the feed.
-  async function kxUploadFile(bucket, file){
+  // on window because the bid modal (submitOffer, in its own script block)
+  // uploads quote attachments through the same path
+  window.kxUploadFile = async function(bucket, file){
     var safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
     var path = window.kxSession.user.id + '/' + Date.now() + '-' +
                Math.random().toString(36).slice(2, 8) + '-' + safe;
     var up = await sb.storage.from(bucket).upload(path, file, { upsert:false });
     if(up.error) throw up.error;
     return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-  }
+  };
+  var kxUploadFile = window.kxUploadFile;
 
   window.cpPublish = async function(){
     init();
@@ -17913,9 +17930,21 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
     var closedPanel = document.getElementById('dealClosedPanel'); if(closedPanel) closedPanel.style.display = 'none';
-    var actionRow = document.getElementById('rfqActionRow'); if(actionRow) actionRow.style.display = '';
     var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
+
+    // Your own post: เสนอราคา makes no sense and the insert policy would refuse
+    // it anyway, so the row becomes "this is yours" instead of a dead button.
+    var isOwner = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
+    var actionRow = document.getElementById('rfqActionRow');
+    if(actionRow){
+      actionRow.style.display = '';
+      actionRow.innerHTML = isOwner
+        ? '<span style="font-size:13px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 14px;">📌 นี่คือประกาศของคุณ — รอผู้ให้บริการเข้ามาเสนอราคา</span>'
+        : '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
+          '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>';
+    }
     window.kxCurrentDetailPostId = post.id;
+    window.kxCurrentDetailOwnerId = post.owner_id;
   }
 
   function renderOfferDetail(post){
@@ -18037,6 +18066,79 @@ body.kx-auth .kx-burger{ display:none !important; }
     '</div>';
   }
 
+  /* ใบเสนอราคาที่ส่ง — the bids you sent. Same story as งานของฉัน: it was a
+     static list of demo rows, and now that submitOffer writes real `quotes`
+     rows it has to read them back or a real bid would vanish on reload.
+     The embedded post can come back null if its owner has since closed it —
+     the posts select policy only exposes open posts to non-owners — so every
+     field reads through a fallback rather than assuming it's there. */
+  function bidRowHTML(q){
+    var post = q.posts || null;
+    var owner = (post && post.profiles) || {};
+    var buyer = owner.company_name || 'เจ้าของประกาศ';
+    var images = (post && post.post_images) || [];
+    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
+    var pillMap = { pending:['pending','รอผล'], won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'] };
+    var pill = pillMap[q.status] || pillMap.pending;
+    var files = (q.quote_attachments || []).map(function(f){
+      return '<span class="bid-file ' + f.file_kind + '">' +
+        (f.file_kind === 'xls' ? '📊 ' : '📄 ') + esc(f.file_name) + '</span>';
+    }).join('');
+    return '<div class="bid-row" data-status="' + esc(q.status) + '" data-origin="rfq"' +
+        (post ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')"' : '') + '>' +
+      '<img class="bid-thumb" src="' + esc(thumb) + '" alt="" loading="lazy">' +
+      '<div class="bid-body">' +
+        '<div class="bid-title">' + esc(post ? post.title : 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
+        '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">' +
+          esc(buyer.charAt(0).toUpperCase()) + '</span>ผู้ซื้อ: ' + esc(buyer) + '</div>' +
+        '<div class="bid-meta">' + (post && post.province ? '<span>📍 ' + esc(post.province) + '</span><span class="sep">|</span>' : '') +
+          '<span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
+        (files ? '<div class="bid-files">' + files + '</div>' : '') +
+        (q.note ? '<div class="bid-note">' + esc(q.note) + '</div>' : '') +
+      '</div>' +
+      '<div class="bid-price-col">' +
+        '<div class="price-lbl">ราคาที่เสนอ</div>' +
+        '<div class="price-num">' + Math.round(q.price).toLocaleString('en-US') + '</div>' +
+      '</div>' +
+      '<div class="bid-status-col">' +
+        '<span class="status-pill ' + pill[0] + '"><span class="dot"></span>' + pill[1] + '</span>' +
+        '<div class="bid-sub-label">ปิดรับข้อเสนอ</div>' +
+        '<div class="bid-sub-value">' + (post && post.deadline ? fmtDateBE(post.deadline) : '-') + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.kxLoadMyBids = async function(){
+    if(!window.kxSession) return;
+    var list = document.getElementById('bidList');
+    if(!list) return;
+    var res = await sb.from('quotes')
+      .select('id,price,note,status,created_at, quote_attachments(file_name,file_kind,file_size,file_url), posts(id,title,province,deadline,post_images(url,sort),profiles!posts_owner_id_fkey(company_name))')
+      .eq('bidder_id', window.kxSession.user.id)
+      .order('created_at', { ascending:false });
+    if(res.error){ console.error('kxLoadMyBids failed', res.error); return; }
+    list.innerHTML = res.data.length
+      ? res.data.map(bidRowHTML).join('')
+      : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่ได้ส่งใบเสนอราคา</div>' +
+        '<div class="kx-empty-sub">เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น รายการจะแสดงที่นี่</div>' +
+        '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ค้นหางาน</button></div>';
+    if(window.kxApplyIcons) window.kxApplyIcons(list);
+
+    // the status tabs count real rows now instead of the demo totals
+    var counts = { all:res.data.length, pending:0, won:0, lost:0 };
+    res.data.forEach(function(q){ if(counts[q.status] != null) counts[q.status]++; });
+    var tabs = document.querySelectorAll('#page-my-bids .status-tab');
+    var labels = [['ทั้งหมด','all'],['รอผล','pending'],['ชนะ','won'],['ไม่ผ่าน','lost']];
+    Array.prototype.forEach.call(tabs, function(tab, i){
+      if(!labels[i]) return;
+      var ic = tab.querySelector('.tab-ic');
+      tab.innerHTML = (ic ? ic.outerHTML : '') + labels[i][0] + ' (' + counts[labels[i][1]] + ')';
+    });
+    var loadMore = document.querySelector('#page-my-bids .load-more');
+    if(loadMore) loadMore.style.display = 'none';
+    if(typeof applyBidFilters === 'function') applyBidFilters();
+  };
+
   window.kxLoadMyPosts = async function(kind){
     if(!window.kxSession) return;
     var pageSel = kind === 'offer' ? '#page-my-offers' : '#page-rfq-offers';
@@ -18116,6 +18218,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-feed' && !loaded) window.kxLoadFeed();
     if(id === 'page-rfq-offers') window.kxLoadMyPosts('rfq');
     if(id === 'page-my-offers') window.kxLoadMyPosts('offer');
+    if(id === 'page-my-bids') window.kxLoadMyBids();
     return r;
   };
 })();
