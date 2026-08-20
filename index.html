@@ -12190,7 +12190,11 @@ var currentPage = null;
   if(document.readyState!=='loading') window.kxApplyIcons(document.body);
   else document.addEventListener('DOMContentLoaded', function(){ window.kxApplyIcons(document.body); });
 })();
-function newPost(){ var h=document.getElementById('cpHeading'); if(h) h.textContent='โพสต์ประกาศ'; navigateTo('page-create-post'); }
+function newPost(){
+  if(window.cpNewPost) window.cpNewPost();
+  else { var h=document.getElementById('cpHeading'); if(h) h.textContent='โพสต์ประกาศ'; }
+  navigateTo('page-create-post');
+}
 function selectPostType(t){
   var rfq=document.getElementById('cpTypeRfq'), off=document.getElementById('cpTypeOffer');
   var rc=document.getElementById('cpRfqCheck'), oc=document.getElementById('cpOfferCheck');
@@ -12236,7 +12240,11 @@ function kxPostTypeForm(isRfq){
 }
 window.kxPostTypeForm = kxPostTypeForm;
 
-function editPost(type, id){ var h=document.getElementById('cpHeading'); if(h) h.textContent='แก้ไขประกาศ'; navigateTo('page-create-post'); }
+function editPost(type, id){
+  if(id && window.cpStartEdit) return window.cpStartEdit(id);
+  var h=document.getElementById('cpHeading'); if(h) h.textContent='แก้ไขประกาศ';
+  navigateTo('page-create-post');
+}
 function navigateTo(pageId, skipHistory){
   if(!skipHistory && currentPage && currentPage !== pageId){
     navHistory.push(currentPage);
@@ -16013,7 +16021,35 @@ body.kx-auth .kx-burger{ display:none !important; }
   // ---------- public actions ----------
   function filledCerts(){ return data.certs.filter(function(c){ return c.name || c.desc; }); }
 
-  window.kxProfileSave = function(){
+  /* The rest of this page still keeps its data in localStorage, but the avatar
+     can't: it has to be visible to everyone else looking at your posts and
+     quotes, not just to you in this browser. So the picture goes to Storage
+     and its URL to profiles.avatar_url, while the other fields carry on as
+     they were. The file picker leaves a data: URL in the <img>, which is
+     turned back into a real file here before upload. */
+  async function saveAvatarToDb(){
+    if(!window.kxSession) return;
+    var av = $('epAvatarImg');
+    var src = (av && !av.hidden && av.src) || '';
+    var current = (window.kxCurrentUser && window.kxCurrentUser.avatar_url) || null;
+
+    var url = null;
+    if(src.indexOf('data:') === 0){
+      var blob = await (await fetch(src)).blob();
+      var ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      url = await kxUploadFile('post-images', new File([blob], 'avatar.' + ext, { type:blob.type }));
+    }else if(src.indexOf('http') === 0){
+      url = src;                       // already uploaded, left in place
+    }
+    if(url === current) return;
+
+    var upd = await sb.from('profiles').update({ avatar_url:url }).eq('id', window.kxSession.user.id);
+    if(upd.error){ console.error('avatar save failed', upd.error); kxToast('บันทึกรูปโปรไฟล์ไม่สำเร็จ'); return; }
+    if(window.kxCurrentUser) window.kxCurrentUser.avatar_url = url;
+    if(window.kxApplyAvatars) window.kxApplyAvatars();
+  }
+
+  window.kxProfileSave = async function(){
     collect();
     data.certs = filledCerts();
     renderCerts();
@@ -16024,6 +16060,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     persist();
     applyToProfile();
+    await saveAvatarToDb();
     if(typeof toast === 'function') toast('บันทึกโปรไฟล์เรียบร้อย');
     navigateTo('page-company-profile');
   };
@@ -16427,6 +16464,84 @@ body.kx-auth .kx-burger{ display:none !important; }
     render();
   }
 
+  /* ===== Editing an existing post =====
+     The ✎ button used to swap the heading and open a blank form, so "แก้ไข"
+     silently meant "start over" — and publishing from it created a second
+     post rather than changing the first. cpStartEdit loads the post back into
+     the same form; cpPublish then branches on EDIT_ID.
+
+     Files already on the post are put into IMGS/DOCS as entries with a real
+     url but no `file`, so they render and can be removed exactly like new
+     picks. On save, entries carrying a `file` are uploaded, and rows whose id
+     is no longer in the list are deleted — which is what makes removing an
+     existing picture actually stick. */
+  var EDIT_ID = null, EDIT_KIND = null;
+
+  function resetForm(){
+    IMGS.forEach(function(im){ if(im.file) URL.revokeObjectURL(im.url); });
+    IMGS = []; DOCS = [];
+    var t = document.getElementById('cpTitle'); if(t) t.value = '';
+    var d = document.querySelector('#page-create-post textarea'); if(d) d.value = '';
+    var p = document.getElementById('cpPrice'); if(p){ p.value = ''; p.classList.remove('bad'); }
+    var pe = document.getElementById('cpPriceErr'); if(pe) pe.hidden = true;
+    var dl = document.getElementById('cpDeadline'); if(dl) dl.value = '';
+    if(typeof render === 'function' && document.getElementById('cpImgs')) render();
+  }
+
+  window.cpNewPost = function(){
+    init();
+    EDIT_ID = null; EDIT_KIND = null;
+    resetForm();
+    if(typeof selectPostType === 'function') selectPostType('rfq');
+    var h = document.getElementById('cpHeading'); if(h) h.textContent = 'โพสต์ประกาศ';
+    var b = document.getElementById('cpPublishBtn'); if(b) b.textContent = '＋ โพสต์ประกาศ';
+  };
+
+  window.cpStartEdit = async function(postId){
+    init();
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    var res = await sb.from('posts')
+      .select('*, post_images(id,url,sort), post_attachments(id,file_name,file_url,file_kind,file_size)')
+      .eq('id', postId).maybeSingle();
+    if(res.error || !res.data){ console.error('cpStartEdit failed', res.error); kxToast('ไม่พบประกาศนี้'); return; }
+    var post = res.data;
+    if(post.owner_id !== window.kxSession.user.id){ kxToast('แก้ไขได้เฉพาะประกาศของคุณเอง'); return; }
+
+    resetForm();
+    EDIT_ID = post.id; EDIT_KIND = post.kind;
+    var isRfq = post.kind === 'rfq';
+    if(typeof selectPostType === 'function') selectPostType(isRfq ? 'rfq' : 'offer');
+
+    document.getElementById('cpTitle').value = post.title || '';
+    var descEl = document.querySelector('#page-create-post textarea');
+    if(descEl) descEl.value = post.description || '';
+    var priceEl = document.getElementById('cpPrice');
+    if(priceEl) priceEl.value = (!isRfq && post.price_high != null) ? String(post.price_high) : '';
+    var dlEl = document.getElementById('cpDeadline');
+    if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
+
+    // radio group has no ids — index 0 is สealed, index 1 is open
+    var bidRadios = document.querySelectorAll('#cpBidStep input[name="cpBid"]');
+    if(bidRadios.length >= 2){
+      bidRadios[0].checked = post.bid_type !== 'open';
+      bidRadios[1].checked = post.bid_type === 'open';
+    }
+
+    (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); })
+      .forEach(function(im){
+        IMGS.push({ name:'รูปเดิม', size:0, url:im.url, rowId:im.id });
+      });
+    (post.post_attachments || []).forEach(function(d){
+      DOCS.push({ name:d.file_name, size:d.file_size || 0, type:d.file_kind, url:d.file_url, rowId:d.id });
+    });
+    render();
+
+    var h = document.getElementById('cpHeading'); if(h) h.textContent = 'แก้ไขประกาศ';
+    var b = document.getElementById('cpPublishBtn'); if(b) b.textContent = '✓ บันทึกการแก้ไข';
+    navigateTo('page-create-post');
+    window.scrollTo({ top:0 });
+  };
+
   function render(){
     imgSec.hidden = !IMGS.length;
     docSec.hidden = !DOCS.length;
@@ -16445,7 +16560,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       return '<span class="file-chip ' + d.type + '">' +
         '<span class="fc-ic">' + (d.type === 'pdf' ? 'PDF' : d.type === 'doc' ? 'W' : d.type === 'dwg' ? 'DWG' : 'X') + '</span>' +
         '<span class="fc-name">' + esc(d.name) + '</span>' +
-        '<span class="fc-size">' + size(d.size) + '</span>' +
+        (d.size ? '<span class="fc-size">' + size(d.size) + '</span>' : '') +
         '<button type="button" class="cp-x" data-k="doc" data-i="' + i + '"' +
         ' aria-label="ลบ ' + esc(d.name) + '">✕</button></span>';
     }).join('');
@@ -16561,63 +16676,115 @@ body.kx-auth .kx-burger{ display:none !important; }
       pErr.hidden = true; pEl.classList.remove('bad');
     }
 
+    var editing = !!EDIT_ID;
     var btn = document.getElementById('cpPublishBtn');
     var wasText = btn ? btn.textContent : '';
-    if(btn){ btn.disabled = true; btn.textContent = 'กำลังโพสต์...'; }
+    if(btn){ btn.disabled = true; btn.textContent = editing ? 'กำลังบันทึก...' : 'กำลังโพสต์...'; }
+
+    var dlEl = document.getElementById('cpDeadline');
+    var chosenDeadline = dlEl && dlEl.value ? new Date(dlEl.value + 'T23:59:59').toISOString() : null;
+    var bidRadios = document.querySelectorAll('#cpBidStep input[name="cpBid"]');
+    var bidType = (bidRadios.length >= 2 && bidRadios[1].checked) ? 'open' : 'sealed';
 
     try{
+      // entries with a `file` are new picks; the rest are rows already on the
+      // post that the poster left in place
       var imageUrls = [];
-      for(var i = 0; i < IMGS.length; i++) imageUrls.push(await kxUploadFile('post-images', IMGS[i].file));
+      for(var i = 0; i < IMGS.length; i++){
+        imageUrls.push(IMGS[i].file ? await kxUploadFile('post-images', IMGS[i].file) : IMGS[i].url);
+      }
       var attachmentRows = [];
       for(var j = 0; j < DOCS.length; j++){
         var d = DOCS[j];
         attachmentRows.push({
-          file_name: d.name, file_kind: d.type, file_size: d.size,
-          file_url: await kxUploadFile('attachments', d.file)
+          file_name: d.name, file_kind: d.type, file_size: d.size || null,
+          file_url: d.file ? await kxUploadFile('attachments', d.file) : d.url,
+          _rowId: d.rowId || null
         });
       }
 
       var days = isRfq ? 14 : 60;
-      var ins = await sb.from('posts').insert({
-        owner_id: window.kxSession.user.id,
+      var fields = {
         kind: isRfq ? 'rfq' : 'offer',
         title: title,
         description: desc || 'ไม่มีรายละเอียดเพิ่มเติม',
         category_id: 'other',
         province: (window.kxCurrentUser && window.kxCurrentUser.province) || 'ไม่ระบุ',
         price_high: isRfq ? null : num,
-        status: 'open',
-        deadline: new Date(Date.now() + days * 86400000).toISOString()
-      }).select().single();
-      if(ins.error) throw ins.error;
+        bid_type: isRfq ? bidType : null,
+        deadline: chosenDeadline || new Date(Date.now() + days * 86400000).toISOString()
+      };
 
-      if(imageUrls.length){
-        var imgRows = imageUrls.map(function(url, idx){ return { post_id: ins.data.id, url: url, sort: idx }; });
-        var imgIns = await sb.from('post_images').insert(imgRows);
+      var postId;
+      if(editing){
+        var upd = await sb.from('posts').update(fields).eq('id', EDIT_ID).select().single();
+        if(upd.error) throw upd.error;
+        postId = EDIT_ID;
+
+        // whatever the poster removed from the form has to go from the database
+        // too, or "แก้ไข" would only ever add
+        var keptImg = IMGS.map(function(im){ return im.rowId; }).filter(Boolean);
+        var delImg = sb.from('post_images').delete().eq('post_id', postId);
+        if(keptImg.length) delImg = delImg.not('id', 'in', '(' + keptImg.join(',') + ')');
+        var di = await delImg;
+        if(di.error) throw di.error;
+
+        var keptDoc = attachmentRows.map(function(r){ return r._rowId; }).filter(Boolean);
+        var delDoc = sb.from('post_attachments').delete().eq('post_id', postId);
+        if(keptDoc.length) delDoc = delDoc.not('id', 'in', '(' + keptDoc.join(',') + ')');
+        var dd = await delDoc;
+        if(dd.error) throw dd.error;
+
+        // sort order can change without the picture changing, so the kept rows
+        // are rewritten rather than assumed still correct
+        for(var k = 0; k < IMGS.length; k++){
+          if(!IMGS[k].rowId) continue;
+          var su = await sb.from('post_images').update({ sort:k }).eq('id', IMGS[k].rowId);
+          if(su.error) throw su.error;
+        }
+      }else{
+        fields.owner_id = window.kxSession.user.id;
+        fields.status = 'open';
+        var ins = await sb.from('posts').insert(fields).select().single();
+        if(ins.error) throw ins.error;
+        postId = ins.data.id;
+      }
+
+      var newImgRows = [];
+      IMGS.forEach(function(im, idx){
+        if(!im.rowId) newImgRows.push({ post_id: postId, url: imageUrls[idx], sort: idx });
+      });
+      if(newImgRows.length){
+        var imgIns = await sb.from('post_images').insert(newImgRows);
         if(imgIns.error) throw imgIns.error;
       }
-      if(attachmentRows.length){
-        attachmentRows.forEach(function(r){ r.post_id = ins.data.id; });
-        var docIns = await sb.from('post_attachments').insert(attachmentRows);
+      var newDocRows = attachmentRows.filter(function(r){ return !r._rowId; })
+        .map(function(r){ return { post_id: postId, file_name:r.file_name, file_kind:r.file_kind, file_size:r.file_size, file_url:r.file_url }; });
+      if(newDocRows.length){
+        var docIns = await sb.from('post_attachments').insert(newDocRows);
         if(docIns.error) throw docIns.error;
       }
 
-      // the objectURLs IMGS/DOCS were carrying are done with either way — the card
-      // that renders next comes from Storage, not from these local blob: URLs
-      IMGS = []; DOCS = [];
-      document.getElementById('cpTitle').value = '';
-      if(descEl) descEl.value = '';
-      var pc = document.getElementById('cpPrice'); if(pc) pc.value = '';
-      render();
+      var wasEditing = editing;
+      EDIT_ID = null; EDIT_KIND = null;
+      resetForm();
+      var h = document.getElementById('cpHeading'); if(h) h.textContent = 'โพสต์ประกาศ';
+      wasText = '＋ โพสต์ประกาศ';
 
-      kxToast('โพสต์ประกาศสำเร็จ');
-      navigateTo('page-feed');
-      await kxLoadFeed();
-      var first = document.querySelector('#page-feed .feed-list .post-card');
-      if(first) first.scrollIntoView({ block:'center' });
+      if(wasEditing){
+        kxToast('บันทึกการแก้ไขเรียบร้อย');
+        kxOpenPost(postId, isRfq ? 'rfq' : 'offer');
+      }else{
+        kxToast('โพสต์ประกาศสำเร็จ');
+        navigateTo('page-feed');
+        await kxLoadFeed();
+        var first = document.querySelector('#page-feed .feed-list .post-card');
+        if(first) first.scrollIntoView({ block:'center' });
+      }
     }catch(err){
       console.error('cpPublish failed', err);
-      kxToast('โพสต์ไม่สำเร็จ: ' + (err && err.message ? err.message : 'กรุณาลองใหม่อีกครั้ง'));
+      kxToast((editing ? 'บันทึกไม่สำเร็จ: ' : 'โพสต์ไม่สำเร็จ: ') +
+        (err && err.message ? err.message : 'กรุณาลองใหม่อีกครั้ง'));
     }finally{
       if(btn){ btn.disabled = false; btn.textContent = wasText; }
     }
@@ -16879,7 +17046,11 @@ body.kx-auth .kx-burger{ display:none !important; }
   // creates it then, using whatever the registration form stashed for this email.
   window.kxEnsureProfile = async function(user){
     var existing = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    if(existing.data){ window.kxCurrentUser = existing.data; return existing.data; }
+    if(existing.data){
+      window.kxCurrentUser = existing.data;
+      if(window.kxApplyAvatars) window.kxApplyAvatars();
+      return existing.data;
+    }
     var pending = null;
     try{
       var raw = localStorage.getItem('kx.pendingProfile');
@@ -17752,6 +17923,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000));
   }
   function money(n){ return Math.round(n).toLocaleString('en-US') + ' ฿'; }
+
+  /* Avatars. Every place that shows a person or company fell back to the first
+     letter of their name, which is all there was before profiles.avatar_url
+     had anything in it. avatarInner returns the picture when there is one and
+     the letter when there isn't, so the two cases stay one call site. */
+  function avatarInner(profile, name){
+    var url = profile && profile.avatar_url;
+    return url
+      ? '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">'
+      : esc(String(name || '?').charAt(0).toUpperCase());
+  }
   function fileKindLetter(k){ return k === 'pdf' ? 'P' : k === 'doc' ? 'W' : k === 'dwg' ? 'D' : 'X'; }
   function fileKindTag(k){ return k === 'pdf' ? 'PDF' : k === 'doc' ? 'W' : k === 'dwg' ? 'DWG' : 'X'; }
   function fileSize(n){
@@ -17811,7 +17993,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       ' data-cat="' + esc(post.category_id || 'other') + '" data-deadline="' + daysLeft(post.deadline) + '"' +
       ' data-location="' + esc(loc) + '" style="cursor:pointer;" onclick="' + openCall + '">' +
       '<div class="pc-head">' +
-        '<span class="pp-av" style="background:#0a5bff" onclick="event.stopPropagation()">' + esc(ownerName.charAt(0).toUpperCase()) + '</span>' +
+        '<span class="pp-av" style="background:#0a5bff;overflow:hidden" onclick="event.stopPropagation()">' + avatarInner(owner, ownerName) + '</span>' +
         '<span class="pc-who"><span class="pc-nameline"><span class="pp-name">' + esc(ownerName) + '</span></span>' +
           '<span class="pc-sub">' + (isRfq ? 'ผู้ซื้อ' : 'ผู้ขาย') + (loc ? ' · ' + esc(loc) : '') +
             ' · ' + relTime(post.created_at) + '</span></span>' +
@@ -17865,7 +18047,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     return 'เหลือ ' + days + ' วัน';
   }
 
-  function quoteCardHTML(q, isOwner, decided){
+  function quoteCardHTML(q, isOwner, decided, canPick){
     var bidder = q.profiles || {};
     var name = esc(bidder.company_name || 'ผู้เสนอราคา');
     var pill = q.status === 'won'
@@ -17873,15 +18055,15 @@ body.kx-auth .kx-burger{ display:none !important; }
       : q.status === 'lost'
         ? '<span style="font-size:11px;font-weight:700;color:var(--ink-faint);background:var(--bg);border-radius:999px;padding:3px 10px;">ไม่ผ่าน</span>'
         : '';
-    // Only the post's owner picks a winner, and only while nothing is decided
-    // yet — after that the buttons would just fail against the update policy.
-    var pickBtn = (isOwner && !decided)
+    // Only the post's owner picks a winner, only once the auction has actually
+    // ended, and only while nothing is decided yet.
+    var pickBtn = (isOwner && !decided && canPick)
       ? '<button class="btn-choose" style="margin-top:8px;" onclick="kxPickWinner(\'' + q.id + '\',\'' + esc(name).replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
       : '';
     return '<div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid ' +
         (q.status === 'won' ? 'var(--green)' : 'var(--line)') + ';border-radius:12px;margin-bottom:10px;' +
         (q.status === 'lost' ? 'opacity:.6;' : '') + '">' +
-      '<div style="width:38px;height:38px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + name.charAt(0).toUpperCase() + '</div>' +
+      '<div style="width:38px;height:38px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden;">' + avatarInner(bidder, name) + '</div>' +
       '<div style="flex:1;min-width:0;">' +
         '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">' + name + ' ' + pill + '</div>' +
         '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px;">' + relTime(q.created_at) + '</div>' +
@@ -17971,6 +18153,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     var canBid    = !isOwner && !isClosed && !isExpired;
     var wonQuote  = quotes.filter(function(q){ return q.status === 'won'; })[0] || null;
     var decided   = !!wonQuote;
+    // A winner can only be chosen once bidding is over — picking early would
+    // cut the auction short for everyone who hadn't bid yet, which is the
+    // whole thing วันสิ้นสุดการรับข้อเสนอ is promising them.
+    var canPick   = isClosed || isExpired;
 
     var statusTag = document.getElementById('rfqStatusTag');
     if(statusTag){
@@ -17993,10 +18179,15 @@ body.kx-auth .kx-burger{ display:none !important; }
         : 'ยังไม่มีผู้เสนอราคาเข้ามา';
     }
     if(offerListEl){
-      offerListEl.innerHTML = quotes.length
+      // tell the owner why there is no เลือก button yet, rather than leaving
+      // them to guess whether it is missing or broken
+      var waitNote = (isOwner && !decided && !canPick && quotes.length)
+        ? '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--blue-50);border:1px solid #dae6ff;border-radius:9px;padding:10px 13px;margin-bottom:12px;">⏳ เลือกผู้ชนะได้เมื่อหมดเวลารับข้อเสนอ (' + fmtDateBE(post.deadline) + ')</div>'
+        : '';
+      offerListEl.innerHTML = waitNote + (quotes.length
         ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
-            .map(function(q){ return quoteCardHTML(q, isOwner, decided); }).join('')
-        : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>';
+            .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick); }).join('')
+        : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>');
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
     var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
@@ -18007,7 +18198,8 @@ body.kx-auth .kx-burger{ display:none !important; }
         var wn = (wonQuote.profiles && wonQuote.profiles.company_name) || 'ผู้ชนะ';
         var wnEl = document.getElementById('winnerName');   if(wnEl) wnEl.textContent = wn;
         var wpEl = document.getElementById('winnerPrice');  if(wpEl) wpEl.textContent = Math.round(wonQuote.price).toLocaleString('en-US');
-        var waEl = document.getElementById('winnerAv');     if(waEl) waEl.textContent = wn.charAt(0).toUpperCase();
+        var waEl = document.getElementById('winnerAv');
+        if(waEl){ waEl.style.overflow = 'hidden'; waEl.innerHTML = avatarInner(wonQuote.profiles, wn); }
         var wpr = closedPanel.querySelector('.winner-price');
         if(wpr) wpr.innerHTML = 'ราคาที่เสนอ <b id="winnerPrice">' + Math.round(wonQuote.price).toLocaleString('en-US') + '</b> บาท';
         closedPanel.style.display = 'block';
@@ -18067,7 +18259,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     var qa = document.getElementById('offerQaBlock'); if(qa) qa.style.display = 'none';
 
     var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
-    var sellerAv = root.querySelector('.seller-av'); if(sellerAv) sellerAv.textContent = ownerName.charAt(0).toUpperCase();
+    var sellerAv = root.querySelector('.seller-av');
+    if(sellerAv){ sellerAv.style.overflow = 'hidden'; sellerAv.innerHTML = avatarInner(owner, ownerName); }
     var sellerStats = root.querySelector('.seller-stats'); if(sellerStats) sellerStats.style.display = 'none';
     var verified = root.querySelector('.seller-verified'); if(verified) verified.style.display = 'none';
 
@@ -18088,7 +18281,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   window.kxLoadPostDetail = async function(id, kind){
     var res = await sb.from('posts')
-      .select('*, profiles!posts_owner_id_fkey(company_name), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name))')
+      .select('*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))')
       .eq('id', id).maybeSingle();
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
     if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
@@ -18181,8 +18374,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       '<img class="bid-thumb" src="' + esc(thumb) + '" alt="" loading="lazy">' +
       '<div class="bid-body">' +
         '<div class="bid-title">' + esc(post ? post.title : 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
-        '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">' +
-          esc(buyer.charAt(0).toUpperCase()) + '</span>ผู้ซื้อ: ' + esc(buyer) + '</div>' +
+        '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);overflow:hidden;">' +
+          avatarInner(owner, buyer) + '</span>ผู้ซื้อ: ' + esc(buyer) + '</div>' +
         '<div class="bid-meta">' + (post && post.province ? '<span>📍 ' + esc(post.province) + '</span><span class="sep">|</span>' : '') +
           '<span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
         (files ? '<div class="bid-files">' + files + '</div>' : '') +
@@ -18200,12 +18393,31 @@ body.kx-auth .kx-burger{ display:none !important; }
     '</div>';
   }
 
+  /* The navbar avatar is on every page, drawn as a generic person icon. Once
+     you have a picture it should be yours — this swaps the icon inside every
+     chip at once, and is called again after a save so it updates without a
+     reload. */
+  window.kxApplyAvatars = function(){
+    var url = window.kxCurrentUser && window.kxCurrentUser.avatar_url;
+    Array.prototype.forEach.call(document.querySelectorAll('.avatar-chip .av-usericon, .avatar-chip .avatar'), function(el){
+      if(url){
+        el.style.overflow = 'hidden';
+        el.style.borderRadius = '50%';
+        el.innerHTML = '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">';
+        el.dataset.kxAvatar = '1';
+      }else if(el.dataset.kxAvatar){
+        el.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg>';
+        delete el.dataset.kxAvatar;
+      }
+    });
+  };
+
   window.kxLoadMyBids = async function(){
     if(!window.kxSession) return;
     var list = document.getElementById('bidList');
     if(!list) return;
     var res = await sb.from('quotes')
-      .select('id,price,note,status,created_at, quote_attachments(file_name,file_kind,file_size,file_url), posts(id,title,province,deadline,post_images(url,sort),profiles!posts_owner_id_fkey(company_name))')
+      .select('id,price,note,status,created_at, quote_attachments(file_name,file_kind,file_size,file_url), posts(id,title,province,deadline,post_images(url,sort),profiles!posts_owner_id_fkey(company_name,avatar_url))')
       .eq('bidder_id', window.kxSession.user.id)
       .order('created_at', { ascending:false });
     if(res.error){ console.error('kxLoadMyBids failed', res.error); return; }
@@ -18265,7 +18477,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
     var res = await sb.from('posts')
-      .select('*, profiles!posts_owner_id_fkey(company_name), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)')
+      .select('*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)')
       .eq('status', 'open')
       .order('created_at', { ascending:false })
       .limit(60);
