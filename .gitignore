@@ -1,0 +1,22 @@
+# local Claude Code tooling config — not part of the deployed app
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editor
+.vscode/
+*.swp
+
+# scratch/backup copies that sometimes land next to index.html during editing
+index.before-*.html
+index.*.bak
+
+# unreferenced files found in assets/img that look like personal photos, not app
+# assets — nothing in index.html points at them; excluded rather than assumed safe
+# to publish. Delete this section (and the files) if they're not needed, or remove
+# just these two lines if they turn out to belong in the app after all.
+assets/img/272735234_5015452981851609_4099771454338103587_n.jpg
+assets/img/S__10821695.jpg
