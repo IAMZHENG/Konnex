@@ -9083,7 +9083,7 @@ html, body{
     <h3>ขอใบเสนอราคา</h3>
     <div class="pf-sub">ส่งความต้องการของคุณให้ <b style="color:var(--ink)">Prime CNC Co., Ltd.</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
     <div class="pf-field"><label>จำนวน/ปริมาณที่ต้องการ <span style="color:var(--red)">*</span></label><input type="text" id="rqjQty" placeholder="เช่น 500 ชิ้น"></div>
-    <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>งบประมาณโดยประมาณ (บาท)</label><input type="text" id="rqjBudget" placeholder="ไม่ระบุก็ได้"></div><div><label>ต้องการภายในวันที่</label><input type="text" id="rqjDue" placeholder="เลือกวันที่"></div></div>
+    <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>งบประมาณโดยประมาณ (บาท)</label><input type="text" id="rqjBudget" placeholder="ไม่ระบุก็ได้"></div><div><label>ต้องการภายในวันที่</label><input type="date" id="rqjDue"></div></div>
     <div class="pf-field"><label>รายละเอียดเพิ่มเติม <span style="color:var(--red)">*</span></label><textarea id="rqjDesc" placeholder="อธิบายสเปคงาน วัสดุ ขนาด หรือความต้องการพิเศษอื่นๆ"></textarea></div>
     <div class="pf-field"><label>แนบรูปภาพ <span style="font-weight:500;color:var(--ink-faint)">(ถ้ามี)</span></label><div class="pf-drop"><span>🖼️ <b style="color:var(--blue-700)">คลิกเพื่ออัปโหลด</b> หรือลากไฟล์มาวาง (JPG, PNG)</span></div></div>
     <div class="pf-field"><label>แนบเอกสาร PDF <span style="font-weight:500;color:var(--ink-faint)">(แบบ, สเปค, ถ้ามี)</span></label><div class="pf-drop"><span>📄 <b style="color:var(--blue-700)">คลิกเพื่ออัปโหลด</b> เอกสาร PDF</span></div></div>
@@ -10372,7 +10372,7 @@ html, body{
         </div>
         <div class="modal-group">
           <label>ใช้ได้ถึงวันที่</label>
-          <input type="text" placeholder="เลือกวันที่">
+          <input type="date" id="rqValidUntil">
         </div>
       </div>
       <div class="modal-group">
@@ -10771,7 +10771,7 @@ html, body{
         </div>
         <div class="modal-group">
           <label>ต้องการภายในวันที่</label>
-          <input type="text" placeholder="เลือกวันที่">
+          <input type="date" id="qrWantBy">
         </div>
       </div>
       <div class="modal-group">
@@ -11293,7 +11293,7 @@ html, body{
     <h3>ตอบกลับใบเสนอราคา</h3>
     <div class="pf-sub">ส่งใบเสนอราคาของคุณให้ <b id="brBuyer" style="color:var(--ink)">-</b></div>
     <div class="pf-field"><label>ราคาที่เสนอ (บาท) <span style="color:var(--red)">*</span></label><input type="text" id="brPrice" placeholder="เช่น 92,000"></div>
-    <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>ระยะเวลาส่งมอบ</label><input type="text" id="brLead" placeholder="เช่น 7 วัน"></div><div><label>ใช้ได้ถึงวันที่</label><input type="text" id="brValid" placeholder="เลือกวันที่"></div></div>
+    <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>ระยะเวลาส่งมอบ</label><input type="text" id="brLead" placeholder="เช่น 7 วัน"></div><div><label>ใช้ได้ถึงวันที่</label><input type="date" id="brValid"></div></div>
     <div class="pf-field"><label>ข้อความ/เงื่อนไขเพิ่มเติม</label><textarea id="brNote" placeholder="เช่น เงื่อนไขการชำระเงิน การรับประกัน ฯลฯ"></textarea></div>
     <div class="pf-field"><label>แนบไฟล์ใบเสนอราคา <span style="font-weight:500;color:var(--ink-faint)">(ถ้ามี)</span></label><div class="pf-drop"><span>📎 <b style="color:var(--blue-700)">คลิกเพื่ออัปโหลด</b> PDF หรือรูปภาพ</span></div></div>
     <button class="pf-btn primary" style="width:100%;justify-content:center;display:flex;margin-top:4px" onclick="submitBidRespond()">ส่งใบเสนอราคา</button>
@@ -17156,38 +17156,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxToast('เข้าสู่ระบบด้วย ' + who + ' ยังไม่เปิดใช้งาน — ใช้อีเมลด้านบนไปก่อนนะครับ');
   };
 
-  /* ---- ถาม: the question goes into the list on the page ----
-     It was an alert() that told you the question had been sent while the Q&A list two
-     inches above it stayed at three. */
-  window.kxAskQuestion = function(btn){
-    var row = btn.parentElement;
-    var input = row.querySelector('.kx-askin');
-    var q = (input.value || '').trim();
-    if(!q){ input.classList.add('bad'); input.focus(); kxToast('พิมพ์คำถามก่อนกดถาม'); return; }
-    input.classList.remove('bad');
-    var list = row.previousElementSibling;                 // the column of questions
-    if(!list){ kxToast('ส่งคำถามแล้ว'); input.value = ''; return; }
-    var item = document.createElement('div');
-    item.style.cssText = 'display:flex;gap:10px;align-items:flex-start;';
-    item.innerHTML =
-      '<div style="width:32px;height:32px;border-radius:50%;background:#0a5bff;color:#fff;' +
-      'display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">?</div>' +
-      '<div style="flex:1;">' +
-        '<div style="font-size:13px;color:var(--ink);"><b>คุณ</b> ' +
-          '<span style="color:var(--ink-faint);font-weight:400;font-size:12.5px;">· เมื่อสักครู่</span></div>' +
-        '<div style="font-size:13px;color:var(--ink);margin-top:3px;">' + esc(q) + '</div>' +
-        '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:5px;">⏳ รอเจ้าของประกาศตอบ</div>' +
-      '</div>';
-    list.appendChild(item);
-    // the heading carries the count, so it has to move too
-    var head = row.closest('.card').querySelector('span');
-    if(head && /^\(\d+\)$/.test(head.textContent.trim())){
-      head.textContent = '(' + (parseInt(head.textContent.replace(/\D/g, ''), 10) + 1) + ')';
-    }
-    input.value = '';
-    item.scrollIntoView({ block:'nearest' });
-    kxToast('ส่งคำถามแล้ว — เจ้าของประกาศจะได้รับแจ้งเตือน');
-  };
+  /* ถาม used to live here as a DOM-only stub. It writes to post_questions now
+     and is defined with the rest of the detail-page code near the end of the
+     file, next to the list it renders. */
 
   /* ---- edit profile: the × on a skill tag removes the tag ---- */
   function wireTags(){
@@ -17989,6 +17960,14 @@ body.kx-auth .kx-burger{ display:none !important; }
       : '';
 
     var openCall = "kxOpenPost('" + post.id + "','" + post.kind + "')";
+    // The action reads from the viewer's side, not the post's: on someone
+    // else's Offer you are asking them for a quote, and on their RFQ you are
+    // giving one. Only the owner is the one reviewing what came in.
+    var mine = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
+    var actionLabel = isRfq
+      ? (mine ? 'ดูข้อเสนอ' : 'เสนอราคา')
+      : (mine ? 'ดูคำขอใบเสนอราคา' : 'ขอใบเสนอราคา');
+    var askCount = (post.post_questions || []).length;
     return '<div class="post-card" data-type="' + (isRfq ? 'buy' : 'sell') + '"' +
       ' data-cat="' + esc(post.category_id || 'other') + '" data-deadline="' + daysLeft(post.deadline) + '"' +
       ' data-location="' + esc(loc) + '" style="cursor:pointer;" onclick="' + openCall + '">' +
@@ -18013,9 +17992,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</span></div>' +
       '<div class="pc-actions">' +
         '<span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>' +
-        '<span class="pc-act" onclick="event.stopPropagation();' + openCall + '">💬 ถาม 0</span>' +
+        '<span class="pc-act" onclick="event.stopPropagation();' + openCall + '">💬 ถาม ' + askCount + '</span>' +
         '<span class="pc-act primary" onclick="event.stopPropagation();' + openCall + '">' +
-          (isRfq ? 'ดูข้อเสนอ' : 'เสนอราคา') + '</span>' +
+          actionLabel + '</span>' +
       '</div>' +
     '</div>';
   }
@@ -18166,7 +18145,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
     }
 
-    var qa = document.getElementById('rfqQaBlock'); if(qa) qa.style.display = 'none';
+    renderQa('rfqQaBlock', post, isOwner);
     var banner = document.getElementById('sealedBanner'); if(banner) banner.style.display = 'none';
     var offerListEl = root.querySelector('#offerList');
     if(offerListEl) offerListEl.classList.remove('sealed');
@@ -18256,7 +18235,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var priceNum = root.querySelector('.offer-price-num'); if(priceNum) priceNum.textContent = post.price_high != null ? money(post.price_high) : 'ติดต่อสอบถาม';
     var desc = root.querySelector('.offer-desc'); if(desc) desc.textContent = post.description || '';
 
-    var qa = document.getElementById('offerQaBlock'); if(qa) qa.style.display = 'none';
+    renderQa('offerQaBlock', post, !!(window.kxSession && post.owner_id === window.kxSession.user.id));
 
     var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
     var sellerAv = root.querySelector('.seller-av');
@@ -18273,16 +18252,140 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.kxCurrentDetailPostId = post.id;
   }
 
+  /* ===== ถาม-ตอบ =====
+     The block was demo markup with a canned thread, and ถาม only appended a
+     <div> — reload and the question was gone, and the owner never saw it.
+     Both detail pages now render the same real list from post_questions.
+
+     Askers stay anonymous on screen ("ผู้ให้บริการ (ไม่ระบุชื่อ)"): on an
+     open RFQ the other askers are each other's competition, and who is
+     circling a job is not the poster's to broadcast. The row still records
+     asker_id, so a question is never truly unattributed. */
+  function qaItemHTML(q, isOwner, ownerName){
+    var answered = !!(q.answer && q.answer.trim());
+    var mine = !!(window.kxSession && q.asker_id === window.kxSession.user.id);
+    var head = mine ? 'คุณ' : 'ผู้ให้บริการ (ไม่ระบุชื่อ)';
+    var reply = answered
+      ? '<div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">' +
+            esc(String(ownerName || '?').charAt(0).toUpperCase()) + '</div>' +
+          '<div style="flex:1;background:var(--blue-50);border:1px solid #dae6ff;border-radius:11px;padding:10px 13px;">' +
+            '<div style="font-size:13px;color:var(--ink);"><b>' + esc(ownerName) + '</b> ' +
+              '<span style="font-size:10.5px;font-weight:700;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span></div>' +
+            '<div style="font-size:13px;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.answer) + '</div>' +
+          '</div></div>'
+      : isOwner
+        ? '<div style="display:flex;gap:8px;margin:10px 0 0 42px;">' +
+            '<input type="text" class="kx-answerin" data-qid="' + q.id + '" placeholder="ตอบคำถามนี้..." ' +
+              'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;color:var(--ink);">' +
+            '<button type="button" onclick="kxAnswerQuestion(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:12.5px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ตอบ</button>' +
+          '</div>'
+        : '<div style="font-size:12.5px;color:var(--ink-soft);margin:5px 0 0 42px;">⏳ รอเจ้าของประกาศตอบ</div>';
+
+    return '<div>' +
+      '<div style="display:flex;gap:10px;align-items:flex-start;">' +
+        '<div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">?</div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-size:13px;color:var(--ink);"><b>' + head + '</b> ' +
+            '<span style="color:var(--ink-faint);font-weight:400;font-size:12.5px;">· ' + relTime(q.created_at) + '</span></div>' +
+          '<div style="font-size:13px;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.body) + '</div>' +
+        '</div>' +
+      '</div>' + reply +
+    '</div>';
+  }
+
+  function renderQa(blockId, post, isOwner){
+    var block = document.getElementById(blockId);
+    if(!block) return;
+    var qs = (post.post_questions || []).slice()
+      .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
+    var ownerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
+    var canAsk = !isOwner && post.status === 'open';
+
+    block.style.display = '';
+    block.dataset.postId = post.id;
+    block.innerHTML =
+      '<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ ' +
+        '<span style="color:var(--ink-faint);font-weight:600;">(' + qs.length + ')</span></div>' +
+      '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">' +
+        '💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>' +
+      (qs.length
+        ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
+            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName); }).join('') + '</div>'
+        : '<div style="font-size:13px;color:var(--ink-faint);padding:6px 0 2px;">ยังไม่มีคำถามสำหรับงานนี้</div>') +
+      (canAsk
+        ? '<div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
+            '<input type="text" class="kx-askin" placeholder="ถามเรื่องสเปก/เงื่อนไขงาน..." ' +
+              'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13px;font-family:inherit;outline:none;color:var(--ink);">' +
+            '<button type="button" onclick="kxAskQuestion(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:11px 20px;font-size:13px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ถาม</button>' +
+          '</div>'
+        : '');
+  }
+
+  window.kxAskQuestion = async function(btn){
+    var block = btn.closest('[data-post-id]');
+    var input = btn.parentElement.querySelector('.kx-askin');
+    var body = ((input && input.value) || '').trim();
+    if(!body){ if(input){ input.classList.add('bad'); input.focus(); } kxToast('พิมพ์คำถามก่อนกดถาม'); return; }
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนถามคำถาม'); navigateTo('page-auth'); return; }
+    input.classList.remove('bad');
+    btn.disabled = true;
+    var res = await sb.from('post_questions').insert({
+      post_id: block.dataset.postId, asker_id: window.kxSession.user.id, body: body
+    });
+    btn.disabled = false;
+    if(res.error){
+      console.error('kxAskQuestion failed', res.error);
+      kxToast(/relation .* does not exist/i.test(res.error.message || '')
+        ? 'ระบบถาม-ตอบยังไม่ได้ติดตั้ง (ยังไม่ได้รัน questions.sql)'
+        : 'ส่งคำถามไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    input.value = '';
+    kxToast('ส่งคำถามแล้ว');
+    await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
+  };
+
+  window.kxAnswerQuestion = async function(btn){
+    var block = btn.closest('[data-post-id]');
+    var input = btn.parentElement.querySelector('.kx-answerin');
+    var answer = ((input && input.value) || '').trim();
+    if(!answer){ if(input){ input.classList.add('bad'); input.focus(); } kxToast('พิมพ์คำตอบก่อนกดตอบ'); return; }
+    input.classList.remove('bad');
+    btn.disabled = true;
+    var res = await sb.from('post_questions')
+      .update({ answer: answer, answered_at: new Date().toISOString() })
+      .eq('id', input.dataset.qid);
+    btn.disabled = false;
+    if(res.error){
+      console.error('kxAnswerQuestion failed', res.error);
+      kxToast('ตอบคำถามไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    kxToast('ตอบคำถามแล้ว');
+    await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
+  };
+
   window.kxOpenPost = function(id, kind){
     var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
     navigateTo(page);
     kxLoadPostDetail(id, kind);
   };
 
+  var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id)';
+  var qaTableMissing = false;
+
   window.kxLoadPostDetail = async function(id, kind){
-    var res = await sb.from('posts')
-      .select('*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))')
+    window.kxCurrentDetailKind = kind;
+    var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))';
+    var res = await sb.from('posts').select(base + (qaTableMissing ? '' : QA_SELECT))
       .eq('id', id).maybeSingle();
+    // questions.sql may not have been run yet — the rest of the page is still
+    // worth showing, so fall back once and stop asking for the embed
+    if(res.error && /post_questions/i.test(res.error.message || '')){
+      qaTableMissing = true;
+      res = await sb.from('posts').select(base).eq('id', id).maybeSingle();
+    }
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
     if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
   };
@@ -18470,17 +18573,24 @@ body.kx-auth .kx-burger{ display:none !important; }
   };
 
   var loaded = false;
+  var feedQaMissing = false;
   window.kxLoadFeed = async function(){
     var list = document.querySelector('#page-feed .feed-list');
     if(!list) return;
     // profiles!posts_owner_id_fkey: posts also reaches profiles indirectly through
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
+    var feedBase = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
     var res = await sb.from('posts')
-      .select('*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)')
+      .select(feedBase + (feedQaMissing ? '' : ', post_questions(id)'))
       .eq('status', 'open')
       .order('created_at', { ascending:false })
       .limit(60);
+    if(res.error && /post_questions/i.test(res.error.message || '')){
+      feedQaMissing = true;
+      res = await sb.from('posts').select(feedBase)
+        .eq('status', 'open').order('created_at', { ascending:false }).limit(60);
+    }
     if(res.error){ console.error('kxLoadFeed failed', res.error); return; }
     list.innerHTML = res.data.map(postCardHTML).join('');
     if(window.kxApplyIcons) window.kxApplyIcons(list);
