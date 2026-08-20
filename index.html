@@ -8417,7 +8417,7 @@ html, body{
 
     <!-- COMPARE OFFERS -->
 
-    <div class="card" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
+    <div class="card" id="rfqQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
       <div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(3)</span></div>
       <div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -8456,7 +8456,7 @@ html, body{
       <div class="compare-title">📊 เปรียบเทียบข้อเสนอที่ได้รับ</div>
       <div class="sort-select">เรียงตาม: ราคาต่ำ-สูง ⌄</div>
     </div>
-    <div class="compare-sub">มีผู้เสนอราคาเข้ามา 7 ราย • เฉลี่ย 6,500 ฿/วัน</div>
+    <div class="compare-sub" id="rfqCompareSub">มีผู้เสนอราคาเข้ามา 7 ราย • เฉลี่ย 6,500 ฿/วัน</div>
 
     <div class="sealed-banner" id="sealedBanner">
       <div class="sealed-ic">🔒</div>
@@ -10215,6 +10215,13 @@ html, body{
 
       <div class="offer-list" id="offerList">
 
+        <div class="kx-empty" style="display:none;">
+          <div class="kx-empty-ic">📦</div>
+          <div class="kx-empty-title">ยังไม่มีประกาศขายในสถานะนี้</div>
+          <div class="kx-empty-sub">เมื่อคุณโพสต์ประกาศขาย รายการจะแสดงที่นี่</div>
+          <button class="btn-create" onclick="newPost()">＋ โพสต์ประกาศ</button>
+        </div>
+
         <div class="offer-row" data-status="active" onclick="navigateTo('page-offer-detail')">
           <img class="offer-thumb" src="assets/img/offer-thumb-1.jpg">
           <div class="offer-body">
@@ -10660,7 +10667,7 @@ html, body{
             <button class="btn btn-outline" onclick="navigateTo('page-messages')">💬 ส่งข้อความ</button>
             <button class="btn btn-primary" onclick="openQuoteModal()">🧾 ขอใบเสนอราคา</button>
           </div>
-    <div class="card" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
+    <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
       <div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(2)</span></div>
       <div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -17775,9 +17782,10 @@ body.kx-auth .kx-burger{ display:none !important; }
         '</div>'
       : '';
 
+    var openCall = "kxOpenPost('" + post.id + "','" + post.kind + "')";
     return '<div class="post-card" data-type="' + (isRfq ? 'buy' : 'sell') + '"' +
       ' data-cat="' + esc(post.category_id || 'other') + '" data-deadline="' + daysLeft(post.deadline) + '"' +
-      ' data-location="' + esc(loc) + '" style="cursor:pointer;" onclick="navigateTo(\'' + detailPage + '\')">' +
+      ' data-location="' + esc(loc) + '" style="cursor:pointer;" onclick="' + openCall + '">' +
       '<div class="pc-head">' +
         '<span class="pp-av" style="background:#0a5bff" onclick="event.stopPropagation()">' + esc(ownerName.charAt(0).toUpperCase()) + '</span>' +
         '<span class="pc-who"><span class="pc-nameline"><span class="pp-name">' + esc(ownerName) + '</span></span>' +
@@ -17799,12 +17807,261 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</span></div>' +
       '<div class="pc-actions">' +
         '<span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>' +
-        '<span class="pc-act" onclick="event.stopPropagation();navigateTo(\'' + detailPage + '\')">💬 ถาม 0</span>' +
-        '<span class="pc-act primary" onclick="event.stopPropagation();navigateTo(\'' + detailPage + '\')">' +
+        '<span class="pc-act" onclick="event.stopPropagation();' + openCall + '">💬 ถาม 0</span>' +
+        '<span class="pc-act primary" onclick="event.stopPropagation();' + openCall + '">' +
           (isRfq ? 'ดูข้อเสนอ' : 'เสนอราคา') + '</span>' +
       '</div>' +
     '</div>';
   }
+
+  /* ===== Post detail pages (page-rfq-detail / page-offer-detail) =====
+     Every card everywhere in the app (feed, งานของฉัน, notifications, search)
+     used to call navigateTo('page-rfq-detail') with no id at all, so the detail
+     page always showed the same hand-written demo content no matter which post
+     was clicked. kxOpenPost() carries the real id through; kxLoadPostDetail()
+     fetches that one post and repaints the page's header/description/images/
+     attachments from it. The fabricated demo content further down each page
+     (a canned Q&A thread, a sealed-bid countdown, three made-up bidders with
+     star ratings) has no real table behind it, so it's hidden rather than
+     wired — showing it next to a real title would just be a different kind of
+     wrong. Real quotes (if any) render in its place; RLS already limits what
+     comes back to what this viewer is allowed to see. */
+
+  var THMONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function fmtDateBE(iso){
+    if(!iso) return 'ไม่ระบุ';
+    var d = new Date(iso);
+    return d.getDate() + ' ' + THMONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+  }
+  function daysLeftLabel(iso){
+    if(!iso) return 'ไม่ระบุกำหนด';
+    var days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+    if(days < 0) return 'หมดเขตแล้ว';
+    if(days === 0) return 'หมดเขตวันนี้';
+    return 'เหลือ ' + days + ' วัน';
+  }
+
+  function quoteCardHTML(q){
+    var bidder = q.profiles || {};
+    var name = esc(bidder.company_name || 'ผู้เสนอราคา');
+    return '<div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;">' +
+      '<div style="width:38px;height:38px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + name.charAt(0).toUpperCase() + '</div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">' + name + '</div>' +
+        '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px;">' + relTime(q.created_at) + '</div>' +
+        (q.note ? '<div style="font-size:13px;color:var(--ink);margin-top:8px;">' + esc(q.note) + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;flex-shrink:0;">' +
+        '<div style="font-size:11px;color:var(--ink-faint);">ราคาเสนอ</div>' +
+        '<div style="font-size:17px;font-weight:800;color:var(--blue-700);">' + money(q.price) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderRfqDetail(post){
+    var root = document.getElementById('page-rfq-detail');
+    if(!root) return;
+    var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
+    var docs = post.post_attachments || [];
+    var quotes = post.quotes || [];
+
+    var h1 = root.querySelector('.header-info h1'); if(h1) h1.textContent = post.title;
+    var meta = root.querySelector('.header-info .meta-row');
+    if(meta){
+      var budget = (post.price_low != null || post.price_high != null)
+        ? '💰 งบประมาณ ' + (post.price_low != null ? money(post.price_low) : '') +
+          (post.price_low != null && post.price_high != null ? ' - ' : '') +
+          (post.price_high != null ? money(post.price_high) : '')
+        : '💰 ไม่ระบุงบประมาณ';
+      meta.innerHTML = '<span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span>🕗 ' + daysLeftLabel(post.deadline) + '</span><span>' + budget + '</span>';
+    }
+    var thumb = root.querySelector('.header-thumb');
+    if(thumb){ if(images.length){ thumb.src = images[0].url; thumb.style.display = ''; } else thumb.style.display = 'none'; }
+    var desc = root.querySelector('.desc-text'); if(desc) desc.textContent = post.description || '';
+    var attach = root.querySelector('.rfq-attach');
+    if(attach){
+      if(docs.length){
+        attach.style.display = '';
+        var label = attach.querySelector('.rfq-attach-label');
+        if(label) label.innerHTML = label.innerHTML.replace(/\(\d+\)/, '(' + docs.length + ')');
+        var grid = attach.querySelector('.rfq-attach-grid');
+        if(grid) grid.innerHTML = docs.map(function(d){
+          return '<a class="file-chip ' + d.file_kind + '" target="_blank" rel="noopener" href="' + esc(d.file_url) + '"' +
+            ' data-ftype="' + d.file_kind + '" data-fname="' + esc(d.file_name) + '" data-fsize="' + fileSize(d.file_size) + '">' +
+            '<span class="fc-ic">' + fileKindTag(d.file_kind) + '</span><span class="fc-name">' + esc(d.file_name) + '</span></a>';
+        }).join('');
+      } else attach.style.display = 'none';
+    }
+    var statusTag = document.getElementById('rfqStatusTag');
+    if(statusTag) statusTag.textContent = post.status !== 'open' ? '🔒 ปิดรับข้อเสนอแล้ว' : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
+
+    var qa = document.getElementById('rfqQaBlock'); if(qa) qa.style.display = 'none';
+    var banner = document.getElementById('sealedBanner'); if(banner) banner.style.display = 'none';
+    var offerListEl = root.querySelector('#offerList');
+    if(offerListEl) offerListEl.classList.remove('sealed');
+
+    var prices = quotes.map(function(q){ return q.price; }).filter(function(v){ return v != null; });
+    var sub = document.getElementById('rfqCompareSub');
+    if(sub){
+      sub.textContent = prices.length
+        ? 'มีผู้เสนอราคาเข้ามา ' + prices.length + ' ราย • เฉลี่ย ' + money(prices.reduce(function(a, b){ return a + b; }, 0) / prices.length)
+        : 'ยังไม่มีผู้เสนอราคาเข้ามา';
+    }
+    if(offerListEl){
+      offerListEl.innerHTML = quotes.length ? quotes.map(quoteCardHTML).join('')
+        : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>';
+    }
+    var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
+    var closedPanel = document.getElementById('dealClosedPanel'); if(closedPanel) closedPanel.style.display = 'none';
+    var actionRow = document.getElementById('rfqActionRow'); if(actionRow) actionRow.style.display = '';
+    var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
+    window.kxCurrentDetailPostId = post.id;
+  }
+
+  function renderOfferDetail(post){
+    var root = document.getElementById('page-offer-detail');
+    if(!root) return;
+    var owner = post.profiles || {};
+    var ownerName = owner.company_name || 'ผู้ใช้ Konnex';
+    var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
+    var quotes = post.quotes || [];
+
+    var gallery = document.getElementById('offerGallery');
+    var dots = document.getElementById('offerGalleryDots');
+    if(gallery){
+      if(images.length){
+        gallery.innerHTML = images.map(function(im){ return '<img src="' + esc(im.url) + '">'; }).join('');
+        if(dots) dots.innerHTML = images.map(function(_, i){ return '<span class="dot' + (i ? '' : ' active') + '"></span>'; }).join('');
+      }else{
+        gallery.innerHTML = '<img src="assets/img/konnex-mark-3.png" style="object-fit:contain;background:var(--bg);">';
+        if(dots) dots.innerHTML = '';
+      }
+    }
+    var h1 = root.querySelector('.offer-header-card h1'); if(h1) h1.textContent = post.title;
+    var meta = root.querySelector('.offer-meta-row');
+    if(meta) meta.innerHTML = '<span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span>👁️ ' + (post.view_count || 0) + ' วิว</span>';
+    var priceNum = root.querySelector('.offer-price-num'); if(priceNum) priceNum.textContent = post.price_high != null ? money(post.price_high) : 'ติดต่อสอบถาม';
+    var desc = root.querySelector('.offer-desc'); if(desc) desc.textContent = post.description || '';
+
+    var qa = document.getElementById('offerQaBlock'); if(qa) qa.style.display = 'none';
+
+    var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
+    var sellerAv = root.querySelector('.seller-av'); if(sellerAv) sellerAv.textContent = ownerName.charAt(0).toUpperCase();
+    var sellerStats = root.querySelector('.seller-stats'); if(sellerStats) sellerStats.style.display = 'none';
+    var verified = root.querySelector('.seller-verified'); if(verified) verified.style.display = 'none';
+
+    var miniRows = root.querySelectorAll('.stat-mini-row b');
+    if(miniRows.length >= 3){
+      miniRows[0].textContent = post.status === 'open' ? 'พร้อมรับงาน' : post.status === 'paused' ? 'พักไว้ชั่วคราว' : 'ปิดรับแล้ว';
+      miniRows[1].textContent = fmtDateBE(post.created_at);
+      miniRows[2].textContent = quotes.length ? quotes.length + ' คำขอ' : 'ยังไม่มี';
+    }
+    window.kxCurrentDetailPostId = post.id;
+  }
+
+  window.kxOpenPost = function(id, kind){
+    var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
+    navigateTo(page);
+    kxLoadPostDetail(id, kind);
+  };
+
+  window.kxLoadPostDetail = async function(id, kind){
+    var res = await sb.from('posts')
+      .select('*, profiles!posts_owner_id_fkey(company_name), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,created_at,profiles!quotes_bidder_id_fkey(company_name))')
+      .eq('id', id).maybeSingle();
+    if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
+    if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
+  };
+
+  /* ===== งานของฉัน (page-rfq-offers / page-my-offers): each used to list the
+     same 4-5 hand-written demo cards regardless of who was logged in or what
+     they'd actually posted, and none of them linked to a real post — this is
+     the second half of the same "old data" report. Queries posts by owner_id
+     instead. */
+
+  function myRfqCardHTML(post){
+    var images = post.post_images || [];
+    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
+    var docs = post.post_attachments || [];
+    var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
+    var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
+    var lockLabel = post.bid_type === 'open' ? '🔓 เปิดราคา' : '🔒 ปิดราคา';
+    var statusVal = post.status === 'open' ? 'active' : post.status;
+    var statusLabel = post.status === 'open' ? 'เปิดรับ' : post.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว';
+    return '<div class="rfq-card" data-status="' + esc(statusVal) + '" onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
+      '<img class="rfq-thumb" src="' + esc(thumb) + '">' +
+      '<div class="rfq-body">' +
+        '<div class="rfq-title">' + esc(post.title) + '</div><div class="rfq-id"><span class="lock-badge">' + lockLabel + '</span></div>' +
+        (docs.length ? '<div class="files-sum">' + docs.length + ' ไฟล์แนบ</div>' : '') +
+        '<div class="rfq-meta"><span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span class="sep">|</span><span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
+      '</div>' +
+      '<div class="rfq-offers">' +
+        '<div class="num">' + prices.length + '</div><div class="label">ข้อเสนอ</div>' +
+        (avg != null ? '<div class="rfq-avg">ราคาเฉลี่ย<b>' + money(avg) + '</b></div>' : '') +
+      '</div>' +
+      '<div class="rfq-status-col">' +
+        '<div class="status-top"><span class="status-live"><span class="dot"></span>' + statusLabel + '</span>' +
+          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'rfq\',\'' + post.id + '\')">✎</button></div>' +
+        '<div class="deadline-label">สิ้นสุด</div><div class="deadline-date">' + fmtDateBE(post.deadline) + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function myOfferRowHTML(post){
+    var images = post.post_images || [];
+    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
+    var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
+    var statusVal = post.status === 'open' ? 'active' : post.status;
+    var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['paused', 'พักไว้'], closed: ['closed', 'ปิดแล้ว'] };
+    var pill = pillMap[statusVal] || pillMap.active;
+    return '<div class="offer-row" data-status="' + statusVal + '" onclick="kxOpenPost(\'' + post.id + '\',\'offer\')">' +
+      '<img class="offer-thumb" src="' + esc(thumb) + '">' +
+      '<div class="offer-body">' +
+        '<div class="offer-title">' + esc(post.title) + '</div>' +
+        '<div class="offer-stats-row"><span>👁️ ' + (post.view_count || 0) + ' วิว</span><span>🧾 ' + prices.length + ' คำขอราคา</span><span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
+      '</div>' +
+      '<div class="offer-price-col">' +
+        '<div class="price-lbl">ราคาเริ่มต้น</div>' +
+        '<div class="price-num">' + (post.price_high != null ? money(post.price_high) : 'ไม่ระบุ') + '</div>' +
+      '</div>' +
+      '<div class="offer-status-col">' +
+        '<div class="offer-status-top"><span class="status-pill ' + pill[0] + '"><span class="dot"></span>' + pill[1] + '</span>' +
+          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'offer\',\'' + post.id + '\')">✎</button></div>' +
+        '<div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button>' +
+          '<div class="offer-status-menu">' +
+            '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'active\')"><span class="osm-dot g"></span>เปิดอยู่</div>' +
+            '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'paused\')"><span class="osm-dot a"></span>พักไว้</div>' +
+            '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'closed\')"><span class="osm-dot c"></span>ปิดแล้ว</div>' +
+          '</div></div></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.kxLoadMyPosts = async function(kind){
+    if(!window.kxSession) return;
+    var pageSel = kind === 'offer' ? '#page-my-offers' : '#page-rfq-offers';
+    var listSel = kind === 'offer' ? '.offer-list' : '.rfq-list';
+    var list = document.querySelector(pageSel + ' ' + listSel);
+    if(!list) return;
+    var res = await sb.from('posts')
+      .select('*, post_images(url,sort), post_attachments(id), quotes(price)')
+      .eq('owner_id', window.kxSession.user.id)
+      .eq('kind', kind)
+      .order('created_at', { ascending:false });
+    if(res.error){ console.error('kxLoadMyPosts failed', res.error); return; }
+    Array.prototype.forEach.call(list.querySelectorAll('.rfq-card, .offer-row'), function(el){ el.remove(); });
+    var cardHTML = kind === 'offer' ? myOfferRowHTML : myRfqCardHTML;
+    var cards = res.data.map(cardHTML).join('');
+    var empty = list.querySelector('.kx-empty');
+    if(empty){
+      empty.style.display = res.data.length ? 'none' : 'block';
+      empty.insertAdjacentHTML('beforebegin', cards);
+    }else{
+      list.insertAdjacentHTML('afterbegin', cards);
+    }
+    var loadMore = document.querySelector(pageSel + ' .load-more');
+    if(loadMore) loadMore.style.display = 'none';
+  };
 
   var loaded = false;
   window.kxLoadFeed = async function(){
@@ -17857,6 +18114,8 @@ body.kx-auth .kx-burger{ display:none !important; }
   window.navigateTo = function(id, skipHistory){
     var r = _navFeed(id, skipHistory);
     if(id === 'page-feed' && !loaded) window.kxLoadFeed();
+    if(id === 'page-rfq-offers') window.kxLoadMyPosts('rfq');
+    if(id === 'page-my-offers') window.kxLoadMyPosts('offer');
     return r;
   };
 })();
