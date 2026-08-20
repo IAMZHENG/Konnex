@@ -14904,6 +14904,10 @@ body.kx-auth .kx-burger{ display:none !important; }
       var ci = document.getElementById('auContactInput');
       ci.classList.add('bad'); ci.focus(); kxToast('กรุณากรอกชื่อผู้ติดต่อ'); return;
     }
+    if(!phone.trim()){
+      var pi = document.getElementById('auPhoneInput');
+      pi.classList.add('bad'); pi.focus(); kxToast('กรุณากรอกเบอร์โทรศัพท์'); return;
+    }
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((mail.value || '').trim())){
       mail.classList.add('bad'); mail.focus(); kxToast('กรุณากรอกอีเมลให้ถูกต้อง'); return;
     }
