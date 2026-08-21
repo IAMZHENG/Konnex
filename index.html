@@ -10706,13 +10706,18 @@ html, body{
       '<span>💰 ' + (r.budget != null ? Math.round(r.budget).toLocaleString('en-US') + ' ฿' : 'ไม่ระบุงบ') + '</span>' +
       (r.needed_by ? '<span>🗓️ ภายใน ' + qrDate(r.needed_by) + '</span>' : '');
 
-    var files = (r.quote_request_files || []).length
-      ? '<div class="qr-files">' + r.quote_request_files.map(function(f){
+    function qrChips(arr, label){
+      if(!arr.length) return '';
+      return '<div class="qr-files"><span style="font-size:11px;color:var(--ink-faint);align-self:center;">' + label + '</span>' +
+        arr.map(function(f){
           return '<a class="file-chip ' + qrEsc(f.file_kind) + '" target="_blank" rel="noopener" href="' + qrEsc(f.file_url) + '">' +
             '<span class="fc-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
             '<span class="fc-name">' + qrEsc(f.file_name) + '</span></a>';
-        }).join('') + '</div>'
-      : '';
+        }).join('') + '</div>';
+    }
+    var all = r.quote_request_files || [];
+    var files = qrChips(all.filter(function(f){ return f.side !== 'reply'; }), '📎 จากผู้ขอ:') +
+                qrChips(all.filter(function(f){ return f.side === 'reply'; }), '📤 ใบเสนอราคาที่คุณส่ง:');
 
     return '<div class="qr-card' + (done ? '' : ' pending') + '">' +
       '<div class="qr-top">' +
@@ -10804,12 +10809,19 @@ html, body{
     if(mo.parentElement !== document.body) document.body.appendChild(mo);
     mo.classList.add('open');
 
+    var qrBase = 'id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
+                 'posts(title),profiles(id,company_name,avatar_url),';
     var res = await sb.from('quote_requests')
-      .select('id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
-              'posts(title),profiles(id,company_name,avatar_url),' +
-              'quote_request_files(file_name,file_url,file_kind,file_size)')
+      .select(qrBase + 'quote_request_files(file_name,file_url,file_kind,file_size,side)')
       .eq('post_id', offerId)
       .order('created_at', { ascending:false });
+    // `side` arrives with quote_reply_files.sql; the list works without it
+    if(res.error && /\bside\b/i.test(res.error.message || '')){
+      res = await sb.from('quote_requests')
+        .select(qrBase + 'quote_request_files(file_name,file_url,file_kind,file_size)')
+        .eq('post_id', offerId)
+        .order('created_at', { ascending:false });
+    }
     if(res.error){
       console.error('openQuoteRequestsModal failed', res.error);
       listEl.innerHTML = '<div style="padding:18px;text-align:center;font-size:13px;color:var(--ink-soft);">' +
@@ -10881,7 +10893,9 @@ html, body{
     return (bytes/(1024*1024)).toFixed(1) + ' MB';
   }
   function handleRqFiles(fileList){
-    Array.from(fileList).forEach(f=> rqFiles.push({name:f.name, size:f.size}));
+    // `file` is the raw File — without it the quotation can be listed here but
+    // never uploaded, which is why nothing ever reached the buyer's card
+    Array.from(fileList).forEach(f=> rqFiles.push({name:f.name, size:f.size, file:f}));
     renderRqFiles();
   }
   function renderRqFiles(){
@@ -10918,16 +10932,39 @@ html, body{
     var was = btn ? btn.textContent : '';
     if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
 
-    var upd = await sb.from('quote_requests').update({
-      quoted_price: price,
-      seller_note: (noteEl && noteEl.value.trim()) || null,
-      answered_at: new Date().toISOString(),
-      status: 'received'
-    }).eq('id', currentRequestId);
+    try{
+      var upd = await sb.from('quote_requests').update({
+        quoted_price: price,
+        seller_note: (noteEl && noteEl.value.trim()) || null,
+        answered_at: new Date().toISOString(),
+        status: 'received'
+      }).eq('id', currentRequestId);
+      if(upd.error) throw upd.error;
 
-    if(upd.error){
-      console.error('submitRespondQuote failed', upd.error);
-      kxToast('ส่งใบเสนอราคาไม่สำเร็จ: ' + (upd.error.message || 'กรุณาลองใหม่'));
+      // the attached quotation, tagged as the reply side so the buyer's card
+      // can show it apart from their own drawings
+      var rows = [];
+      for(var i = 0; i < rqFiles.length; i++){
+        if(!rqFiles[i].file) continue;
+        rows.push({
+          request_id: currentRequestId,
+          file_name: rqFiles[i].name,
+          file_size: rqFiles[i].size,
+          file_kind: /\.pdf$/i.test(rqFiles[i].name) ? 'pdf' : 'img',
+          file_url: await window.kxUploadFile('attachments', rqFiles[i].file),
+          side: 'reply'
+        });
+      }
+      if(rows.length){
+        var fi = await sb.from('quote_request_files').insert(rows);
+        if(fi.error) throw fi.error;
+      }
+      rqFiles.length = 0;
+    }catch(err){
+      console.error('submitRespondQuote failed', err);
+      kxToast(/side|column/i.test((err && err.message) || '')
+        ? 'แนบไฟล์ใบเสนอราคาไม่ได้ (ยังไม่ได้รัน quote_reply_files.sql)'
+        : 'ส่งใบเสนอราคาไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
       if(btn){ btn.disabled = false; btn.textContent = was; }
       return;
     }
@@ -11406,11 +11443,26 @@ html, body{
         var got = r.status === 'received';
         var seller = r.seller.replace(/'/g,'');
 
-        // no document number unless the seller's reply actually carried one —
-        // otherwise this rendered an empty "📄 .pdf" chip that opened nothing
-        var files = (got && r.docNo)
-          ? '<div class="bid-files"><span class="bid-file pdf" onclick="event.stopPropagation();openQuotePdf(\'' + r.docNo + '\',\'' + seller + '\')">📄 ' + r.docNo + '.pdf</span></div>'
-          : '';
+        /* The quotation the seller attached, and the drawings you sent them.
+           This used to render only from r.docNo, which nothing ever filled, so
+           an attached ใบเสนอราคา never appeared on the card at all. */
+        function chips(arr, label, cls){
+          if(!arr || !arr.length) return '';
+          return '<div class="bid-files" style="align-items:center;">' +
+            '<span style="font-size:11px;color:var(--ink-faint);margin-right:2px;">' + label + '</span>' +
+            arr.map(function(f){
+              return '<a class="bid-file ' + (f.file_kind === 'pdf' ? 'pdf' : 'img') + '" target="_blank" rel="noopener"' +
+                ' href="' + String(f.file_url).replace(/"/g,'&quot;') + '" onclick="event.stopPropagation()">' +
+                (f.file_kind === 'pdf' ? '📄 ' : '🖼️ ') +
+                String(f.file_name).replace(/[&<>]/g,'') + '</a>';
+            }).join('') + '</div>';
+        }
+        var files = chips(r.replyFiles, '📥 ใบเสนอราคาจากผู้ขาย:', 'pdf') +
+                    chips(r.myFiles,    '📤 ไฟล์ที่คุณแนบไป:', 'img') +
+                    (got && r.note
+                      ? '<div style="font-size:12.5px;color:var(--green);margin-top:6px;">↳ ' +
+                        String(r.note).replace(/[&<>]/g,'') + '</div>'
+                      : '');
 
         var price = got
           ? '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">' + r.price + '</div>' +
@@ -11451,12 +11503,20 @@ html, body{
       if(!window.kxSession) return;
       var list = document.getElementById('mrList');
       if(!list) return;
+      var base = 'id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
+                 'posts(id,title,province,owner_id,post_images(url,sort),profiles!posts_owner_id_fkey(company_name)),';
       var res = await sb.from('quote_requests')
-        .select('id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
-                'posts(id,title,province,owner_id,post_images(url,sort),profiles!posts_owner_id_fkey(company_name)),' +
-                'quote_request_files(file_name,file_url,file_kind)')
+        .select(base + 'quote_request_files(file_name,file_url,file_kind,side)')
         .eq('requester_id', window.kxSession.user.id)
         .order('created_at', { ascending:false });
+      // quote_reply_files.sql adds `side`; without it the table is still there
+      // and the page is still worth showing — just without the two-sided split
+      if(res.error && /\bside\b/i.test(res.error.message || '')){
+        res = await sb.from('quote_requests')
+          .select(base + 'quote_request_files(file_name,file_url,file_kind)')
+          .eq('requester_id', window.kxSession.user.id)
+          .order('created_at', { ascending:false });
+      }
       if(res.error){
         console.error('kxLoadMyRequests failed', res.error);
         if(/schema cache|does not exist/i.test(res.error.message || '')){
@@ -11481,6 +11541,11 @@ html, body{
           date: d.getDate() + ' ' + TH[d.getMonth()] + ' ' + (d.getFullYear() + 543),
           status: r.status,
           price: r.quoted_price != null ? Math.round(r.quoted_price).toLocaleString('en-US') : '',
+          note: r.seller_note || '',
+          // both sides' attachments, kept apart: what you sent them, and the
+          // quotation they sent back
+          myFiles:    (r.quote_request_files || []).filter(function(f){ return f.side !== 'reply'; }),
+          replyFiles: (r.quote_request_files || []).filter(function(f){ return f.side === 'reply'; }),
           docNo: ''
         };
       });
