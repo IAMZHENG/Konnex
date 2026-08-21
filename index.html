@@ -11880,18 +11880,7 @@ html, body{
     <div>
       <div class="sh-head"><h1>ประวัติการเข้าชม</h1><button type="button" class="sh-clear" onclick="shClear()">🗑 ล้างประวัติ</button></div>
       <p class="sh-sub">รายการงานและบริษัทที่คุณเปิดดูล่าสุด</p>
-      <div class="sh-hist">
-        <div class="sh-hgroup">วันนี้</div>
-        <div class="sh-hitem" onclick="navigateTo('page-rfq-detail')"><div class="sh-hic buy">🏷️</div><div class="sh-hbody"><div class="sh-htitle">หาเช่ารถเครน 25 ตัน พร้อมคนขับ</div><div class="sh-hmeta">RFQ ต้องการซื้อ · กรุงเทพฯ</div></div><div class="sh-htime">10:24</div></div>
-        <div class="sh-hitem" onclick="navigateTo('page-company-profile')"><div class="sh-hic co">🏬</div><div class="sh-hbody"><div class="sh-htitle">Prime CNC Co., Ltd.</div><div class="sh-hmeta">โปรไฟล์บริษัท · ชลบุรี · ★ 4.8</div></div><div class="sh-htime">10:12</div></div>
-        <div class="sh-hitem" onclick="navigateTo('page-offer-detail')"><div class="sh-hic sell">🏷️</div><div class="sh-hbody"><div class="sh-htitle">รับผลิตงานโลหะแผ่นทุกชนิด</div><div class="sh-hmeta">ข้อเสนอขาย · สมุทรปราการ</div></div><div class="sh-htime">09:40</div></div>
-        <div class="sh-hgroup">เมื่อวาน</div>
-        <div class="sh-hitem" onclick="navigateTo('page-rfq-detail')"><div class="sh-hic buy">🏷️</div><div class="sh-hbody"><div class="sh-htitle">ติดตั้ง Solar Rooftop 50 kW</div><div class="sh-hmeta">RFQ ต้องการซื้อ · กรุงเทพมหานคร</div></div><div class="sh-htime">18:02</div></div>
-        <div class="sh-hitem" onclick="navigateTo('page-offer-detail')"><div class="sh-hic sell">🏷️</div><div class="sh-hbody"><div class="sh-htitle">รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่ง</div><div class="sh-hmeta">ข้อเสนอขาย · ปทุมธานี</div></div><div class="sh-htime">15:30</div></div>
-        <div class="sh-hgroup">7 วันที่ผ่านมา</div>
-        <div class="sh-hitem" onclick="navigateTo('page-rfq-detail')"><div class="sh-hic buy">🏷️</div><div class="sh-hbody"><div class="sh-htitle">ต้องการซ่อมบำรุงเครื่องจักร CNC ประจำปี</div><div class="sh-hmeta">RFQ ต้องการซื้อ · ชลบุรี</div></div><div class="sh-htime">14 พ.ค.</div></div>
-        <div class="sh-hitem" onclick="navigateTo('page-company-profile')"><div class="sh-hic co">🏬</div><div class="sh-hbody"><div class="sh-htitle">Siam Metal Works</div><div class="sh-hmeta">โปรไฟล์บริษัท · สมุทรปราการ · ★ 4.5</div></div><div class="sh-htime">12 พ.ค.</div></div>
-      </div>
+      <div class="sh-hist"></div>
     </div>
   </div>
 </div>
@@ -17761,18 +17750,107 @@ body.kx-auth .kx-burger{ display:none !important; }
   };
   window.setSaveRegion = function(){ kxToast('บันทึกภาษาและภูมิภาคแล้ว'); };
 
-  /* ---- history ---- */
-  window.shClear = function(){
+  /* ---- ประวัติการเข้าชม ----
+     Was seven hand-written rows and a ล้างประวัติ that replaced them with an
+     empty state until the next reload. `view_history` and its "own view
+     history only" policy were already in schema.sql and are right as they are,
+     so this needs no new SQL.
+
+     The primary key is (profile_id, post_id), so re-opening a post moves it
+     back to the top rather than adding a second row — upsert, not insert. */
+
+  window.kxNoteView = async function(postId, ownerId){
+    if(!window.kxSession || !postId) return;
+    // your own listings would otherwise fill the list; you know where they are
+    if(ownerId && ownerId === window.kxSession.user.id) return;
+    var res = await sb.from('view_history').upsert({
+      profile_id: window.kxSession.user.id,
+      post_id: postId,
+      viewed_at: new Date().toISOString()
+    }, { onConflict: 'profile_id,post_id' });
+    if(res.error) console.error('kxNoteView failed', res.error);
+  };
+
+  function shHistEsc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+    });
+  }
+  function shHistTime(iso){
+    var d = new Date(iso), now = new Date();
+    if(d.toDateString() === now.toDateString()){
+      return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+    }
+    var M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate() + ' ' + M[d.getMonth()];
+  }
+  // the page's three headings, by how long ago the view was
+  function shHistGroup(iso){
+    var d = new Date(iso), now = new Date();
+    if(d.toDateString() === now.toDateString()) return 'วันนี้';
+    var y = new Date(now.getTime() - 86400000);
+    if(d.toDateString() === y.toDateString()) return 'เมื่อวาน';
+    if(now - d < 7 * 86400000) return '7 วันที่ผ่านมา';
+    return 'ก่อนหน้านี้';
+  }
+
+  window.kxLoadHistory = async function(){
+    if(!window.kxSession) return;
+    var wrap = document.querySelector('#page-history .sh-hist');
+    if(!wrap) return;
+    var res = await sb.from('view_history')
+      .select('post_id,viewed_at,posts(id,title,kind,province,status)')
+      .eq('profile_id', window.kxSession.user.id)
+      .order('viewed_at', { ascending:false })
+      .limit(100);
+    if(res.error){ console.error('kxLoadHistory failed', res.error); return; }
+
+    // a post deleted since it was viewed embeds as null and has nothing to open
+    var rows = res.data.filter(function(r){ return r.posts; });
+    if(!rows.length){
+      wrap.innerHTML =
+        '<div class="kx-empty"><div class="kx-empty-ic">🕘</div>' +
+        '<div class="kx-empty-title">ยังไม่มีประวัติการเข้าชม</div>' +
+        '<div class="kx-empty-sub">ประกาศที่คุณเปิดดูจะมาแสดงที่นี่</div>' +
+        '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ไปที่ค้นหางาน</button></div>';
+      return;
+    }
+
+    var html = '', lastGroup = '';
+    rows.forEach(function(r){
+      var p = r.posts;
+      var isRfq = p.kind !== 'offer';
+      var g = shHistGroup(r.viewed_at);
+      if(g !== lastGroup){ html += '<div class="sh-hgroup">' + g + '</div>'; lastGroup = g; }
+      html += '<div class="sh-hitem" onclick="kxOpenPost(\'' + p.id + '\',\'' + (isRfq ? 'rfq' : 'offer') + '\')">' +
+        '<div class="sh-hic ' + (isRfq ? 'buy' : 'sell') + '">🏷️</div>' +
+        '<div class="sh-hbody">' +
+          '<div class="sh-htitle">' + shHistEsc(p.title) + '</div>' +
+          '<div class="sh-hmeta">' + (isRfq ? 'RFQ ต้องการซื้อ' : 'ข้อเสนอขาย') +
+            ' · ' + shHistEsc(p.province || 'ไม่ระบุ') +
+            (p.status && p.status !== 'open' ? ' · ปิดรับแล้ว' : '') + '</div>' +
+        '</div>' +
+        '<div class="sh-htime">' + shHistTime(r.viewed_at) + '</div>' +
+      '</div>';
+    });
+    wrap.innerHTML = html;
+    if(window.kxApplyIcons) window.kxApplyIcons(wrap);
+  };
+
+  window.shClear = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
     var wrap = document.querySelector('#page-history .sh-hist');
     if(!wrap) return;
     var n = wrap.querySelectorAll('.sh-hitem').length;
     if(!n){ kxToast('ไม่มีประวัติให้ล้าง'); return; }
     if(!confirm('ล้างประวัติการเข้าชมทั้งหมด ' + n + ' รายการ?')) return;
-    wrap.innerHTML =
-      '<div class="kx-empty"><div class="kx-empty-ic">🕘</div>' +
-      '<div class="kx-empty-title">ยังไม่มีประวัติการเข้าชม</div>' +
-      '<div class="kx-empty-sub">งานและบริษัทที่คุณเปิดดูจะมาแสดงที่นี่</div>' +
-      '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ไปที่ค้นหางาน</button></div>';
+    var res = await sb.from('view_history').delete().eq('profile_id', window.kxSession.user.id);
+    if(res.error){
+      console.error('shClear failed', res.error);
+      kxToast('ล้างประวัติไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    await kxLoadHistory();
     kxToast('ล้างประวัติแล้ว');
   };
 
@@ -19343,6 +19421,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
     if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
+    // opening a post is what "เข้าชม" means; not awaited, since a failed write
+    // here should never hold up or break the page you came to read
+    if(window.kxNoteView) window.kxNoteView(res.data.id, res.data.owner_id);
   };
 
   /* ===== งานของฉัน (page-rfq-offers / page-my-offers): each used to list the
@@ -19604,6 +19685,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-my-requests' && window.kxLoadMyRequests) window.kxLoadMyRequests();
     if(id === 'page-notifications' && window.kxLoadNotifications) window.kxLoadNotifications();
     if(id === 'page-saved' && window.kxLoadSaved) window.kxLoadSaved();
+    if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
     if(id === 'page-messages'){
       if(window.kxLoadConversations) window.kxLoadConversations();
       if(window.kxChatPollStart) window.kxChatPollStart();
