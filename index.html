@@ -10601,68 +10601,111 @@ html, body{
     });
   }
 
-  var QUOTE_REQUESTS = {
-    'OFR-2505-0021': { title:'รับผลิตงานโลหะแผ่นทุกชนิด', total:9, list:[
-      {name:'Global Parts Co., Ltd.', date:'19 พ.ค. 2567', qty:'500 ชิ้น', budget:'90,000 บาท', note:'ต้องการเหล็กหนา 3mm ตัดเลเซอร์', responded:false},
-      {name:'Smart Factory Co., Ltd.', date:'18 พ.ค. 2567', qty:'1,200 ชิ้น', budget:'ไม่ระบุ', note:'ขอราคาสำหรับงานล็อตใหญ่', responded:false},
-      {name:'Tech Solutions', date:'17 พ.ค. 2567', qty:'300 ชิ้น', budget:'50,000 บาท', note:'ต้องการภายใน 2 สัปดาห์', responded:true},
-    ]},
-    'OFR-2505-0018': { title:'รับกลึง กัด เจาะ ชิ้นงาน CNC ตามแบบ', total:15, list:[
-      {name:'Apex Manufacturing', date:'21 เม.ย. 2567', qty:'800 ชิ้น', budget:'120,000 บาท', note:'มีแบบ 2D/3D พร้อมส่ง', responded:true},
-      {name:'Ratchaburi Parts', date:'20 เม.ย. 2567', qty:'250 ชิ้น', budget:'ไม่ระบุ', note:'ขอตัวอย่างชิ้นงานก่อน', responded:false},
-      {name:'Delta Industrial', date:'19 เม.ย. 2567', qty:'450 ชิ้น', budget:'65,000 บาท', note:'-', responded:false},
-    ]},
-    'OFR-2505-0011': { title:'รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่ง', total:2, list:[
-      {name:'คุณกิตติ ขนส่ง', date:'14 พ.ค. 2567', qty:'5 เที่ยว/เดือน', budget:'ไม่ระบุ', note:'เส้นทางกรุงเทพ-ชลบุรี', responded:false},
-      {name:'Blue Ocean Logistics', date:'13 พ.ค. 2567', qty:'1 เที่ยว', budget:'16,000 บาท', note:'ขนส่งด่วนภายใน 2 วัน', responded:true},
-    ]},
-    'OFR-2505-0009': { title:'ออกแบบและติดตั้งระบบไฟฟ้าโรงงาน ครบวงจร', total:6, list:[
-      {name:'Thai Solar Energy', date:'7 เม.ย. 2567', qty:'1 ระบบ', budget:'85,000 บาท', note:'โรงงานขนาด 500 ตร.ม.', responded:false},
-      {name:'Eastern Factory Group', date:'6 เม.ย. 2567', qty:'1 ระบบ', budget:'ไม่ระบุ', note:'ขอเข้าสำรวจหน้างานก่อน', responded:false},
-    ]},
-    'OFR-2504-0032': { title:'รับพัฒนาเว็บไซต์และระบบหลังบ้าน', total:21, list:[
-      {name:'WebPro Studio', date:'1 มี.ค. 2567', qty:'1 โปรเจกต์', budget:'80,000 บาท', note:'เว็บอีคอมเมิร์ซ พร้อมระบบหลังบ้าน', responded:true},
-      {name:'Retail Chain Co.', date:'28 ก.พ. 2567', qty:'1 โปรเจกต์', budget:'150,000 บาท', note:'ต้องรองรับหลายสาขา', responded:false},
-      {name:'StartUp Hub', date:'27 ก.พ. 2567', qty:'1 โปรเจกต์', budget:'ไม่ระบุ', note:'งบจำกัด ขอราคาประหยัด', responded:false},
-    ]},
-  };
+  // QUOTE_REQUESTS (hand-written demo requests) removed — openQuoteRequestsModal
+  // reads the quote_requests table now.
 
   var currentQuoteOfferId = null;
-  function openQuoteRequestsModal(offerId){
+  /* The seller's side of ขอใบเสนอราคา. This read a hardcoded QUOTE_REQUESTS
+     object keyed by demo listing numbers, so a real request sent from an Offer
+     page had nowhere to arrive — the buyer sent it and the seller could never
+     see it. It reads quote_requests for the open listing now. */
+  function qrEsc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+    });
+  }
+  var QR_ROWS = [];
+
+  window.openQuoteRequestsModal = async function(offerId){
     currentQuoteOfferId = offerId;
-    var data = QUOTE_REQUESTS[offerId];
-    if(!data) return;
-    document.getElementById('qrModalTitle').innerText = 'คำขอใบเสนอราคา — ' + data.title;
-    var answered = data.list.filter(function(r){ return r.responded; }).length;
-    var pending = data.list.length - answered;
-    document.getElementById('qrModalSub').innerHTML = 'มีผู้ขอใบเสนอราคาทั้งหมด ' + data.total + ' ราย &nbsp;·&nbsp; ' +
-      '<span style="color:var(--amber);font-weight:700;">● ยังไม่ได้ตอบ ' + pending + '</span> &nbsp; ' +
-      '<span style="color:var(--green);font-weight:700;">✓ ส่งใบเสนอราคาแล้ว ' + answered + '</span>';
-    var listEl = document.getElementById('qrList');
-    var sorted = data.list.slice().sort(function(a,b){ return (a.responded?1:0) - (b.responded?1:0); });
+    var titleEl = document.getElementById('qrModalTitle');
+    var subEl   = document.getElementById('qrModalSub');
+    var listEl  = document.getElementById('qrList');
+    document.getElementById('qrMoreNote').innerText = '';
+    listEl.innerHTML = '<div style="padding:18px;text-align:center;font-size:13px;color:var(--ink-faint);">กำลังโหลด...</div>';
+    document.getElementById('quoteRequestsModal').classList.add('open');
+
+    var res = await sb.from('quote_requests')
+      .select('id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
+              'posts(title),profiles(id,company_name,avatar_url),' +
+              'quote_request_files(file_name,file_url,file_kind,file_size)')
+      .eq('post_id', offerId)
+      .order('created_at', { ascending:false });
+    if(res.error){
+      console.error('openQuoteRequestsModal failed', res.error);
+      listEl.innerHTML = '<div style="padding:18px;text-align:center;font-size:13px;color:var(--ink-soft);">' +
+        (/schema cache|does not exist/i.test(res.error.message || '')
+          ? 'ระบบขอใบเสนอราคายังไม่ได้ติดตั้ง<br><span style="font-size:12px;color:var(--ink-faint);">ยังไม่ได้รัน database/quote_requests.sql</span>'
+          : 'โหลดคำขอไม่สำเร็จ') + '</div>';
+      return;
+    }
+    QR_ROWS = res.data;
+    var title = (res.data[0] && res.data[0].posts && res.data[0].posts.title) || '';
+    if(titleEl) titleEl.innerText = title ? 'คำขอใบเสนอราคา — ' + title : 'คำขอใบเสนอราคา';
+
+    var answered = res.data.filter(function(r){ return r.status === 'received'; }).length;
+    var pending  = res.data.length - answered;
+    if(subEl){
+      subEl.innerHTML = res.data.length
+        ? 'มีผู้ขอใบเสนอราคาทั้งหมด ' + res.data.length + ' ราย &nbsp;·&nbsp; ' +
+          '<span style="color:var(--amber);font-weight:700;">● ยังไม่ได้ตอบ ' + pending + '</span> &nbsp; ' +
+          '<span style="color:var(--green);font-weight:700;">✓ ส่งใบเสนอราคาแล้ว ' + answered + '</span>'
+        : 'ยังไม่มีใครขอใบเสนอราคาสำหรับประกาศนี้';
+    }
+
+    if(!res.data.length){
+      listEl.innerHTML = '<div style="padding:22px;text-align:center;font-size:13px;color:var(--ink-faint);">' +
+        'ยังไม่มีคำขอ<br>เมื่อมีคนขอใบเสนอราคาจากประกาศนี้ รายการจะแสดงที่นี่</div>';
+      return;
+    }
+
+    var TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    function fmt(iso){
+      if(!iso) return 'ไม่ระบุ';
+      var d = new Date(iso);
+      return d.getDate() + ' ' + TH[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    }
+    // unanswered first — those are the ones needing action
+    var sorted = res.data.slice().sort(function(a,b){
+      return (a.status === 'received' ? 1 : 0) - (b.status === 'received' ? 1 : 0);
+    });
     listEl.innerHTML = sorted.map(function(r){
-      var initial = r.name.trim().charAt(0);
-      var badge = r.responded
-        ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-bg);padding:3px 10px;border-radius:999px;">✓ ส่งใบเสนอราคาแล้ว</span>'
+      var done = r.status === 'received';
+      var who  = (r.profiles && r.profiles.company_name) || 'ผู้ซื้อ';
+      var av   = (r.profiles && r.profiles.avatar_url)
+        ? '<img src="' + qrEsc(r.profiles.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">'
+        : qrEsc(who.charAt(0).toUpperCase());
+      var badge = done
+        ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-bg);padding:3px 10px;border-radius:999px;">✓ ส่งใบเสนอราคาแล้ว ' + Math.round(r.quoted_price).toLocaleString('en-US') + ' ฿</span>'
         : '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--amber);background:#fff7e6;padding:3px 10px;border-radius:999px;">● ยังไม่ได้ตอบ</span>';
-      var btn = r.responded
-        ? '<button class="btn-edit-offer" style="margin-top:10px;background:#fff;border:1.5px solid var(--line);color:var(--ink);" onclick="openRespondQuoteModal(\'' + r.name.replace(/'/g,"") + '\')">✎ แก้ไข/ดูใบเสนอราคาที่ส่ง</button>'
-        : '<button class="btn-edit-offer" style="margin-top:10px;" onclick="openRespondQuoteModal(\'' + r.name.replace(/'/g,"") + '\')">✎ ตอบกลับด้วยใบเสนอราคา</button>';
-      return '<div style="display:flex;gap:12px;border:1px solid var(--line);border-radius:12px;padding:14px;' + (r.responded ? '' : 'background:#fffdf7;border-color:#f3e2b8;') + '">' +
-        '<div style="width:38px;height:38px;border-radius:10px;background: var(--blue-600);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + initial + '</div>' +
+      var files = (r.quote_request_files || []).length
+        ? '<div class="rfq-attach-grid" style="margin-top:8px;">' + r.quote_request_files.map(function(f){
+            return '<a class="file-chip ' + qrEsc(f.file_kind) + '" target="_blank" rel="noopener" href="' + qrEsc(f.file_url) + '">' +
+              '<span class="fc-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
+              '<span class="fc-name">' + qrEsc(f.file_name) + '</span></a>';
+          }).join('') + '</div>'
+        : '';
+      return '<div style="display:flex;gap:12px;border:1px solid ' + (done ? 'var(--line)' : '#f3e2b8') + ';border-radius:12px;padding:14px;' + (done ? '' : 'background:#fffdf7;') + '">' +
+        '<div onclick="closeQuoteRequestsModal();kxViewProfile(\'' + (r.profiles && r.profiles.id) + '\')" style="cursor:pointer;overflow:hidden;width:38px;height:38px;border-radius:10px;background:var(--blue-600);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + av + '</div>' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:700;">' + r.name + '</span>' + badge + '</div>' +
-          '<div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:6px;">ขอใบเสนอราคาเมื่อ ' + r.date + '</div>' +
-          '<div style="font-size:12.5px;color:var(--ink-soft);">📦 จำนวน: ' + r.qty + ' &nbsp;•&nbsp; 💰 งบประมาณ: ' + r.budget + '</div>' +
-          '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;">💬 ' + r.note + '</div>' +
-          btn +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:700;">' + qrEsc(who) + '</span>' + badge + '</div>' +
+          '<div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:6px;">ขอใบเสนอราคาเมื่อ ' + fmt(r.created_at) + '</div>' +
+          '<div style="font-size:12.5px;color:var(--ink-soft);">📦 จำนวน: ' + qrEsc(r.quantity) +
+            ' &nbsp;•&nbsp; 💰 งบประมาณ: ' + (r.budget != null ? Math.round(r.budget).toLocaleString('en-US') + ' ฿' : 'ไม่ระบุ') +
+            (r.needed_by ? ' &nbsp;•&nbsp; 🗓️ ต้องการภายใน ' + fmt(r.needed_by) : '') + '</div>' +
+          '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;white-space:pre-wrap;">💬 ' + qrEsc(r.detail) + '</div>' +
+          files +
+          (done && r.seller_note ? '<div style="font-size:12.5px;color:var(--green);margin-top:6px;">↳ ' + qrEsc(r.seller_note) + '</div>' : '') +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+            '<button class="btn-edit-offer" style="margin-top:10px;' + (done ? 'background:#fff;border:1.5px solid var(--line);color:var(--ink);' : '') + '" onclick="openRespondQuoteModal(\'' + r.id + '\')">' +
+              (done ? '✎ แก้ไขใบเสนอราคาที่ส่ง' : '✎ ตอบกลับด้วยใบเสนอราคา') + '</button>' +
+            '<button class="btn-edit-offer" style="margin-top:10px;background:#fff;border:1.5px solid var(--line);color:var(--ink);" onclick="closeQuoteRequestsModal();kxStartChat(\'' + (r.profiles && r.profiles.id) + '\',\'' + offerId + '\')">💬 แชท</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join('');
-    var extra = data.total - data.list.length;
-    document.getElementById('qrMoreNote').innerText = extra > 0 ? 'และอีก ' + extra + ' ราย' : '';
-    document.getElementById('quoteRequestsModal').classList.add('open');
-  }
+    if(window.kxApplyIcons) window.kxApplyIcons(listEl);
+  };
   function closeQuoteRequestsModal(){
     document.getElementById('quoteRequestsModal').classList.remove('open');
   }
@@ -10670,10 +10713,30 @@ html, body{
     if(e.target.id === 'quoteRequestsModal') closeQuoteRequestsModal();
   });
 
-  function openRespondQuoteModal(buyerName){
-    document.getElementById('rqBuyerName').innerText = buyerName;
+  var RESPOND_MODAL_HTML = null;
+  var currentRequestId = null;
+
+  window.openRespondQuoteModal = function(requestId){
+    currentRequestId = requestId;
+    var box = document.getElementById('respondQuoteModalBox');
+    // submitRespondQuote replaces the body with a success panel, so it has to
+    // be put back or the next reply is typed into the previous confirmation
+    if(RESPOND_MODAL_HTML === null) RESPOND_MODAL_HTML = box.innerHTML;
+    else box.innerHTML = RESPOND_MODAL_HTML;
+    rqFiles.length = 0;
+
+    var row = QR_ROWS.filter(function(r){ return r.id === requestId; })[0];
+    document.getElementById('rqBuyerName').innerText =
+      (row && row.profiles && row.profiles.company_name) || 'ผู้ซื้อ';
+    // editing an existing reply starts from what was sent
+    if(row && row.quoted_price != null){
+      var p = document.getElementById('rqPrice');
+      if(p) p.value = String(Math.round(row.quoted_price));
+      var note = box.querySelector('textarea');
+      if(note) note.value = row.seller_note || '';
+    }
     document.getElementById('respondQuoteModal').classList.add('open');
-  }
+  };
   function closeRespondQuoteModal(){
     document.getElementById('respondQuoteModal').classList.remove('open');
   }
@@ -10702,29 +10765,52 @@ html, body{
   }
   function removeRqFile(i){ rqFiles.splice(i,1); renderRqFiles(); }
 
-  function submitRespondQuote(){
+  /* Marked a demo row `responded` in memory and appended a fake bid row to the
+     list. It writes the price onto the real quote_requests row now, which is
+     the same row the buyer's "คำขอราคาของฉัน" reads — that is what flips their
+     status from รอราคา to ได้รับแล้ว. */
+  async function submitRespondQuote(){
     var buyerName = document.getElementById('rqBuyerName').innerText;
-    var priceVal = document.getElementById('rqPrice').value.trim() || '-';
-    var offerData = QUOTE_REQUESTS[currentQuoteOfferId];
-    var offerTitle = offerData ? offerData.title : '';
-    if(offerData){
-      var req = offerData.list.filter(function(r){ return r.name.replace(/'/g,'') === buyerName; })[0];
-      if(req) req.responded = true;
+    var priceEl = document.getElementById('rqPrice');
+    var raw = (priceEl.value || '').replace(/[, ]/g, '');
+    var price = parseFloat(raw);
+    if(!raw || isNaN(price) || price <= 0){
+      priceEl.classList.add('bad'); priceEl.focus();
+      kxToast('กรุณากรอกราคาที่เสนอเป็นตัวเลข');
+      return;
     }
-    addQuoteToMyBids(currentQuoteOfferId, offerTitle, buyerName, priceVal);
+    priceEl.classList.remove('bad');
+    if(!currentRequestId){ kxToast('ไม่พบคำขอนี้'); return; }
+
+    var noteEl = document.querySelector('#respondQuoteModalBox textarea');
+    var btn = document.querySelector('#respondQuoteModalBox .btn-submit-quote');
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+    var upd = await sb.from('quote_requests').update({
+      quoted_price: price,
+      seller_note: (noteEl && noteEl.value.trim()) || null,
+      answered_at: new Date().toISOString(),
+      status: 'received'
+    }).eq('id', currentRequestId);
+
+    if(upd.error){
+      console.error('submitRespondQuote failed', upd.error);
+      kxToast('ส่งใบเสนอราคาไม่สำเร็จ: ' + (upd.error.message || 'กรุณาลองใหม่'));
+      if(btn){ btn.disabled = false; btn.textContent = was; }
+      return;
+    }
 
     var box = document.getElementById('respondQuoteModalBox');
     box.innerHTML = '<div style="text-align:center;padding:10px 0 4px;">' +
       '<div style="font-size:40px;margin-bottom:12px;">🎉</div>' +
       '<div style="font-size:16px;font-weight:800;margin-bottom:8px;">ส่งใบเสนอราคาสำเร็จ!</div>' +
-      '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:18px;text-align:left;">' + buyerName + ' จะได้รับใบเสนอราคาของคุณทันที ใบเสนอราคาที่ส่งจะแสดงที่:' +
-        '<div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">' +
-          '<div style="display:flex;gap:9px;align-items:flex-start;"><span style="color:var(--green);font-weight:800;">✓</span><span><b>หน้า “ใบเสนอราคาของฉัน”</b> — รวมใบเสนอราคาทุกใบที่คุณส่ง พร้อมสถานะ</span></div>' +
-          '<div style="display:flex;gap:9px;align-items:flex-start;"><span style="color:var(--green);font-weight:800;">✓</span><span><b>รายการ “คำขอใบเสนอราคา” ของประกาศนี้</b> — คำขอของ ' + buyerName + ' จะขึ้นป้าย “✓ ส่งใบเสนอราคาแล้ว”</span></div>' +
-        '</div>' +
+      '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:18px;text-align:left;">' +
+        qrEsc(buyerName) + ' จะเห็นราคา <b>' + Math.round(price).toLocaleString('en-US') + ' ฿</b> ที่หน้า ' +
+        '<b>“ใบเสนอราคา → ที่ขอ”</b> ของเขา และสถานะจะเปลี่ยนจาก “รอราคา” เป็น “ได้รับแล้ว”' +
       '</div>' +
       '<div style="display:flex;gap:10px;">' +
-        '<button style="flex:1;justify-content:center;display:flex;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:700;cursor:pointer;" onclick="closeRespondQuoteModal();closeQuoteRequestsModal();navigateTo(\'page-my-bids\')">🧾 ใบเสนอราคาของฉัน</button>' +
+        '<button style="flex:1;justify-content:center;display:flex;padding:12px;border-radius:10px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:700;cursor:pointer;" onclick="closeRespondQuoteModal();closeQuoteRequestsModal();navigateTo(\'page-messages\')">💬 ไปที่ข้อความ</button>' +
         '<button style="flex:1;justify-content:center;display:flex;padding:12px;border-radius:10px;border:none;color:#fff;font-weight:700;cursor:pointer;background: var(--blue-600);" onclick="reopenQuoteRequests()">← กลับไปรายการคำขอ</button>' +
       '</div>' +
     '</div>';
@@ -10734,55 +10820,8 @@ html, body{
     if(currentQuoteOfferId) openQuoteRequestsModal(currentQuoteOfferId);
   }
 
-  function addQuoteToMyBids(offerId, offerTitle, buyerName, priceVal){
-    var bidList = document.getElementById('bidList');
-    if(!bidList) return;
-    var initial = buyerName.trim().charAt(0);
-    var today = new Date();
-    var months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    var dateText = today.getDate() + ' ' + months[today.getMonth()] + ' ' + (today.getFullYear() + 543);
-
-    var row = document.createElement('div');
-    row.className = 'bid-row';
-    row.setAttribute('data-status', 'pending');
-    row.setAttribute('data-origin', 'offer');
-    // the canonical picture for this offer, matching the rows already on the page
-    var OFFER_IMG = { 'OFR-2505-0021':'offer-thumb-1.jpg', 'OFR-2505-0018':'offer-thumb-2.jpg',
-                      'OFR-2505-0011':'offer-thumb-3.jpg', 'OFR-2505-0009':'offer-thumb-4.jpg',
-                      'OFR-2504-0032':'offer-thumb-5.jpg' };
-    row.innerHTML =
-      '<img class="bid-thumb" src="assets/img/' + (OFFER_IMG[offerId] || 'offergallery-1.jpg') + '" alt="" loading="lazy">' +
-      '<div class="bid-body">' +
-        '<div class="bid-title">' + offerTitle + '</div>' +
-        '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">' + initial + '</span>ผู้ซื้อ: ' + buyerName + '</div>' +
-        '<div class="bid-meta"><span>🕗 ' + dateText + '</span></div>' +
-      '</div>' +
-      '<div class="bid-price-col">' +
-        '<div class="price-lbl">ราคาที่เสนอ</div>' +
-        '<div class="price-num">' + priceVal + '</div>' +
-      '</div>' +
-      '<div class="bid-status-col">' +
-        '<span class="status-pill pending"><span class="dot"></span>รอผล</span>' +
-        '<div class="bid-sub-label">ปิดรับข้อเสนอ</div>' +
-        '<div class="bid-sub-value">-</div>' +
-      '</div>';
-    bidList.insertBefore(row, bidList.firstChild);
-
-    var totalEl = document.querySelector('#page-my-bids .summary-card .summary-num');
-    if(totalEl){ totalEl.innerText = (parseInt(totalEl.innerText.replace(/,/g,''),10) + 1).toLocaleString(); }
-    var pendingEl = document.querySelectorAll('#page-my-bids .summary-card .summary-num')[1];
-    if(pendingEl){ pendingEl.innerText = (parseInt(pendingEl.innerText.replace(/,/g,''),10) + 1); }
-    var tabAll = document.querySelector('#page-my-bids .status-tab[onclick*="\'all\'"]');
-    var tabPending = document.querySelector('#page-my-bids .status-tab[onclick*="\'pending\'"]');
-    function bumpTabCount(el){
-      if(!el) return;
-      el.innerHTML = el.innerHTML.replace(/\(([\d,]+)\)/, function(m, n){
-        return '(' + (parseInt(n.replace(/,/g,''),10) + 1) + ')';
-      });
-    }
-    bumpTabCount(tabAll);
-    bumpTabCount(tabPending);
-  }
+  // addQuoteToMyBids removed — the seller's reply is a real quote_requests
+  // update now, not a fabricated row appended to the bid list.
 </script>
 
 </div>
@@ -18549,7 +18588,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(miniRows.length >= 3){
       miniRows[0].textContent = post.status === 'open' ? 'พร้อมรับงาน' : post.status === 'paused' ? 'พักไว้ชั่วคราว' : 'ปิดรับแล้ว';
       miniRows[1].textContent = fmtDateBE(post.created_at);
-      miniRows[2].textContent = quotes.length ? quotes.length + ' คำขอ' : 'ยังไม่มี';
+      // same wrong-table bug as the badge on งานของฉัน — คำขอราคา lives in
+      // quote_requests, and RLS shows only the ones this viewer may see
+      var reqCount = (post.quote_requests || []).length;
+      miniRows[2].textContent = reqCount ? reqCount + ' คำขอ' : 'ยังไม่มี';
     }
     // ส่งข้อความ on this page reads these two. Only renderRfqDetail used to set
     // the owner, so on an Offer they still held whichever RFQ was opened last —
@@ -18814,18 +18856,23 @@ body.kx-auth .kx-burger{ display:none !important; }
   };
 
   var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id,profiles!post_questions_asker_id_fkey(id,company_name,avatar_url))';
+  var QR_SELECT = ', quote_requests(id)';
   var qaTableMissing = false;
+  var qrTableMissing = false;
 
   window.kxLoadPostDetail = async function(id, kind){
     window.kxCurrentDetailKind = kind;
     var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,bidder_id,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))';
-    var res = await sb.from('posts').select(base + (qaTableMissing ? '' : QA_SELECT))
-      .eq('id', id).maybeSingle();
-    // questions.sql may not have been run yet — the rest of the page is still
-    // worth showing, so fall back once and stop asking for the embed
-    if(res.error && /post_questions/i.test(res.error.message || '')){
-      qaTableMissing = true;
-      res = await sb.from('posts').select(base).eq('id', id).maybeSingle();
+    function sel(){
+      return base + (qaTableMissing ? '' : QA_SELECT) + (qrTableMissing ? '' : QR_SELECT);
+    }
+    var res = await sb.from('posts').select(sel()).eq('id', id).maybeSingle();
+    // questions.sql / quote_requests.sql may not have been run yet — the rest
+    // of the page is still worth showing, so drop the embed and stop asking
+    if(res.error && /post_questions|quote_requests/i.test(res.error.message || '')){
+      if(/post_questions/i.test(res.error.message)) qaTableMissing = true;
+      if(/quote_requests/i.test(res.error.message)) qrTableMissing = true;
+      res = await sb.from('posts').select(sel()).eq('id', id).maybeSingle();
     }
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
     if(res.data.kind === 'offer') renderOfferDetail(res.data); else renderRfqDetail(res.data);
@@ -18868,7 +18915,10 @@ body.kx-auth .kx-burger{ display:none !important; }
   function myOfferRowHTML(post){
     var images = post.post_images || [];
     var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
-    var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
+    // คำขอราคา on an Offer comes from quote_requests. This counted `quotes`,
+    // which is the bidding table for RFQs, so the badge read 0 no matter how
+    // many requests had actually arrived.
+    var reqs = (post.quote_requests || []).length;
     var statusVal = post.status === 'open' ? 'active' : post.status;
     var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['paused', 'พักไว้'], closed: ['closed', 'ปิดแล้ว'] };
     var pill = pillMap[statusVal] || pillMap.active;
@@ -18876,7 +18926,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       '<img class="offer-thumb" src="' + esc(thumb) + '">' +
       '<div class="offer-body">' +
         '<div class="offer-title">' + esc(post.title) + '</div>' +
-        '<div class="offer-stats-row"><span>👁️ ' + (post.view_count || 0) + ' วิว</span><span>🧾 ' + prices.length + ' คำขอราคา</span><span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
+        '<div class="offer-stats-row"><span>👁️ ' + (post.view_count || 0) + ' วิว</span>' +
+          '<span class="quote-badge" style="cursor:pointer;" onclick="event.stopPropagation();openQuoteRequestsModal(\'' + post.id + '\')">🧾 ' + reqs + ' คำขอราคา</span>' +
+          '<span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
       '</div>' +
       '<div class="offer-price-col">' +
         '<div class="price-lbl">ราคาเริ่มต้น</div>' +
@@ -18993,11 +19045,19 @@ body.kx-auth .kx-burger{ display:none !important; }
     var listSel = kind === 'offer' ? '.offer-list' : '.rfq-list';
     var list = document.querySelector(pageSel + ' ' + listSel);
     if(!list) return;
-    var res = await sb.from('posts')
-      .select('*, post_images(url,sort), post_attachments(id), quotes(price)')
+    var sel = '*, post_images(url,sort), post_attachments(id), quotes(price)' +
+              (kind === 'offer' ? ', quote_requests(id)' : '');
+    var res = await sb.from('posts').select(sel)
       .eq('owner_id', window.kxSession.user.id)
       .eq('kind', kind)
       .order('created_at', { ascending:false });
+    // quote_requests.sql may not have been run — the listings themselves still
+    // matter, so drop the embed and carry on
+    if(res.error && /quote_requests/i.test(res.error.message || '')){
+      res = await sb.from('posts').select('*, post_images(url,sort), post_attachments(id), quotes(price)')
+        .eq('owner_id', window.kxSession.user.id).eq('kind', kind)
+        .order('created_at', { ascending:false });
+    }
     if(res.error){ console.error('kxLoadMyPosts failed', res.error); return; }
     Array.prototype.forEach.call(list.querySelectorAll('.rfq-card, .offer-row'), function(el){ el.remove(); });
     var cardHTML = kind === 'offer' ? myOfferRowHTML : myRfqCardHTML;
