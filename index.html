@@ -15740,8 +15740,26 @@ body.kx-auth .kx-burger{ display:none !important; }
 // and the edit-profile wording, so the three stay consistent.
 (function(){
   var KEY = 'kx.entity';
-  function read(){ try{ return localStorage.getItem(KEY) || 'company'; }catch(e){ return 'company'; } }
+  /* The signed-in account decides this, not the browser. It used to read
+     localStorage alone, so: signing in on a new device showed a บุคคลธรรมดา
+     account the whole company vocabulary (ชื่อบริษัท, เลขทะเบียนนิติบุคคล,
+     เกี่ยวกับบริษัท), and a second account on a shared browser inherited the
+     first one's type. profiles.business_type is set at signup and is the
+     answer; localStorage is only a fallback for the signup form, which runs
+     before there is an account at all. */
+  function read(){
+    var u = window.kxCurrentUser;
+    if(u && (u.business_type === 'person' || u.business_type === 'company')) return u.business_type;
+    try{ return localStorage.getItem(KEY) || 'company'; }catch(e){ return 'company'; }
+  }
   function save(v){ try{ localStorage.setItem(KEY, v); }catch(e){} }
+  // called after sign-in so the cached copy matches the account that just arrived
+  window.kxSyncEntity = function(type){
+    if(type !== 'person' && type !== 'company') return;
+    save(type);
+    apply(type);
+    if(typeof window.kxApplyEntity === 'function') window.kxApplyEntity(type);
+  };
 
   var COPY = {
     person: {
@@ -16653,6 +16671,16 @@ body.kx-auth .kx-burger{ display:none !important; }
     row.skills = data.skills || [];
     row.areas  = data.areas  || [];
     row.certs  = filledCerts();
+    // the บุคคลธรรมดา / นิติบุคคล chips on this page change the account type, so
+    // the change has to reach the row — otherwise it only held in this browser
+    var ent = (typeof kxEntity === 'function') ? kxEntity() : null;
+    if(ent === 'person' || ent === 'company') row.business_type = ent;
+
+    // fields belonging to the other kind of account are cleared rather than
+    // left behind: an individual with a registered capital still on file, or a
+    // company with years of ประสบการณ์, is data nobody entered on purpose
+    if(row.business_type === 'person'){ row.founded_year = null; row.employees = null; row.capital = null; }
+    else if(row.business_type === 'company'){ row.occupation = null; row.experience = null; }
 
     var upd = await sb.from('profiles').update(row).eq('id', window.kxSession.user.id);
     // profile_fields.sql may not have been run — save what the table does have
@@ -17087,6 +17115,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     // entity choice also reshapes this page
     var baseEntity = window.authEntity;
     window.authEntity = function(t){ if(baseEntity) baseEntity(t); applyEntity(t); refresh(); };
+    // so kxSyncEntity can re-run the edit-profile half after sign-in
+    window.kxApplyEntity = function(t){ applyEntity(t); refresh(); };
     applyEntity(typeof kxEntity === 'function' ? kxEntity() : 'company');
 
     fill();
@@ -18158,6 +18188,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       // the profiles row is the real store for the profile page, so it fills
       // the form and the display from here rather than from this browser
       if(window.kxProfileFromRow) window.kxProfileFromRow(existing.data);
+      // บุคคลธรรมดา vs นิติบุคคล follows the account, so every label and every
+      // person/company-only field matches whoever just signed in
+      if(window.kxSyncEntity) window.kxSyncEntity(existing.data.business_type);
       return existing.data;
     }
     var pending = null;
@@ -19617,6 +19650,21 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
         'ยังไม่มีบริการที่เพิ่มไว้</div>';
     }
+    /* Headings follow the profile being viewed. applyToProfile does this too,
+       but only from kxEntity() — the *viewer's* type — so an individual's page
+       read "เกี่ยวกับบริษัท / ติดต่อบริษัท" whenever a company account opened
+       it, and vice versa. */
+    var solo = pr.business_type === 'person';
+    var HEAD = { 'เกี่ยวกับบริษัท':'เกี่ยวกับฉัน', 'ติดต่อบริษัท':'ติดต่อ',
+                 'บริการของเรา':'บริการของฉัน', 'ใบรับรองและมาตรฐาน':'ใบรับรองและวุฒิบัตร',
+                 'ข้อมูลบริษัท':'ข้อมูลส่วนตัว' };
+    var BACK = {}; for(var k in HEAD) BACK[HEAD[k]] = k;
+    Array.prototype.forEach.call(p.querySelectorAll('h3'), function(h){
+      var t = h.textContent.trim();
+      if(solo && HEAD[t]) h.textContent = HEAD[t];
+      else if(!solo && BACK[t]) h.textContent = BACK[t];
+    });
+
     var recent = document.getElementById('pfRecentCard');
     if(recent) recent.style.display = '';
 
@@ -19637,15 +19685,22 @@ body.kx-auth .kx-burger{ display:none !important; }
   function fillInfoList(pr){
     var info = document.getElementById('pfInfoList');
     if(!info) return;
-    var BIZ = { company:'บริษัท / นิติบุคคล', person:'บุคคลธรรมดา', shop:'ร้านค้า / ห้างหุ้นส่วน' };
+    /* Which facts belong here depends on the profile being viewed, not on who
+       is viewing. An individual has no registered capital or head-count, and a
+       company has no ประสบการณ์ in years — mixing them showed both sets on
+       everyone. */
+    var isPerson = pr.business_type === 'person';
     var facts = [];
-    if(pr.industry)      facts.push(['ประเภทธุรกิจ', pr.industry]);
-    else if(pr.business_type) facts.push(['ประเภทกิจการ', BIZ[pr.business_type] || pr.business_type]);
-    if(pr.founded_year)  facts.push(['ปีที่ก่อตั้ง', String(pr.founded_year)]);
-    if(pr.employees)     facts.push(['จำนวนพนักงาน', pr.employees]);
-    if(pr.capital)       facts.push(['ทุนจดทะเบียน', pr.capital + ' บาท']);
-    if(pr.occupation)    facts.push(['อาชีพ / ตำแหน่ง', pr.occupation]);
-    if(pr.experience)    facts.push(['ประสบการณ์', pr.experience + ' ปี']);
+    facts.push(['ประเภทบัญชี', isPerson ? 'บุคคลธรรมดา' : 'นิติบุคคล']);
+    if(pr.industry) facts.push([isPerson ? 'สายงาน' : 'ประเภทธุรกิจ', pr.industry]);
+    if(isPerson){
+      if(pr.occupation) facts.push(['อาชีพ / ตำแหน่ง', pr.occupation]);
+      if(pr.experience) facts.push(['ประสบการณ์', pr.experience + ' ปี']);
+    }else{
+      if(pr.founded_year) facts.push(['ปีที่ก่อตั้ง', String(pr.founded_year)]);
+      if(pr.employees)    facts.push(['จำนวนพนักงาน', pr.employees]);
+      if(pr.capital)      facts.push(['ทุนจดทะเบียน', pr.capital + ' บาท']);
+    }
     if(pr.province)      facts.push(['จังหวัด', pr.province]);
     if(pr.rating_count)  facts.push(['คะแนน', pr.rating_avg + '/5.0 (' + pr.rating_count + ' รีวิว)']);
     info.innerHTML = facts.map(function(f){
