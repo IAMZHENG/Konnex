@@ -15864,11 +15864,34 @@ body.kx-auth .kx-burger{ display:none !important; }
     [mail, pw].forEach(function(e){ if(e) e.classList.remove('bad'); });
     if(err) err.hidden = true;
 
+    /* The labels already switched with the บุคคลธรรมดา / นิติบุคคล choice; the
+       rules behind them did not. So an individual was told ชื่อผู้ติดต่อ was
+       optional and then refused for leaving it blank, was asked for a
+       เลขบัตรประชาชน marked required that nothing ever checked, and got
+       "กรุณากรอกชื่อบริษัท / ธุรกิจ" when their own name was missing. */
     if(!name.trim()){
       var ni = document.getElementById('auNameInput');
-      ni.classList.add('bad'); ni.focus(); kxToast('กรุณากรอกชื่อบริษัท / ธุรกิจ'); return;
+      ni.classList.add('bad'); ni.focus();
+      kxToast(isPerson ? 'กรุณากรอกชื่อ-นามสกุล' : 'กรุณากรอกชื่อบริษัท / ธุรกิจ');
+      return;
     }
-    if(!contact.trim()){
+    var taxEl = document.getElementById('auTaxInput');
+    if(taxEl) taxEl.classList.remove('bad');
+    var taxDigits = tax.replace(/\D/g, '');
+    if(!taxDigits){
+      if(taxEl){ taxEl.classList.add('bad'); taxEl.focus(); }
+      kxToast(isPerson ? 'กรุณากรอกเลขบัตรประชาชน' : 'กรุณากรอกเลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี');
+      return;
+    }
+    if(taxDigits.length !== 13){
+      if(taxEl){ taxEl.classList.add('bad'); taxEl.focus(); }
+      kxToast((isPerson ? 'เลขบัตรประชาชน' : 'เลขทะเบียนนิติบุคคล') + 'ต้องมี 13 หลัก');
+      return;
+    }
+    // a company is a separate entity from the person you speak to, so it needs
+    // one. An individual is their own contact — the field only exists for when
+    // someone else handles their enquiries.
+    if(!isPerson && !contact.trim()){
       var ci = document.getElementById('auContactInput');
       ci.classList.add('bad'); ci.focus(); kxToast('กรุณากรอกชื่อผู้ติดต่อ'); return;
     }
@@ -15891,8 +15914,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     // and an anonymous request cannot pass the "auth.uid() = id" check in schema.sql
     try{
       localStorage.setItem('kx.pendingProfile', JSON.stringify({
-        email: mail.value.trim(), company_name: name.trim(), contact_name: contact.trim(),
-        phone: phone.trim(), tax_id: tax.trim(), business_type: isPerson ? 'person' : 'company'
+        email: mail.value.trim(), company_name: name.trim(),
+        // an individual who left it blank is their own contact
+        contact_name: contact.trim() || (isPerson ? name.trim() : ''),
+        phone: phone.trim(), tax_id: taxDigits,
+        business_type: isPerson ? 'person' : 'company'
       }));
     }catch(e){}
 
