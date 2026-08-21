@@ -9111,7 +9111,7 @@ html, body{
   <div class="pf-modal" id="reqQuoteBox">
     <button class="pf-x" onclick="closeReqQuote()">✕</button>
     <h3>ขอใบเสนอราคา</h3>
-    <div class="pf-sub">ส่งความต้องการของคุณให้ <b style="color:var(--ink)">Prime CNC Co., Ltd.</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
+    <div class="pf-sub">ส่งความต้องการของคุณให้ <b style="color:var(--ink)" id="rqjSellerName">ผู้ขาย</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
     <div class="pf-field"><label>จำนวน/ปริมาณที่ต้องการ <span style="color:var(--red)">*</span></label><input type="text" id="rqjQty" placeholder="เช่น 500 ชิ้น"></div>
     <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>งบประมาณโดยประมาณ (บาท)</label><input type="text" id="rqjBudget" placeholder="ไม่ระบุก็ได้"></div><div><label>ต้องการภายในวันที่</label><input type="date" id="rqjDue"></div></div>
     <div class="pf-field"><label>รายละเอียดเพิ่มเติม <span style="color:var(--red)">*</span></label><textarea id="rqjDesc" placeholder="อธิบายสเปคงาน วัสดุ ขนาด หรือความต้องการพิเศษอื่นๆ"></textarea></div>
@@ -9125,6 +9125,9 @@ html, body{
   function openReqQuote(){
     var box = document.getElementById('reqQuoteBox');
     if(box.dataset.orig) box.innerHTML = box.dataset.orig;
+    // whoever's profile is on screen, not the demo company this was written for
+    var n = document.getElementById('rqjSellerName');
+    if(n) n.textContent = window.kxProfileViewingName || 'ผู้ขาย';
     document.getElementById('reqQuoteModal').classList.add('open');
   }
   function closeReqQuote(){ document.getElementById('reqQuoteModal').classList.remove('open'); }
@@ -9136,7 +9139,9 @@ html, body{
       '<div style="text-align:center;padding:14px 6px 6px">' +
         '<div style="width:56px;height:56px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><svg viewBox="0 0 24 24" style="width:30px;height:30px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"/></svg></div>' +
         '<div style="font-size:17px;font-weight:800;margin-bottom:8px">ส่งคำขอใบเสนอราคาสำเร็จ!</div>' +
-        '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">Prime CNC Co., Ltd. ได้รับคำขอของคุณแล้ว และจะตอบกลับด้วยใบเสนอราคาผ่านหน้าข้อความเร็ว ๆ นี้</div>' +
+        '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">' +
+          String(window.kxProfileViewingName || 'ผู้ขาย').replace(/[&<>"]/g, '') +
+          ' ได้รับคำขอของคุณแล้ว และจะตอบกลับด้วยใบเสนอราคาผ่านหน้าข้อความเร็ว ๆ นี้</div>' +
         '<button class="pf-btn primary" style="width:100%;justify-content:center;display:flex" onclick="closeReqQuote();navigateTo(\'page-messages\')">💬 ไปที่ข้อความ</button>' +
       '</div>';
   }
@@ -10931,16 +10936,16 @@ html, body{
     <div class="modal-box" id="quoteModalBox">
       <button class="modal-close" onclick="closeQuoteModal()">✕</button>
       <div class="modal-title">ขอใบเสนอราคา</div>
-      <div class="modal-sub">ส่งความต้องการของคุณให้ <b>Prime CNC Co., Ltd.</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
+      <div class="modal-sub">ส่งความต้องการของคุณให้ <b id="qrSellerName">ผู้ขาย</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
 
       <div class="modal-group">
         <label>จำนวน/ปริมาณที่ต้องการ <span class="req">*</span></label>
-        <input type="text" placeholder="เช่น 500 ชิ้น">
+        <input type="text" id="qrQty" placeholder="เช่น 500 ชิ้น">
       </div>
       <div class="modal-row">
         <div class="modal-group">
           <label>งบประมาณโดยประมาณ (บาท)</label>
-          <input type="text" placeholder="ไม่ระบุก็ได้">
+          <input type="text" id="qrBudget" placeholder="ไม่ระบุก็ได้">
         </div>
         <div class="modal-group">
           <label>ต้องการภายในวันที่</label>
@@ -10949,7 +10954,7 @@ html, body{
       </div>
       <div class="modal-group">
         <label>รายละเอียดเพิ่มเติม <span class="req">*</span></label>
-        <textarea placeholder="อธิบายสเปคงาน วัสดุ ขนาด หรือความต้องการพิเศษอื่นๆ"></textarea>
+        <textarea id="qrDetail" placeholder="อธิบายสเปคงาน วัสดุ ขนาด หรือความต้องการพิเศษอื่นๆ"></textarea>
       </div>
       <div class="modal-group">
         <label>แนบรูปภาพ <span style="font-weight:500;color:var(--ink-faint);">(ถ้ามี)</span></label>
@@ -10983,8 +10988,24 @@ html, body{
     var dots = document.getElementById('offerGalleryDots').children;
     Array.from(dots).forEach((d,i)=> d.classList.toggle('active', i === galleryIndex));
   }
-  function openQuoteModal(){ var m=document.getElementById('quoteModal'); if(m.parentElement!==document.body) document.body.appendChild(m); m.classList.add('open'); }
-  
+  /* The modal was addressed to "Prime CNC Co., Ltd." no matter whose listing
+     you opened it from, and its body is replaced by a success panel on submit
+     — so it also has to be restored, or the second request you send would be
+     typed into the previous confirmation screen. */
+  var QUOTE_MODAL_HTML = null;
+  function openQuoteModal(){
+    var m = document.getElementById('quoteModal');
+    if(m.parentElement !== document.body) document.body.appendChild(m);
+    var box = document.getElementById('quoteModalBox');
+    if(QUOTE_MODAL_HTML === null) QUOTE_MODAL_HTML = box.innerHTML;
+    else box.innerHTML = QUOTE_MODAL_HTML;
+    quoteFiles.img.length = 0; quoteFiles.pdf.length = 0;
+
+    var name = document.getElementById('qrSellerName');
+    if(name) name.textContent = window.kxCurrentDetailOwnerName || 'ผู้ขาย';
+    m.classList.add('open');
+  }
+
   function closeQuoteModal(){ document.getElementById('quoteModal').classList.remove('open'); }
   document.getElementById('quoteModal').addEventListener('click', e=>{
     if(e.target.id === 'quoteModal') closeQuoteModal();
@@ -10996,7 +11017,8 @@ html, body{
     return (bytes/(1024*1024)).toFixed(1) + ' MB';
   }
   function handleQuoteFiles(fileList, kind){
-    Array.from(fileList).forEach(f=> quoteFiles[kind].push({name:f.name, size:f.size}));
+    // `file` is the raw File — without it the attachment can be listed but not uploaded
+    Array.from(fileList).forEach(f=> quoteFiles[kind].push({name:f.name, size:f.size, file:f}));
     renderQuoteFiles(kind);
   }
   function renderQuoteFiles(kind){
@@ -11025,22 +11047,81 @@ html, body{
     });
   });
 
-  function submitQuoteRequest(){
-    if(typeof MY_REQUESTS !== 'undefined'){
-      MY_REQUESTS.unshift({seller:'Prime CNC Co., Ltd.', img:'assets/img/offer-thumb-2.jpg', avc:'#0846c7', title:'รับกลึง กัด เจาะ ชิ้นงาน CNC ตามแบบ', loc:'ชลบุรี', date:'วันนี้', status:'waiting', price:'', docNo:''});
-      if(typeof renderMyRequests==='function') renderMyRequests();
+  /* Used to push a fixed row — always "Prime CNC Co., Ltd." and always the
+     same CNC listing — into an in-memory array, whichever offer you were
+     actually looking at, and lose it on reload. It writes a real
+     quote_requests row now. */
+  async function submitQuoteRequest(){
+    var qty    = (document.getElementById('qrQty').value || '').trim();
+    var detail = (document.getElementById('qrDetail').value || '').trim();
+    if(!qty){ document.getElementById('qrQty').focus(); kxToast('กรุณากรอกจำนวน/ปริมาณที่ต้องการ'); return; }
+    if(!detail){ document.getElementById('qrDetail').focus(); kxToast('กรุณากรอกรายละเอียดเพิ่มเติม'); return; }
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนขอใบเสนอราคา'); closeQuoteModal(); navigateTo('page-auth'); return; }
+
+    var postId = window.kxCurrentDetailPostId;
+    if(!postId){ kxToast('ไม่พบประกาศนี้'); return; }
+    if(window.kxCurrentDetailOwnerId === window.kxSession.user.id){
+      kxToast('ไม่สามารถขอใบเสนอราคาจากประกาศของตัวเองได้'); closeQuoteModal(); return;
     }
-    var box = document.getElementById('quoteModalBox');
-    box.innerHTML = `
-      <div class="success-box">
-        <div class="success-ic">🎉</div>
-        <div style="font-size:16px;font-weight:800;margin-bottom:8px;">ส่งคำขอสำเร็จ!</div>
-        <div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:16px;text-align:left;">Prime CNC Co., Ltd. ได้รับคำขอใบเสนอราคาของคุณแล้ว โดยปกติตอบกลับภายใน 1 ชั่วโมง<br><br>ติดตามคำขอนี้และใบเสนอราคาที่ตอบกลับมาได้ที่หน้า <b>"คำขอราคาของฉัน"</b> (สถานะจะเปลี่ยนเป็น “✓ ได้รับใบเสนอราคาแล้ว” เมื่อผู้ขายตอบ)</div>
-        <div style="display:flex;gap:10px;">
-          <button class="btn btn-outline" style="flex:1;justify-content:center;" onclick="closeQuoteModal();navigateTo('page-my-requests')">📩 คำขอราคาของฉัน</button>
-          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="closeQuoteModal();navigateTo('page-messages')">💬 ไปที่ข้อความ</button>
-        </div>
-      </div>`;
+
+    var rawBudget = (document.getElementById('qrBudget').value || '').replace(/[, ]/g, '');
+    var budget = rawBudget ? parseFloat(rawBudget) : null;
+    var by = (document.getElementById('qrWantBy').value || '') || null;
+
+    var btn = document.querySelector('#quoteModalBox .btn-submit-quote');
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+    try{
+      var ins = await sb.from('quote_requests').insert({
+        post_id: postId,
+        requester_id: window.kxSession.user.id,
+        quantity: qty,
+        budget: (budget != null && !isNaN(budget)) ? budget : null,
+        needed_by: by,
+        detail: detail
+      }).select().single();
+      if(ins.error) throw ins.error;
+
+      var all = quoteFiles.img.concat(quoteFiles.pdf);
+      var rows = [];
+      for(var i = 0; i < all.length; i++){
+        if(!all[i].file) continue;
+        rows.push({
+          request_id: ins.data.id,
+          file_name: all[i].name,
+          file_size: all[i].size,
+          file_kind: /\.pdf$/i.test(all[i].name) ? 'pdf' : 'img',
+          file_url: await window.kxUploadFile('attachments', all[i].file)
+        });
+      }
+      if(rows.length){
+        var f = await sb.from('quote_request_files').insert(rows);
+        if(f.error) throw f.error;
+      }
+
+      var seller = window.kxCurrentDetailOwnerName || 'ผู้ขาย';
+      document.getElementById('quoteModalBox').innerHTML =
+        '<div class="success-box">' +
+          '<div class="success-ic">🎉</div>' +
+          '<div style="font-size:16px;font-weight:800;margin-bottom:8px;">ส่งคำขอสำเร็จ!</div>' +
+          '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:16px;text-align:left;">' +
+            seller.replace(/[&<>"]/g, '') + ' ได้รับคำขอใบเสนอราคาของคุณแล้ว<br><br>' +
+            'ติดตามคำขอนี้และใบเสนอราคาที่ตอบกลับมาได้ที่หน้า <b>"คำขอราคาของฉัน"</b> ' +
+            '(สถานะจะเปลี่ยนเป็น “ได้รับแล้ว” เมื่อผู้ขายตอบ)</div>' +
+          '<div style="display:flex;gap:10px;">' +
+            '<button class="btn btn-outline" style="flex:1;justify-content:center;" onclick="closeQuoteModal();navigateTo(\'page-my-requests\')">📩 คำขอราคาของฉัน</button>' +
+            '<button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="closeQuoteModal();navigateTo(\'page-messages\')">💬 ไปที่ข้อความ</button>' +
+          '</div>' +
+        '</div>';
+      if(window.kxLoadMyRequests) window.kxLoadMyRequests();
+    }catch(err){
+      console.error('submitQuoteRequest failed', err);
+      kxToast(/relation .* does not exist|schema cache/i.test(err && err.message || '')
+        ? 'ระบบขอใบเสนอราคายังไม่ได้ติดตั้ง (ยังไม่ได้รัน quote_requests.sql)'
+        : 'ส่งคำขอไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
+      if(btn){ btn.disabled = false; btn.textContent = was; }
+    }
   }
 </script>
 
@@ -11139,11 +11220,8 @@ html, body{
     </div>
   </div>
   <script>
-    var MY_REQUESTS = [
-      {seller:'Siam Metal Works', img:'assets/img/offer-thumb-1.jpg', avc:'#c2410c', title:'รับผลิตงานโลหะแผ่นทุกชนิด', loc:'สมุทรปราการ', date:'19 พ.ค. 2567', status:'received', price:'92,000', docNo:'KX-QT-2567-00231'},
-      {seller:'Prime CNC Co., Ltd.', img:'assets/img/offer-thumb-2.jpg', avc:'#0846c7', title:'รับกลึง กัด เจาะ ชิ้นงาน CNC ตามแบบ', loc:'ชลบุรี', date:'18 พ.ค. 2567', status:'received', price:'78,500', docNo:'KX-QT-2567-00224'},
-      {seller:'กรีนโซลาร์ เอ็นเนอร์ยี่', img:'assets/img/rfq-thumb-2.jpg', avc:'#15803d', title:'ติดตั้ง Solar Rooftop 50 kW', loc:'กรุงเทพฯ', date:'17 พ.ค. 2567', status:'waiting', price:'', docNo:''},
-    ];
+    // was three hand-written rows; kxLoadMyRequests fills it from the database
+    var MY_REQUESTS = [];
     var mrFilter = 'all';
     function switchMrTab(el, f){
       document.querySelectorAll('#page-my-requests .mr-tab').forEach(function(t){ t.classList.remove('active'); });
@@ -11158,7 +11236,9 @@ html, body{
         var got = r.status === 'received';
         var seller = r.seller.replace(/'/g,'');
 
-        var files = got
+        // no document number unless the seller's reply actually carried one —
+        // otherwise this rendered an empty "📄 .pdf" chip that opened nothing
+        var files = (got && r.docNo)
           ? '<div class="bid-files"><span class="bid-file pdf" onclick="event.stopPropagation();openQuotePdf(\'' + r.docNo + '\',\'' + seller + '\')">📄 ' + r.docNo + '.pdf</span></div>'
           : '';
 
@@ -11170,15 +11250,20 @@ html, body{
 
         var status = got
           ? '<span class="status-pill won"><span class="dot"></span>ได้รับแล้ว</span>' +
-              '<button class="btn-view-rfq" onclick="event.stopPropagation();openQuotePdf(\'' + r.docNo + '\',\'' + seller + '\')">📄 ดูใบเสนอราคา</button>'
+              (r.docNo ? '<button class="btn-view-rfq" onclick="event.stopPropagation();openQuotePdf(\'' + r.docNo + '\',\'' + seller + '\')">📄 ดูใบเสนอราคา</button>' : '')
           : '<span class="status-pill pending"><span class="dot"></span>รอราคา</span>' +
-              '<button class="btn-view-rfq" onclick="event.stopPropagation();navigateTo(\'page-messages\')">💬 แชทกับผู้ขาย</button>';
+              (r.sellerId
+                ? '<button class="btn-view-rfq" onclick="event.stopPropagation();kxStartChat(\'' + r.sellerId + '\',\'' + (r.postId || '') + '\')">💬 แชทกับผู้ขาย</button>'
+                : '');
 
-        return '<div class="bid-row" data-status="' + r.status + '" onclick="navigateTo(\'page-offer-detail\')">' +
+        return '<div class="bid-row" data-status="' + r.status + '"' +
+            (r.postId ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + r.postId + '\',\'offer\')"' : '') + '>' +
           '<img class="bid-thumb" src="' + r.img + '" alt="" loading="lazy">' +
           '<div class="bid-body">' +
             '<div class="bid-title">' + r.title + '</div>' +
-            '<div class="bid-buyer"><span class="bid-buyer-av" style="background:' + r.avc + '" onclick="event.stopPropagation();navigateTo(\'page-company-profile\')">' + r.seller.charAt(0) + '</span>ผู้ขาย: ' + r.seller + '</div>' +
+            '<div class="bid-buyer"><span class="bid-buyer-av" style="background:' + r.avc + '"' +
+              (r.sellerId ? ' onclick="event.stopPropagation();kxViewProfile(\'' + r.sellerId + '\')"' : '') + '>' +
+              r.seller.charAt(0) + '</span>ผู้ขาย: ' + r.seller + '</div>' +
             '<div class="bid-meta"><span>📍 ' + r.loc + '</span><span class="sep">|</span><span>🕗 ' + r.date + '</span></div>' +
             files +
           '</div>' +
@@ -11188,6 +11273,49 @@ html, body{
       }).join('');
       if(window.kxApplyIcons) window.kxApplyIcons(list);
     }
+
+    /* The list held three hand-written rows and submitQuoteRequest pushed a
+       fixed fourth one onto them, so what you saw here had no connection to
+       what you had actually asked for. */
+    window.kxLoadMyRequests = async function(){
+      if(!window.kxSession) return;
+      var list = document.getElementById('mrList');
+      if(!list) return;
+      var res = await sb.from('quote_requests')
+        .select('id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
+                'posts(id,title,province,owner_id,post_images(url,sort),profiles!posts_owner_id_fkey(company_name)),' +
+                'quote_request_files(file_name,file_url,file_kind)')
+        .eq('requester_id', window.kxSession.user.id)
+        .order('created_at', { ascending:false });
+      if(res.error){
+        console.error('kxLoadMyRequests failed', res.error);
+        if(/schema cache|does not exist/i.test(res.error.message || '')){
+          list.innerHTML = '<div class="mr-empty">ระบบขอใบเสนอราคายังไม่ได้ติดตั้ง<br>' +
+            '<span style="font-size:12px;color:var(--ink-faint);">ยังไม่ได้รัน database/quote_requests.sql</span></div>';
+        }
+        return;
+      }
+      var TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      MY_REQUESTS = res.data.map(function(r){
+        var post = r.posts || {};
+        var imgs = post.post_images || [];
+        var d = new Date(r.created_at);
+        return {
+          postId: post.id || null,
+          sellerId: post.owner_id || null,
+          seller: (post.profiles && post.profiles.company_name) || 'ผู้ขาย',
+          img: imgs.length ? imgs[0].url : 'assets/img/konnex-mark-3.png',
+          avc: '#0846c7',
+          title: post.title || 'ประกาศนี้ถูกปิดแล้ว',
+          loc: post.province || 'ไม่ระบุ',
+          date: d.getDate() + ' ' + TH[d.getMonth()] + ' ' + (d.getFullYear() + 543),
+          status: r.status,
+          price: r.quoted_price != null ? Math.round(r.quoted_price).toLocaleString('en-US') : '',
+          docNo: ''
+        };
+      });
+      renderMyRequests();
+    };
     document.addEventListener('DOMContentLoaded', renderMyRequests);
   </script>
 </div>
@@ -18378,9 +18506,10 @@ body.kx-auth .kx-burger{ display:none !important; }
               : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }
     }
-    window.kxCurrentDetailPostId  = post.id;
-    window.kxCurrentDetailOwnerId = post.owner_id;
-    window.kxCurrentDetailCanBid  = canBid;
+    window.kxCurrentDetailPostId    = post.id;
+    window.kxCurrentDetailOwnerId   = post.owner_id;
+    window.kxCurrentDetailOwnerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
+    window.kxCurrentDetailCanBid    = canBid;
   }
 
   function renderOfferDetail(post){
@@ -18426,9 +18555,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     // the owner, so on an Offer they still held whichever RFQ was opened last —
     // the button either said "ไม่พบเจ้าของประกาศ" or, worse, would have opened a
     // chat with the wrong person about the wrong post.
-    window.kxCurrentDetailPostId  = post.id;
-    window.kxCurrentDetailOwnerId = post.owner_id;
-    window.kxCurrentDetailCanBid  = false;
+    window.kxCurrentDetailPostId    = post.id;
+    window.kxCurrentDetailOwnerId   = post.owner_id;
+    window.kxCurrentDetailOwnerName = ownerName;
+    window.kxCurrentDetailCanBid    = false;
   }
 
   /* ===== ถาม-ตอบ =====
@@ -18603,6 +18733,8 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     navigateTo('page-company-profile');
     fillInfoList(pr);
+    window.kxProfileViewingId   = id;
+    window.kxProfileViewingName = name;
 
     // your own profile keeps the richer local view it has always had
     if(window.kxSession && id === window.kxSession.user.id){
@@ -18942,6 +19074,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-rfq-offers') window.kxLoadMyPosts('rfq');
     if(id === 'page-my-offers') window.kxLoadMyPosts('offer');
     if(id === 'page-my-bids') window.kxLoadMyBids();
+    if(id === 'page-my-requests' && window.kxLoadMyRequests) window.kxLoadMyRequests();
     if(id === 'page-messages'){
       if(window.kxLoadConversations) window.kxLoadConversations();
       if(window.kxChatPollStart) window.kxChatPollStart();
