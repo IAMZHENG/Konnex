@@ -14022,7 +14022,12 @@ body.kx-auth .kx-burger{ display:none !important; }
 @media (min-width: 1025px){
   #page-company-profile .profile-layout{ grid-template-columns:230px minmax(0,1fr); }
 }
-#page-company-profile .wrap{ max-width:640px; margin-left:auto; margin-right:auto; }
+/* width:100% is load-bearing. This is a grid item, and an auto inline margin
+   makes a grid item size to its content instead of stretching — so the column
+   was as wide as whatever happened to be inside it. It reached 640px only
+   because the demo content was wide enough; once that came out the whole page
+   narrowed to about 400px. */
+#page-company-profile .wrap{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; }
 
 /* --- header --- */
 #page-company-profile .hero-card{ padding:0 !important; overflow:hidden; }
@@ -16986,25 +16991,48 @@ body.kx-auth .kx-burger{ display:none !important; }
      and its URL to profiles.avatar_url, while the other fields carry on as
      they were. The file picker leaves a data: URL in the <img>, which is
      turned back into a real file here before upload. */
+  /* The picker sets img.src to URL.createObjectURL(file) — a `blob:` URL. This
+     only recognised `data:` and `http`, so a freshly chosen picture matched
+     neither branch, `url` stayed null, and the function returned before saving
+     anything. The upload silently did nothing and profiles.avatar_url stayed
+     null, which is why the letter kept showing on feed cards while the profile
+     page itself looked right (that one reads localStorage).
+
+     blob: and data: both come back from fetch() as a Blob, so one path handles
+     both, and the cover image goes the same way. */
+  async function uploadPickedImage(imgEl, currentUrl, label){
+    var src = (imgEl && !imgEl.hidden && imgEl.getAttribute('src')) || '';
+    if(!src) return { url:null, changed: currentUrl != null };      // cleared
+    if(src.indexOf('http') === 0) return { url:src, changed:false }; // already stored
+    if(src.indexOf('blob:') !== 0 && src.indexOf('data:') !== 0) return { url:currentUrl, changed:false };
+
+    var blob = await (await fetch(src)).blob();
+    var ext = (String(blob.type).split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    var url = await kxUploadFile('post-images', new File([blob], label + '.' + ext, { type: blob.type || 'image/jpeg' }));
+    return { url:url, changed:true };
+  }
+
   async function saveAvatarToDb(){
     if(!window.kxSession) return;
-    var av = $('epAvatarImg');
-    var src = (av && !av.hidden && av.src) || '';
-    var current = (window.kxCurrentUser && window.kxCurrentUser.avatar_url) || null;
+    var patch = {};
+    try{
+      var a = await uploadPickedImage($('epAvatarImg'),
+        (window.kxCurrentUser && window.kxCurrentUser.avatar_url) || null, 'avatar');
+      if(a.changed) patch.avatar_url = a.url;
 
-    var url = null;
-    if(src.indexOf('data:') === 0){
-      var blob = await (await fetch(src)).blob();
-      var ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-      url = await kxUploadFile('post-images', new File([blob], 'avatar.' + ext, { type:blob.type }));
-    }else if(src.indexOf('http') === 0){
-      url = src;                       // already uploaded, left in place
+      var c = await uploadPickedImage($('epCoverImg'),
+        (window.kxCurrentUser && window.kxCurrentUser.cover_url) || null, 'cover');
+      if(c.changed) patch.cover_url = c.url;
+    }catch(err){
+      console.error('image upload failed', err);
+      kxToast('อัปโหลดรูปไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
+      return;
     }
-    if(url === current) return;
+    if(!Object.keys(patch).length) return;
 
-    var upd = await sb.from('profiles').update({ avatar_url:url }).eq('id', window.kxSession.user.id);
+    var upd = await sb.from('profiles').update(patch).eq('id', window.kxSession.user.id);
     if(upd.error){ console.error('avatar save failed', upd.error); kxToast('บันทึกรูปโปรไฟล์ไม่สำเร็จ'); return; }
-    if(window.kxCurrentUser) window.kxCurrentUser.avatar_url = url;
+    if(window.kxCurrentUser) for(var k in patch) window.kxCurrentUser[k] = patch[k];
     if(window.kxApplyAvatars) window.kxApplyAvatars();
   }
 
