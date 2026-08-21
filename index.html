@@ -8920,10 +8920,7 @@ html, body{
             <h1>&nbsp;<span class="verified-pill" style="display:none">✓ Verified</span></h1>
             <div class="hero-meta-line" id="pfHeroMeta"></div>
           </div>
-          <div class="hero-actions">
-            <button class="btn btn-outline" onclick="navigateTo(&#39;page-messages&#39;)">💬 ส่งข้อความ</button>
-            <button class="btn btn-primary" onclick="openQuoteModal()">📄 ขอใบเสนอราคา</button>
-          </div>
+          <div class="hero-actions" id="pfHeroActions"></div>
           <div class="hero-statstrip">
             <div class="hss"><span class="hss-num">356</span> <span class="hss-lbl">RFQ ที่ตอบ</span></div>
             <div class="hss"><span class="hss-num">892</span> <span class="hss-lbl">ใบเสนอที่ส่ง</span></div>
@@ -19544,6 +19541,7 @@ body.kx-auth .kx-burger{ display:none !important; }
      when the owner entered something and hidden when they didn't, rather than
      showing this page's worked example on someone else's profile. */
   var GUEST_HIDDEN = ['pfRecentCard','pfServicesCard','pfReviewsCard','pfVerifyCard'];
+  var kxProfileNavIntent = false;
 
   /* The hero and the two unbuilt tabs, for whoever's profile is on screen.
      These carried a 4.8 rating, 128 reviews, four services and a full set of
@@ -19555,6 +19553,19 @@ body.kx-auth .kx-burger{ display:none !important; }
     pr = pr || {};
     var p = document.getElementById('page-company-profile');
     if(!p) return;
+
+    /* Own profile vs somebody else's. The page was showing the same controls
+       either way, so on your own profile it offered to send you a message,
+       ask you for a quote and write you a review — and offered no way to edit,
+       which is the one thing you actually want there. */
+    var mine = !!(window.kxSession && pr.id && pr.id === window.kxSession.user.id);
+    var actions = document.getElementById('pfHeroActions');
+    if(actions){
+      actions.innerHTML = mine
+        ? '<button class="btn btn-outline" onclick="navigateTo(\'page-edit-profile\')">✎ แก้ไขโปรไฟล์</button>'
+        : '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>' +
+          '<button class="btn btn-primary" onclick="openReqQuote()">📄 ขอใบเสนอราคา</button>';
+    }
 
     var pill = p.querySelector('.hero-idblock .verified-pill');
     if(pill) pill.style.display = pr.is_verified ? '' : 'none';
@@ -19608,6 +19619,14 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var recent = document.getElementById('pfRecentCard');
     if(recent) recent.style.display = '';
+
+    /* Last, because the two cards above are rebuilt from their original heading
+       markup — which brings เขียนรีวิว and เพิ่มบริการ back with it. */
+    Array.prototype.forEach.call(p.querySelectorAll('button,a,.pf-btn,.pf-seeall'), function(b){
+      var t = (b.textContent || '').trim();
+      if(/เพิ่มบริการ/.test(t)) b.style.display = mine ? '' : 'none';   // yours to add
+      if(/เขียนรีวิว/.test(t))  b.style.display = mine ? 'none' : '';   // not on yourself
+    });
   };
 
   /* ข้อมูลบริษัท ships with a worked example in it — ISO 9001:2015, a tax
@@ -19640,9 +19659,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(!id){ kxToast('ไม่พบโปรไฟล์นี้'); return; }
     var p = document.getElementById('page-company-profile');
     if(!p) return;
+    // tells the router this navigation is deliberate, so it doesn't reset the
+    // page back to your own profile underneath us
+    kxProfileNavIntent = true;
 
     var res = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
-    if(res.error || !res.data){ console.error('kxViewProfile failed', res.error); kxToast('ไม่พบโปรไฟล์นี้'); return; }
+    if(res.error || !res.data){
+      // leaving the flag set would make the next plain navigation here look
+      // deliberate, and show whoever was on screen last
+      kxProfileNavIntent = false;
+      console.error('kxViewProfile failed', res.error); kxToast('ไม่พบโปรไฟล์นี้'); return;
+    }
     var pr = res.data;
     var name = pr.company_name || 'ผู้ใช้ Konnex';
 
@@ -19659,8 +19686,14 @@ body.kx-auth .kx-burger{ display:none !important; }
       });
       var cc = document.getElementById('pfContactCard');
       if(cc) cc.style.display = '';
+      /* From the row we just fetched, not from the localStorage cache.
+         kxApplyProfile paints whatever that cache holds, which is stale after
+         editing elsewhere and belongs to the wrong person entirely if another
+         account used this browser first — your own profile would render with
+         their details. kxProfileFromRow refreshes the cache and then paints. */
+      if(window.kxProfileFromRow) window.kxProfileFromRow(pr);
+      else if(window.kxApplyProfile) window.kxApplyProfile();
       kxRenderProfileShell(pr);
-      if(window.kxApplyProfile) window.kxApplyProfile();
       if(window.kxLoadProfileWins) window.kxLoadProfileWins();
       return;
     }
@@ -20042,6 +20075,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-saved' && window.kxLoadSaved) window.kxLoadSaved();
     if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
+    /* page-company-profile keeps whoever was last painted onto it, so reaching
+       it any other way — the ดูโปรไฟล์ row in the rail, the avatar menu, a back
+       button — used to show the last person you looked at instead of you. */
+    if(id === 'page-company-profile'){
+      if(kxProfileNavIntent) kxProfileNavIntent = false;
+      else if(window.kxSession && window.kxViewProfile) window.kxViewProfile(window.kxSession.user.id);
+    }
     if(id === 'page-messages'){
       if(window.kxLoadConversations) window.kxLoadConversations();
       if(window.kxChatPollStart) window.kxChatPollStart();
