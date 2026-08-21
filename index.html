@@ -11728,11 +11728,11 @@ html, body{
               <h3>ข้อมูลบัญชี</h3>
               <p class="card-desc">ข้อมูลนี้ใช้สำหรับการเข้าสู่ระบบและการติดต่อจากผู้ซื้อ/ผู้ขาย</p>
               <div class="set-row2">
-                <div class="set-field"><label for="setName">ชื่อผู้ติดต่อ</label><input id="setName" type="text" value="คุณบุญมี ใจดี"></div>
+                <div class="set-field"><label for="setName" id="setNameLabel">ชื่อผู้ติดต่อ</label><input id="setName" type="text" placeholder="ชื่อผู้ติดต่อ"></div>
               </div>
               <div class="set-row2">
-                <div class="set-field"><label for="setEmail">อีเมล</label><input id="setEmail" type="text" value="boonmee@company.co.th"></div>
-                <div class="set-field"><label for="setPhone">เบอร์โทรศัพท์</label><input id="setPhone" type="text" value="081-234-5678"></div>
+                <div class="set-field"><label for="setEmail">อีเมลสำหรับติดต่อ</label><input id="setEmail" type="text" placeholder="you@company.co.th"></div>
+                <div class="set-field"><label for="setPhone">เบอร์โทรศัพท์</label><input id="setPhone" type="text" placeholder="08x-xxx-xxxx"></div>
               </div>
               <div class="set-actions"><button type="button" class="set-btn ghost" onclick="setRevert()">ยกเลิก</button><button type="button" class="set-btn primary" onclick="setSaveAccount(this)">บันทึกการเปลี่ยนแปลง</button></div>
             </div>
@@ -18043,14 +18043,46 @@ body.kx-auth .kx-burger{ display:none !important; }
     }catch(e){ setWrite(setInitial); }
     kxToast('ยกเลิกการแก้ไขแล้ว');
   };
-  window.setSaveAccount = function(){
+  /* ข้อมูลบัญชี. This card shipped with someone's details typed into it
+     ("คุณบุญมี ใจดี", boonmee@company.co.th), required ชื่อผู้ติดต่อ from
+     everyone including individuals — for whom it is not a required field
+     anywhere else — and saved only to localStorage, so nothing here ever
+     reached the account. */
+  window.kxLoadSettings = function(){
+    var u = window.kxCurrentUser;
+    if(!u) return;
+    var n = document.getElementById('setName');  if(n) n.value = u.contact_name || '';
+    var e = document.getElementById('setEmail'); if(e) e.value = u.email || '';
+    var p = document.getElementById('setPhone'); if(p) p.value = u.phone || '';
+    var lbl = document.getElementById('setNameLabel');
+    if(lbl) lbl.textContent = (u.business_type === 'person')
+      ? 'ชื่อผู้ติดต่อ (ถ้าต่างจากชื่อคุณ)' : 'ชื่อผู้ติดต่อ';
+  };
+
+  window.setSaveAccount = async function(){
     var name = document.getElementById('setName'), mail = document.getElementById('setEmail');
-    if(!name.value.trim()){ name.classList.add('bad'); name.focus(); kxToast('กรุณากรอกชื่อผู้ติดต่อ'); return; }
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim())){
+    var isPerson = (window.kxCurrentUser || {}).business_type === 'person';
+    name.classList.remove('bad'); mail.classList.remove('bad');
+    // an individual is their own contact — the same rule the signup form uses
+    if(!isPerson && !name.value.trim()){
+      name.classList.add('bad'); name.focus(); kxToast('กรุณากรอกชื่อผู้ติดต่อ'); return;
+    }
+    if(mail.value.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail.value.trim())){
       mail.classList.add('bad'); mail.focus(); kxToast('รูปแบบอีเมลไม่ถูกต้อง'); return;
     }
-    name.classList.remove('bad'); mail.classList.remove('bad');
     var data = setRead();
+    if(window.kxSession){
+      var patch = { contact_name: name.value.trim() || null,
+                    email: mail.value.trim() || null,
+                    phone: (document.getElementById('setPhone')||{}).value.trim() || null };
+      var upd = await sb.from('profiles').update(patch).eq('id', window.kxSession.user.id);
+      if(upd.error){
+        console.error('setSaveAccount failed', upd.error);
+        kxToast('บันทึกไม่สำเร็จ: ' + (upd.error.message || 'กรุณาลองใหม่'));
+        return;
+      }
+      if(window.kxCurrentUser) for(var k in patch) window.kxCurrentUser[k] = patch[k];
+    }
     try{ localStorage.setItem('kx.settings', JSON.stringify(data)); }catch(e){}
     // the rail and the profile read the same name, so they follow
     try{
@@ -18060,7 +18092,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     }catch(e){}
     kxToast('บันทึกข้อมูลบัญชีแล้ว');
   };
-  window.setSavePassword = function(){
+  /* Said "อัปเดตรหัสผ่านแล้ว" and changed nothing — it cleared the two boxes
+     and stopped. The current password is checked by signing in with it, because
+     updateUser happily changes the password of whoever is already signed in
+     without asking for the old one; on a shared or unlocked machine that is the
+     whole protection this form implies it has. */
+  window.setSavePassword = async function(){
     var cur = document.getElementById('setPwCur'),
         nw  = document.getElementById('setPwNew'),
         nw2 = document.getElementById('setPwNew2');
@@ -18068,8 +18105,23 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(!cur.value){ cur.classList.add('bad'); cur.focus(); kxToast('กรุณากรอกรหัสผ่านปัจจุบัน'); return; }
     if((nw.value || '').length < 8){ nw.classList.add('bad'); nw.focus(); kxToast('รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร'); return; }
     if(nw.value !== nw2.value){ nw2.classList.add('bad'); nw2.focus(); kxToast('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
-    nw.value = ''; nw2.value = '';
-    kxToast('อัปเดตรหัสผ่านแล้ว');
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+    var email = window.kxSession.user.email;
+    var check = await sb.auth.signInWithPassword({ email: email, password: cur.value });
+    if(check.error){
+      cur.classList.add('bad'); cur.focus();
+      kxToast('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+      return;
+    }
+    var res = await sb.auth.updateUser({ password: nw.value });
+    if(res.error){
+      console.error('setSavePassword failed', res.error);
+      kxToast('เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    cur.value = ''; nw.value = ''; nw2.value = '';
+    kxToast('เปลี่ยนรหัสผ่านเรียบร้อย');
   };
   window.setSaveRegion = function(){ kxToast('บันทึกภาษาและภูมิภาคแล้ว'); };
 
@@ -20262,6 +20314,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-saved' && window.kxLoadSaved) window.kxLoadSaved();
     if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
+    if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
     /* page-company-profile keeps whoever was last painted onto it, so reaching
        it any other way — the ดูโปรไฟล์ row in the rail, the avatar menu, a back
        button — used to show the last person you looked at instead of you. */
