@@ -8939,8 +8939,10 @@ html, body{
         <div class="tabs">
         <div class="tab active" onclick="pfTab('overview',this)">ภาพรวม</div>
         <div class="tab" id="pfReviewsTab" onclick="pfTab('reviews',this)">รีวิว (0)</div>
-        <div class="tab" onclick="pfTab('services',this)">บริการของฉัน</div>
+        <div class="tab" id="pfServicesTab" onclick="pfTab('services',this)">บริการของฉัน</div>
         <div class="tab" onclick="pfTab('wins',this)">ผลงานสะสม</div>
+        <div class="tab" id="pfPostsTab"  onclick="pfTab('posts',this)">งานของฉัน</div>
+        <div class="tab" id="pfQuotesTab" onclick="pfTab('quotes',this)">ใบเสนอราคา</div>
       </div>
     </div>
 
@@ -9033,6 +9035,9 @@ html, body{
           <div class="pf-wins-list" id="pfWinsList"></div>
           <div class="pf-wins-note">แสดงเฉพาะงานที่ปิดดีลในระบบ ผู้ให้บริการแก้ไขหรือเพิ่มเองไม่ได้</div>
         </div>
+
+        <div class="card" id="pfPostsCard" data-pf-sec="posts"></div>
+        <div class="card" id="pfQuotesCard" data-pf-sec="quotes"></div>
 
         <div class="card" data-pf-sec="overview" id="pfContactCard">
           <h3>ติดต่อบริษัท</h3>
@@ -19818,10 +19823,21 @@ body.kx-auth .kx-burger{ display:none !important; }
         });
     }else if(strip) strip.style.display = 'none';
 
-    // these three read their own tables now
-    if(window.kxLoadReviews)   window.kxLoadReviews(pr.id, mine);
-    if(window.kxLoadServices)  window.kxLoadServices(pr.id, mine);
-    if(window.kxRenderVerify)  window.kxRenderVerify(pr, mine);
+    // these read their own tables now
+    if(window.kxLoadReviews)       window.kxLoadReviews(pr.id, mine);
+    if(window.kxLoadServices)      window.kxLoadServices(pr.id, mine);
+    if(window.kxRenderVerify)      window.kxRenderVerify(pr, mine);
+    if(window.kxLoadProfilePosts)  window.kxLoadProfilePosts(pr.id, mine);
+    if(window.kxLoadProfileQuotes) window.kxLoadProfileQuotes(pr.id, mine);
+
+    // tab labels read from the viewer's side; ใบเสนอราคา is private, so it is
+    // only on your own profile
+    var svcTab = document.getElementById('pfServicesTab');
+    if(svcTab) svcTab.textContent = mine ? 'บริการของฉัน' : 'บริการ';
+    var postsTab = document.getElementById('pfPostsTab');
+    if(postsTab) postsTab.textContent = mine ? 'งานของฉัน' : 'ประกาศ';
+    var quotesTab = document.getElementById('pfQuotesTab');
+    if(quotesTab) quotesTab.style.display = mine ? '' : 'none';
     /* Headings follow the profile being viewed. applyToProfile does this too,
        but only from kxEntity() — the *viewer's* type — so an individual's page
        read "เกี่ยวกับบริษัท / ติดต่อบริษัท" whenever a company account opened
@@ -20503,6 +20519,93 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxToast('เพิ่มบริการแล้ว');
     kxLoadServices(window.kxSession.user.id, true);
     return true;
+  };
+
+  /* ---------- งานของฉัน / ใบเสนอราคา ----------
+     Two tabs the profile was missing. They differ in who may see them: posts
+     are public, so someone else's profile lists what they have open; quotes
+     are restricted to the bidder and the post's owner, so that tab is only
+     shown on your own profile rather than rendering an empty box that looks
+     like the person has never bid on anything. */
+  var TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function dateBE(iso){
+    if(!iso) return '';
+    var d = new Date(iso);
+    return d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+  }
+  function pfEmpty(msg){
+    return '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' + msg + '</div>';
+  }
+
+  window.kxLoadProfilePosts = async function(profileId, isOwner){
+    var card = document.getElementById('pfPostsCard');
+    if(!card || !profileId) return;
+    var q = sb.from('posts')
+      .select('id,title,kind,province,status,deadline,created_at,quote_count,request_count,post_images(url,sort)')
+      .eq('owner_id', profileId).order('created_at', { ascending:false }).limit(50);
+    // a visitor has no business seeing someone's paused or closed listings
+    if(!isOwner) q = q.eq('status', 'open');
+    var res = await q;
+    if(res.error){ console.error('kxLoadProfilePosts failed', res.error); return; }
+
+    card.innerHTML = '<div class="card-head"><h3>' + (isOwner ? 'งานของฉัน' : 'ประกาศทั้งหมด') +
+        ' (' + res.data.length + ')</h3>' +
+        (isOwner ? '<a href="#" class="pf-seeall" onclick="navigateTo(\'page-rfq-offers\');return false;">จัดการทั้งหมด ›</a>' : '') +
+      '</div>' +
+      (res.data.length ? res.data.map(function(p){
+        var isRfq = p.kind !== 'offer';
+        var imgs = (p.post_images || []).slice().sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
+        var n = isRfq ? (p.quote_count || 0) : (p.request_count || 0);
+        return '<div style="display:flex;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0;cursor:pointer;"' +
+            ' onclick="kxOpenPost(\'' + p.id + '\',\'' + (isRfq ? 'rfq' : 'offer') + '\')">' +
+          '<img src="' + esc(imgs.length ? imgs[0].url : 'assets/img/konnex-mark-3.png') + '"' +
+            ' style="width:64px;height:56px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--bg);">' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.title) + '</div>' +
+            '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:3px;">' +
+              (isRfq ? '🛒 ต้องการซื้อ' : '🏷️ ประกาศขาย') + ' · ' + esc(p.province || 'ไม่ระบุ') +
+              ' · ' + dateBE(p.created_at) +
+              (p.status !== 'open' ? ' · ปิดแล้ว' : '') + '</div>' +
+          '</div>' +
+          '<div style="text-align:right;flex-shrink:0;font-size:11.5px;color:var(--ink-soft);">' +
+            '<b style="display:block;font-size:15px;color:var(--blue-700);">' + n + '</b>' +
+            (isRfq ? 'ข้อเสนอ' : 'คำขอราคา') + '</div>' +
+        '</div>';
+      }).join('')
+      : pfEmpty(isOwner ? 'คุณยังไม่ได้โพสต์ประกาศ' : 'ยังไม่มีประกาศที่เปิดรับอยู่'));
+  };
+
+  window.kxLoadProfileQuotes = async function(profileId, isOwner){
+    var card = document.getElementById('pfQuotesCard');
+    if(!card) return;
+    if(!isOwner){ card.innerHTML = ''; return; }   // private; the tab is hidden too
+    var res = await sb.from('quotes')
+      .select('id,price,status,created_at,posts(id,title,province)')
+      .eq('bidder_id', profileId).order('created_at', { ascending:false }).limit(50);
+    if(res.error){ console.error('kxLoadProfileQuotes failed', res.error); return; }
+
+    var PILL = { won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'], pending:['pending','รอผล'] };
+    card.innerHTML = '<div class="card-head"><h3>ใบเสนอราคาที่ส่ง (' + res.data.length + ')</h3>' +
+        '<a href="#" class="pf-seeall" onclick="navigateTo(\'page-my-bids\');return false;">ดูทั้งหมด ›</a></div>' +
+      (res.data.length ? res.data.map(function(q){
+        var p = q.posts || {};
+        var pill = PILL[q.status] || PILL.pending;
+        return '<div style="display:flex;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0;"' +
+            (p.id ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')"' : '') + '>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+              esc(p.title || 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
+            '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:3px;">' +
+              esc(p.province || 'ไม่ระบุ') + ' · ส่งเมื่อ ' + dateBE(q.created_at) + '</div>' +
+          '</div>' +
+          '<div style="text-align:right;flex-shrink:0;">' +
+            '<div style="font-size:15px;font-weight:800;color:var(--blue-700);">' +
+              Math.round(q.price).toLocaleString('en-US') + ' ฿</div>' +
+            '<span class="status-pill ' + pill[0] + '" style="margin-top:4px;"><span class="dot"></span>' + pill[1] + '</span>' +
+          '</div>' +
+        '</div>';
+      }).join('')
+      : pfEmpty('คุณยังไม่ได้ส่งใบเสนอราคา'));
   };
 
   // ---------- การยืนยันตัวตน ----------
