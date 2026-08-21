@@ -11443,30 +11443,34 @@ html, body{
         var got = r.status === 'received';
         var seller = r.seller.replace(/'/g,'');
 
-        /* The quotation the seller attached, and the drawings you sent them.
-           This used to render only from r.docNo, which nothing ever filled, so
-           an attached ใบเสนอราคา never appeared on the card at all. */
-        function chips(arr, label, cls){
-          if(!arr || !arr.length) return '';
-          return '<div class="bid-files" style="align-items:center;">' +
-            '<span style="font-size:11px;color:var(--ink-faint);margin-right:2px;">' + label + '</span>' +
-            arr.map(function(f){
-              return '<a class="bid-file ' + (f.file_kind === 'pdf' ? 'pdf' : 'img') + '" target="_blank" rel="noopener"' +
-                ' href="' + String(f.file_url).replace(/"/g,'&quot;') + '" onclick="event.stopPropagation()">' +
-                (f.file_kind === 'pdf' ? '📄 ' : '🖼️ ') +
-                String(f.file_name).replace(/[&<>]/g,'') + '</a>';
-            }).join('') + '</div>';
+        /* The quotation the seller sent belongs next to the price, not mixed
+           in with the drawings you uploaded — it is the answer to the request,
+           and putting it under ราคาที่เสนอ makes the two read as one thing.
+           Your own attachments stay in the body with the rest of the request. */
+        function mrEsc(s){
+          return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+            return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+          });
         }
-        var files = chips(r.replyFiles, '📥 ใบเสนอราคาจากผู้ขาย:', 'pdf') +
-                    chips(r.myFiles,    '📤 ไฟล์ที่คุณแนบไป:', 'img') +
-                    (got && r.note
-                      ? '<div style="font-size:12.5px;color:var(--green);margin-top:6px;">↳ ' +
-                        String(r.note).replace(/[&<>]/g,'') + '</div>'
-                      : '');
+        function fileChip(f, cls){
+          return '<a class="mr-file ' + (cls || '') + ' ' + (f.file_kind === 'pdf' ? 'pdf' : 'img') + '"' +
+            ' target="_blank" rel="noopener" href="' + mrEsc(f.file_url) + '"' +
+            ' title="' + mrEsc(f.file_name) + '" onclick="event.stopPropagation()">' +
+            '<span class="mr-file-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
+            '<span class="mr-file-name">' + mrEsc(f.file_name) + '</span></a>';
+        }
+        var quoteDoc = (r.replyFiles && r.replyFiles.length)
+          ? '<div class="mr-quotedoc">' + r.replyFiles.map(function(f){ return fileChip(f, 'strong'); }).join('') + '</div>'
+          : '';
+        var files = (r.myFiles && r.myFiles.length
+              ? '<div class="mr-files"><span class="mr-files-lbl">ไฟล์ที่คุณแนบไป</span>' +
+                r.myFiles.map(function(f){ return fileChip(f); }).join('') + '</div>'
+              : '') +
+            (got && r.note ? '<div class="mr-note">↳ ' + mrEsc(r.note) + '</div>' : '');
 
         var price = got
           ? '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">' + r.price + '</div>' +
-            '<div class="price-cmp mid">บาท</div>'
+            '<div class="price-cmp mid">บาท</div>' + quoteDoc
           : '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">—</div>' +
             '<div class="price-cmp mid">ยังไม่ได้รับราคา</div>';
 
@@ -11489,7 +11493,7 @@ html, body{
             '<div class="bid-meta"><span>📍 ' + r.loc + '</span><span class="sep">|</span><span>🕗 ' + r.date + '</span></div>' +
             files +
           '</div>' +
-          '<div class="bid-price-col">' + price + '</div>' +
+          '<div class="bid-price-col' + (quoteDoc ? ' has-doc' : '') + '">' + price + '</div>' +
           '<div class="bid-status-col">' + status + '</div>' +
         '</div>';
       }).join('');
@@ -14567,9 +14571,12 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-offers .offer-thumb,
 #page-my-bids .bid-thumb,
 #page-my-requests .bid-thumb{
-  width:240px !important;
-  /* 228px card - 32px padding - 2px border: the picture fills it exactly */
-  height:194px !important;
+  /* Was 240x194. On a row that also carries a 200px price column and a 190px
+     status column, that left the title and the attachments about 150px to live
+     in — the name wrapped mid-word and every file chip landed on its own line.
+     The picture is context here, not the subject. */
+  width:150px !important;
+  height:130px !important;
   border-radius:12px !important;
 }
 /* the image inside a rounded, clipped frame keeps square corners on purpose */
@@ -14785,6 +14792,49 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-file{ display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:#565b6e; background:var(--bg,#f6f8fc); border:1px solid var(--line,#e6e7f0); border-radius:8px; padding:5px 10px; }
 #page-my-requests .bid-file.pdf{ color:#c0392b; }
 #page-my-requests .bid-file.xls{ color:#1e7d47; }
+
+/* Attachments on a request card. Names here are whatever the uploader called
+   the file, which can be a 40-character uuid, so every chip is one fixed size
+   with the name truncated and the full name on hover — otherwise a single long
+   name reflows the whole card. */
+/* justify-content is explicit: the surrounding card pushes its rows to the end,
+   which left each row of chips ending flush right and starting at a different x */
+#page-my-requests .mr-files{ display:flex; flex-wrap:wrap; align-items:center;
+    justify-content:flex-start; gap:7px; margin-top:10px; }
+/* its own line, so the chips below it grid evenly instead of the first row
+   starting wherever the label happens to end */
+#page-my-requests .mr-files-lbl{ flex:0 0 100%; font-size:11px; font-weight:700;
+    color:var(--ink-faint); margin-bottom:-1px; }
+#page-my-requests .mr-file{
+    display:inline-flex; align-items:center; gap:6px; max-width:190px;
+    font-size:12px; font-weight:600; color:var(--ink-soft); text-decoration:none;
+    background:var(--bg,#f6f8fc); border:1px solid var(--line,#e6e7f0);
+    border-radius:8px; padding:5px 9px;
+    }
+#page-my-requests .mr-file:hover{ border-color:#c2d6ff; background:var(--blue-50,#eaf1ff); }
+#page-my-requests .mr-file-ic{
+    flex:none; font-size:9.5px; font-weight:800; letter-spacing:.02em;
+    color:#fff; background:#94a3b8; border-radius:4px; padding:2px 5px;
+    }
+#page-my-requests .mr-file.pdf .mr-file-ic{ background:#c0392b; }
+#page-my-requests .mr-file.img .mr-file-ic{ background:#0a5bff; }
+#page-my-requests .mr-file-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* the seller's quotation, sitting under ราคาที่เสนอ in the right-hand column.
+   That column is 130px, which is fine for a number and too narrow for a file
+   name, so it widens only on the cards that carry one. */
+#page-my-requests .bid-price-col.has-doc{
+    width:200px !important; max-width:200px !important;
+    display:flex; flex-direction:column; align-items:center;
+    }
+#page-my-requests .mr-quotedoc{ display:flex; flex-direction:column; gap:6px; margin-top:12px;
+    padding-top:10px; border-top:1px dashed #c2d6ff; width:100%; }
+#page-my-requests .mr-quotedoc .mr-file{ max-width:100%; background:#fff; border-color:#c2d6ff; justify-content:center; }
+#page-my-requests .mr-quotedoc .mr-file:hover{ background:#fff; border-color:#0a5bff; }
+
+#page-my-requests .mr-note{ font-size:12.5px; color:var(--green,#15803d); margin-top:9px;
+    background:var(--green-bg,#ecfdf3); border-radius:8px; padding:7px 11px; line-height:1.6; }
+
 #page-my-requests .bid-row{ cursor:pointer; }
 #page-my-requests .bid-status-col .btn-view-rfq{ margin-top:2px; }
 
