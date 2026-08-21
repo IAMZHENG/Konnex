@@ -8409,7 +8409,7 @@ html, body{
           <div class="winner-price">ราคาที่เสนอ <b id="winnerPrice">6,200</b> บาท/วัน</div>
         </div>
         <div class="winner-actions">
-          <button class="btn btn-primary" onclick="navigateTo('page-messages')">💬 เริ่มแชทกับผู้ชนะ</button>
+          <button class="btn btn-primary" id="kxChatWinnerBtn" onclick="kxChatWithWinner()">💬 เริ่มแชทกับผู้ชนะ</button>
         </div>
       </div>
       <div class="deal-closed-note" id="dealClosedNote">Konnex ทำหน้าที่เฉพาะขั้นตอนขอใบเสนอราคา — ขั้นตอนต่อไป (ยืนยันรายละเอียด กำหนดส่งมอบ การชำระเงิน ฯลฯ) ให้ทั้งสองฝ่ายตกลงกันเองผ่านแชท</div>
@@ -9257,91 +9257,20 @@ html, body{
           <h2>ข้อความ</h2>
           <div class="conv-search">🔍 ค้นหาการสนทนา</div>
         </div>
-        <div class="conv-items">
-          <div class="conv-item active" onclick="openConv(this,'c1')">
-            <div class="conv-avatar">P<span class="dot-online"></span></div>
-            <div class="conv-info">
-              <div class="conv-top-row"><span class="conv-name">Prime CNC Co., Ltd.</span><span class="conv-time">10:24</span></div>
-              <div class="conv-snippet">ได้เลยครับ ส่งแบบมาให้ดูได้เลย</div>
-            </div>
-          </div>
-          <div class="conv-item" onclick="openConv(this,'c2')">
-            <div class="conv-avatar" style="background:var(--orange);">S</div>
-            <div class="conv-info">
-              <div class="conv-top-row"><span class="conv-name">Siam Metal Works</span><span class="conv-time">9:02</span></div>
-              <div class="conv-snippet unread">แจ้งราคาล่าสุดให้ทราบด้วยครับ</div>
-            </div>
-            <div class="conv-unread-dot"></div>
-          </div>
-          <div class="conv-item" onclick="openConv(this,'c3')">
-            <div class="conv-avatar" style="background:var(--green);">T</div>
-            <div class="conv-info">
-              <div class="conv-top-row"><span class="conv-name">Thai Solar Energy</span><span class="conv-time">เมื่อวาน</span></div>
-              <div class="conv-snippet">ขอบคุณสำหรับข้อมูลครับ</div>
-            </div>
-          </div>
-          <div class="conv-item" onclick="openConv(this,'c4')">
-            <div class="conv-avatar" style="background:#6d28d9;">K</div>
-            <div class="conv-info">
-              <div class="conv-top-row"><span class="conv-name">คุณกิตติ ขนส่ง</span><span class="conv-time">เมื่อวาน</span></div>
-              <div class="conv-snippet unread">พร้อมรับงานวันจันทร์นี้เลยครับ</div>
-            </div>
-            <div class="conv-unread-dot"></div>
-          </div>
-          <div class="conv-item" onclick="openConv(this,'c5')">
-            <div class="conv-avatar" style="background:#be185d;">W</div>
-            <div class="conv-info">
-              <div class="conv-top-row"><span class="conv-name">WebPro Studio</span><span class="conv-time">จ. ที่แล้ว</span></div>
-              <div class="conv-snippet">ส่ง Mockup หน้าแรกให้แล้วนะครับ</div>
-            </div>
-          </div>
-        </div>
+        <div class="conv-items" id="convItems"></div>
       </div>
 
       <!-- CHAT THREAD -->
       <div class="chat-thread">
         <div class="chat-header">
-          <div class="conv-avatar">P</div>
+          <div class="conv-avatar"></div>
           <div class="chat-header-info">
-            <div class="chat-name">Prime CNC Co., Ltd.</div>
-            <div class="chat-status">● ออนไลน์</div>
+            <div class="chat-name">เลือกการสนทนา</div>
+            <div class="chat-status off"></div>
           </div>
         </div>
 
-        <div class="chat-body">
-          <div class="chat-date-sep">วันนี้</div>
-
-          <div class="bubble-row in">
-            <div class="bubble-avatar">P</div>
-            <div>
-              <div class="bubble">สวัสดีครับ สนใจงาน RFQ ผลิตชิ้นส่วน CNC ของคุณ รบกวนขอรายละเอียดเพิ่มเติมได้ไหมครับ</div>
-              <div class="bubble-time">10:12</div>
-            </div>
-          </div>
-
-          <div class="bubble-row out">
-            <div>
-              <div class="bubble">สวัสดีครับ ต้องการชิ้นส่วนสแตนเลส 304 จำนวน 1,000 ชิ้น ตามแบบที่แนบไว้ใน RFQ เลยครับ</div>
-              <div class="bubble-time">10:15</div>
-            </div>
-          </div>
-
-          <div class="bubble-row in">
-            <div class="bubble-avatar">P</div>
-            <div>
-              <div class="bubble">รับทราบครับ ทางเรามีเครื่องจักรรองรับงานนี้ได้สบายๆ ขอเวลาคำนวณราคาสักครู่นะครับ</div>
-              <div class="bubble-file">📎 ใบเสนอราคาเบื้องต้น.pdf</div>
-              <div class="bubble-time">10:20</div>
-            </div>
-          </div>
-
-          <div class="bubble-row out">
-            <div>
-              <div class="bubble">ได้เลยครับ ส่งแบบมาให้ดูได้เลย</div>
-              <div class="bubble-time">10:24</div>
-            </div>
-          </div>
-        </div>
+        <div class="chat-body"></div>
 
         <div class="chat-input-row">
           <input type="file" id="chatFile" multiple hidden>
@@ -9355,6 +9284,22 @@ html, body{
 
 <script>
 (function(){
+  /* ===== ข้อความ =====
+     This was a fake: five conversations typed into the markup, a THREADS map
+     seeded from that markup, and a send that appended a bubble to whichever
+     thread was on screen. Nothing left the browser, so the other side never
+     received anything and a reload lost it all.
+
+     It now reads `conversations` / `conversation_participants` / `messages`.
+     Starting a chat goes through the kx_start_conversation function rather
+     than three separate inserts — see database/messaging.sql for why, and for
+     the RLS gaps that made the tables unusable before this.
+
+     There is no realtime subscription: that needs replication switched on for
+     the table in the Supabase dashboard, which is one more manual setup step.
+     A poll while the page is open is enough for a chat between two people and
+     needs no setup at all. */
+
   var page   = document.getElementById('page-messages');
   var thread = page.querySelector('.chat-thread');
   var body   = thread.querySelector('.chat-body');
@@ -9363,90 +9308,247 @@ html, body{
   var send   = thread.querySelector('.chat-send');
   var clip   = thread.querySelector('.chat-attach');
   var file   = document.getElementById('chatFile');
+  var listEl = document.getElementById('convItems');
+
+  var CONVS = [];          // [{id, post_id, other:{...}, last, unread}]
+  var current = null;      // conversation id on screen
+  var poll = null;
+  var missing = false;     // messaging.sql not run yet
 
   function esc(s){
     return String(s).replace(/[&<>"]/g, function(c){
       return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
     });
   }
-  function now(){
-    var d = new Date();
+  function hhmm(d){
     return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
+  function listTime(iso){
+    if(!iso) return '';
+    var d = new Date(iso), now = new Date();
+    if(d.toDateString() === now.toDateString()) return hhmm(d);
+    var yest = new Date(now.getTime() - 86400000);
+    if(d.toDateString() === yest.toDateString()) return 'เมื่อวาน';
+    return d.getDate() + '/' + (d.getMonth() + 1);
+  }
+  function dayLabel(iso){
+    var d = new Date(iso), now = new Date();
+    if(d.toDateString() === now.toDateString()) return 'วันนี้';
+    var yest = new Date(now.getTime() - 86400000);
+    if(d.toDateString() === yest.toDateString()) return 'เมื่อวาน';
+    var M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return d.getDate() + ' ' + M[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+  }
+  function fsize(n){
+    if(!n) return '';
+    return n < 1024 ? n + ' B'
+         : n < 1048576 ? Math.round(n / 1024) + ' KB'
+         : (n / 1048576).toFixed(1) + ' MB';
+  }
+  function avatarHTML(p, name){
+    var url = p && p.avatar_url;
+    return url
+      ? '<img src="' + esc(url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">'
+      : esc(String(name || '?').charAt(0).toUpperCase());
+  }
+  function notReady(err){
+    return err && (/kx_start_conversation|conversation_participants|last_read_at|kx_is_participant/i.test(err.message || '')
+                || err.code === '42883' || err.code === '42703');
+  }
 
-  /* Every conversation in the list needs somewhere for its messages to live, or
-     sending would drop them into whichever thread happened to be on screen. The
-     store is seeded from the list itself, so adding a conversation to the markup is
-     enough — c1 keeps the thread that is already written out below it. */
-  var THREADS = {};
-  var current = 'c1';
-  page.querySelectorAll('.conv-item').forEach(function(item){
-    var id = (item.getAttribute('onclick') || '').replace(/.*'(c\d+)'.*/, '$1');
-    var av = item.querySelector('.conv-avatar');
-    THREADS[id] = {
-      name: item.querySelector('.conv-name').textContent,
-      letter: (av.textContent || '?').trim().charAt(0),
-      bg: av.style.background || '',
-      online: !!item.querySelector('.dot-online'),
-      html: null
-    };
-    if(id !== 'c1'){
-      THREADS[id].html =
-        '<div class="chat-date-sep">' + item.querySelector('.conv-time').textContent + '</div>' +
-        '<div class="bubble-row in"><div class="bubble-avatar">' + esc(THREADS[id].letter) + '</div>' +
-        '<div><div class="bubble">' + esc(item.querySelector('.conv-snippet').textContent) + '</div>' +
-        '<div class="bubble-time">' + esc(item.querySelector('.conv-time').textContent) + '</div></div></div>';
+  // ---------- list ----------
+  window.kxLoadConversations = async function(){
+    if(!window.kxSession || !listEl) return;
+    var mine = await sb.from('conversation_participants')
+      .select('conversation_id,last_read_at')
+      .eq('profile_id', window.kxSession.user.id);
+    if(mine.error){
+      if(notReady(mine.error)){ missing = true; renderList(); return; }
+      console.error('kxLoadConversations failed', mine.error); return;
     }
-  });
-  THREADS.c1.html = body.innerHTML;
+    // clears itself once the SQL has been run, so the "not installed" notice
+    // doesn't stick around until a reload
+    missing = false;
+    var ids = mine.data.map(function(r){ return r.conversation_id; });
+    if(!ids.length){ CONVS = []; renderList(); return; }
+    var readAt = {};
+    mine.data.forEach(function(r){ readAt[r.conversation_id] = r.last_read_at; });
 
-  function openConv(el, id){
-    page.querySelectorAll('.conv-item').forEach(function(i){ i.classList.remove('active'); });
-    el.classList.add('active');
-    // opening a conversation is reading it
-    var dot = el.querySelector('.conv-unread-dot'); if(dot) dot.remove();
-    var sn = el.querySelector('.conv-snippet'); if(sn) sn.classList.remove('unread');
-    if(!id || !THREADS[id] || id === current) return;
-    THREADS[current].html = body.innerHTML;   // keep what was typed into the old one
+    var convs = await sb.from('conversations')
+      .select('id,post_id,posts(title),conversation_participants(profile_id,profiles(id,company_name,avatar_url)),messages(id,body,file_name,sender_id,created_at)')
+      .in('id', ids);
+    if(convs.error){ console.error('kxLoadConversations failed', convs.error); return; }
+
+    var me = window.kxSession.user.id;
+    CONVS = convs.data.map(function(c){
+      var others = (c.conversation_participants || [])
+        .filter(function(p){ return p.profile_id !== me; })
+        .map(function(p){ return p.profiles; })
+        .filter(Boolean);
+      var msgs = (c.messages || []).slice()
+        .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
+      var last = msgs[msgs.length - 1] || null;
+      var seen = readAt[c.id];
+      return {
+        id: c.id,
+        postTitle: c.posts && c.posts.title,
+        other: others[0] || { company_name:'ผู้ใช้ Konnex' },
+        last: last,
+        unread: msgs.some(function(m){
+          return m.sender_id !== me && (!seen || new Date(m.created_at) > new Date(seen));
+        })
+      };
+    }).sort(function(a, b){
+      return new Date((b.last && b.last.created_at) || 0) - new Date((a.last && a.last.created_at) || 0);
+    });
+    renderList();
+    updateUnreadBadges();
+  };
+
+  function snippetOf(m){
+    if(!m) return 'ยังไม่มีข้อความ';
+    if(m.body) return m.body;
+    if(m.file_name) return '📎 ' + m.file_name;
+    return '';
+  }
+
+  function renderList(){
+    if(!listEl) return;
+    if(missing){
+      listEl.innerHTML = '<div style="padding:22px 18px;font-size:13px;color:var(--ink-soft);line-height:1.7;">' +
+        'ระบบข้อความยังไม่ได้ติดตั้ง<br><span style="color:var(--ink-faint);font-size:12.5px;">ยังไม่ได้รัน database/messaging.sql</span></div>';
+      return;
+    }
+    if(!CONVS.length){
+      listEl.innerHTML = '<div style="padding:22px 18px;font-size:13px;color:var(--ink-soft);line-height:1.7;">' +
+        'ยังไม่มีการสนทนา<br><span style="color:var(--ink-faint);font-size:12.5px;">' +
+        'เริ่มคุยได้จากหน้าประกาศ — กด “สอบถามรายละเอียด” หรือ “ส่งข้อความ”</span></div>';
+      return;
+    }
+    listEl.innerHTML = CONVS.map(function(c){
+      var name = c.other.company_name || 'ผู้ใช้ Konnex';
+      return '<div class="conv-item' + (c.id === current ? ' active' : '') + '" onclick="kxOpenConversation(\'' + c.id + '\')">' +
+        '<div class="conv-avatar" style="overflow:hidden">' + avatarHTML(c.other, name) + '</div>' +
+        '<div class="conv-info">' +
+          '<div class="conv-top-row"><span class="conv-name">' + esc(name) + '</span>' +
+            '<span class="conv-time">' + esc(listTime(c.last && c.last.created_at)) + '</span></div>' +
+          '<div class="conv-snippet' + (c.unread ? ' unread' : '') + '">' + esc(snippetOf(c.last)) + '</div>' +
+          (c.postTitle ? '<div class="conv-snippet" style="font-size:11px;color:var(--ink-faint);">เกี่ยวกับ: ' + esc(c.postTitle) + '</div>' : '') +
+        '</div>' +
+        (c.unread ? '<div class="conv-unread-dot"></div>' : '') +
+      '</div>';
+    }).join('');
+    if(window.kxApplyIcons) window.kxApplyIcons(listEl);
+  }
+
+  // the sidebar and navbar both carry a count of unread conversations
+  function updateUnreadBadges(){
+    var n = CONVS.filter(function(c){ return c.unread; }).length;
+    Array.prototype.forEach.call(document.querySelectorAll('.side-link'), function(l){
+      if(l.textContent.indexOf('ข้อความ') < 0) return;
+      var c = l.querySelector('.side-count');
+      if(!c) return;
+      c.textContent = n;
+      c.style.display = n ? '' : 'none';
+    });
+  }
+
+  // ---------- thread ----------
+  function bubbleHTML(m, other, me){
+    var out = m.sender_id === me;
+    var inner =
+      (m.body ? '<div class="bubble">' + esc(m.body) + '</div>' : '') +
+      (m.file_name
+        ? '<a class="bubble-file" href="' + esc(m.file_url || '#') + '" target="_blank" rel="noopener">📎 ' +
+          '<span class="bf-name">' + esc(m.file_name) + '</span>' +
+          (m.file_size ? '<span class="bf-size">' + fsize(m.file_size) + '</span>' : '') + '</a>'
+        : '') +
+      '<div class="bubble-time">' + hhmm(new Date(m.created_at)) + '</div>';
+    return '<div class="bubble-row ' + (out ? 'out' : 'in') + '">' +
+      (out ? '' : '<div class="bubble-avatar" style="overflow:hidden">' +
+        avatarHTML(other, other && other.company_name) + '</div>') +
+      '<div>' + inner + '</div>' +
+    '</div>';
+  }
+
+  window.kxOpenConversation = async function(id){
+    if(!window.kxSession) return;
     current = id;
-    body.innerHTML = THREADS[id].html;
-    var t = THREADS[id];
+    var conv = CONVS.filter(function(c){ return c.id === id; })[0];
+    var other = (conv && conv.other) || {};
+    var name = other.company_name || 'ผู้ใช้ Konnex';
+
     var hav = head.querySelector('.conv-avatar');
-    hav.textContent = t.letter;
-    hav.style.background = t.bg;
-    head.querySelector('.chat-name').textContent = t.name;
-    // the ● is turned into an svg dot at load, so it has to be re-converted here
+    if(hav){ hav.style.overflow = 'hidden'; hav.innerHTML = avatarHTML(other, name); }
+    head.querySelector('.chat-name').textContent = name;
     var st = head.querySelector('.chat-status');
-    st.textContent = t.online ? '● ออนไลน์' : '● ออฟไลน์';
-    st.classList.toggle('off', !t.online);   // .chat-status is green by default
+    if(st){ st.textContent = conv && conv.postTitle ? 'เกี่ยวกับ: ' + conv.postTitle : ''; st.classList.add('off'); }
+
+    var res = await sb.from('messages')
+      .select('id,body,file_name,file_url,file_size,sender_id,created_at')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending:true });
+    if(res.error){ console.error('kxOpenConversation failed', res.error); return; }
+
+    var me = window.kxSession.user.id;
+    var html = '', lastDay = '';
+    res.data.forEach(function(m){
+      var d = dayLabel(m.created_at);
+      if(d !== lastDay){ html += '<div class="chat-date-sep">' + esc(d) + '</div>'; lastDay = d; }
+      html += bubbleHTML(m, other, me);
+    });
+    body.innerHTML = html || '<div style="padding:24px;text-align:center;font-size:13px;color:var(--ink-faint);">ยังไม่มีข้อความ — ทักทายกันก่อนได้เลย</div>';
     if(window.kxApplyIcons){ window.kxApplyIcons(head); window.kxApplyIcons(body); }
     body.scrollTop = body.scrollHeight;
-  }
-  window.openConv = openConv;
 
-  function bubble(inner){
-    var row = document.createElement('div');
-    row.className = 'bubble-row out';
-    row.innerHTML = '<div>' + inner + '<div class="bubble-time">' + now() + '</div></div>';
-    body.appendChild(row);
-    if(window.kxApplyIcons) window.kxApplyIcons(row);
-    body.scrollTop = body.scrollHeight;
-  }
-  // the list row is how you find the conversation again, so it has to follow
-  function touchList(text){
-    var item = page.querySelector('.conv-item.active');
-    if(!item) return;
-    var s = item.querySelector('.conv-snippet'), t = item.querySelector('.conv-time');
-    if(s){ s.textContent = text; s.classList.remove('unread'); }
-    if(t) t.textContent = now();
+    // opening a conversation is reading it
+    await sb.from('conversation_participants')
+      .update({ last_read_at: new Date().toISOString() })
+      .eq('conversation_id', id).eq('profile_id', me);
+    if(conv) conv.unread = false;
+    renderList();
+    updateUnreadBadges();
+  };
+
+  // ---------- starting a chat from a post ----------
+  window.kxStartChat = async function(otherId, postId){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนส่งข้อความ'); navigateTo('page-auth'); return; }
+    if(!otherId){ kxToast('ไม่พบผู้รับข้อความ'); return; }
+    if(otherId === window.kxSession.user.id){ kxToast('ไม่สามารถส่งข้อความหาตัวเองได้'); return; }
+    var res = await sb.rpc('kx_start_conversation', { other_id: otherId, p_post_id: postId || null });
+    if(res.error){
+      console.error('kxStartChat failed', res.error);
+      kxToast(notReady(res.error)
+        ? 'ระบบข้อความยังไม่ได้ติดตั้ง (ยังไม่ได้รัน messaging.sql)'
+        : 'เปิดการสนทนาไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    navigateTo('page-messages');
+    await kxLoadConversations();
+    await kxOpenConversation(res.data);
+  };
+
+  // ---------- sending ----------
+  async function sendMessage(fields){
+    if(!current){ kxToast('เลือกการสนทนาก่อน'); return false; }
+    var row = { conversation_id: current, sender_id: window.kxSession.user.id };
+    for(var k in fields) row[k] = fields[k];
+    var res = await sb.from('messages').insert(row);
+    if(res.error){
+      console.error('sendMessage failed', res.error);
+      kxToast('ส่งข้อความไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return false;
+    }
+    await kxOpenConversation(current);
+    await kxLoadConversations();
+    return true;
   }
 
-  function sendText(){
+  async function sendText(){
     var v = (input.value || '').trim();
-    if(!v) return;
-    bubble('<div class="bubble">' + esc(v) + '</div>');
-    touchList(v);
+    if(!v || !window.kxSession) return;
     input.value = '';
+    if(!await sendMessage({ body: v })) input.value = v;   // put it back if it failed
     input.focus();
   }
   send.addEventListener('click', sendText);
@@ -9454,25 +9556,39 @@ html, body{
     if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendText(); }
   });
 
-  function size(n){
-    return n < 1024 ? n + ' B'
-         : n < 1048576 ? Math.round(n / 1024) + ' KB'
-         : (n / 1048576).toFixed(1) + ' MB';
-  }
   clip.addEventListener('click', function(){ file.click(); });
   clip.addEventListener('keydown', function(e){
     if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); file.click(); }
   });
-  file.addEventListener('change', function(){
-    var list = Array.prototype.slice.call(file.files || []);
-    if(!list.length) return;
-    bubble(list.map(function(f){
-      return '<div class="bubble-file">📎 <span class="bf-name">' + esc(f.name) +
-             '</span><span class="bf-size">' + size(f.size) + '</span></div>';
-    }).join(''));
-    touchList(list.length === 1 ? '📎 ' + list[0].name : '📎 ' + list.length + ' ไฟล์');
+  file.addEventListener('change', async function(){
+    var files = Array.prototype.slice.call(file.files || []);
     file.value = '';   // so picking the same file twice still fires change
+    if(!files.length || !current || !window.kxSession) return;
+    for(var i = 0; i < files.length; i++){
+      try{
+        var url = await window.kxUploadFile('attachments', files[i]);
+        await sendMessage({ file_name: files[i].name, file_url: url, file_size: files[i].size });
+      }catch(err){
+        console.error('chat upload failed', err);
+        kxToast('แนบไฟล์ไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
+      }
+    }
   });
+
+  // ---------- keep it fresh while the page is open ----------
+  window.kxChatPollStart = function(){
+    window.kxChatPollStop();
+    poll = setInterval(function(){
+      if(!window.kxSession || missing) return;
+      if(document.hidden) return;
+      var active = document.querySelector('.app-page.active');
+      if(!active || active.id !== 'page-messages') return;
+      if(current) kxOpenConversation(current);
+      else kxLoadConversations();
+    }, 6000);
+  };
+  window.kxChatPollStop = function(){ if(poll){ clearInterval(poll); poll = null; } };
+
 })();
 </script>
 
@@ -10685,7 +10801,7 @@ html, body{
             รับผลิตงานโลหะแผ่นทุกชนิด ตัดเลเซอร์ พับ ม้วน เชื่อม ประกอบ รองรับงานเหล็ก สเตนเลส อลูมิเนียม มีทีมช่างมากประสบการณ์ พร้อมเครื่องจักรทันสมัย ส่งมอบตรงเวลา รับงานทั้งจำนวนน้อยและจำนวนมาก
           </div>
           <div class="offer-action-row">
-            <button class="btn btn-outline" onclick="navigateTo('page-messages')">💬 ส่งข้อความ</button>
+            <button class="btn btn-outline" id="kxOfferChatBtn" onclick="kxChatWithSeller()">💬 ส่งข้อความ</button>
             <button class="btn btn-primary" onclick="openQuoteModal()">🧾 ขอใบเสนอราคา</button>
           </div>
     <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
@@ -18174,6 +18290,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var closedPanel = document.getElementById('dealClosedPanel');
     if(closedPanel){
       if(wonQuote){
+        window.kxWinnerProfileId = wonQuote.bidder_id || null;
         var wn = (wonQuote.profiles && wonQuote.profiles.company_name) || 'ผู้ชนะ';
         var wnEl = document.getElementById('winnerName');   if(wnEl) wnEl.textContent = wn;
         var wpEl = document.getElementById('winnerPrice');  if(wpEl) wpEl.textContent = Math.round(wonQuote.price).toLocaleString('en-US');
@@ -18182,7 +18299,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         var wpr = closedPanel.querySelector('.winner-price');
         if(wpr) wpr.innerHTML = 'ราคาที่เสนอ <b id="winnerPrice">' + Math.round(wonQuote.price).toLocaleString('en-US') + '</b> บาท';
         closedPanel.style.display = 'block';
-      } else closedPanel.style.display = 'none';
+      } else { closedPanel.style.display = 'none'; window.kxWinnerProfileId = null; }
     }
 
     var actionRow = document.getElementById('rfqActionRow');
@@ -18196,13 +18313,12 @@ body.kx-auth .kx-burger{ display:none !important; }
           : isClosed ? '📌 ประกาศของคุณ — ปิดรับข้อเสนอแล้ว'
           : isExpired ? '📌 ประกาศของคุณ — หมดเขตรับข้อเสนอแล้ว'
           : '📌 นี่คือประกาศของคุณ — รอผู้ให้บริการเข้ามาเสนอราคา');
-      }else if(!canBid){
-        actionRow.innerHTML = '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
-          note(decided ? '🏆 ประกาศนี้ได้ผู้ชนะแล้ว'
-            : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }else{
-        actionRow.innerHTML = '<button class="btn btn-outline" onclick="navigateTo(\'page-messages\')">💬 สอบถามรายละเอียด</button>' +
-          '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>';
+        var chat = '<button class="btn btn-outline" onclick="kxStartChat(\'' + post.owner_id + '\',\'' + post.id + '\')">💬 สอบถามรายละเอียด</button>';
+        actionRow.innerHTML = canBid
+          ? chat + '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>'
+          : chat + note(decided ? '🏆 ประกาศนี้ได้ผู้ชนะแล้ว'
+              : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }
     }
     window.kxCurrentDetailPostId  = post.id;
@@ -18366,6 +18482,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
   };
 
+  // The two "message this person" buttons that live in static markup and so
+  // can't carry the id in their onclick — they read whichever post is open.
+  window.kxChatWithWinner = function(){
+    if(!window.kxWinnerProfileId){ kxToast('ยังไม่มีผู้ชนะสำหรับงานนี้'); return; }
+    kxStartChat(window.kxWinnerProfileId, window.kxCurrentDetailPostId);
+  };
+  window.kxChatWithSeller = function(){
+    if(!window.kxCurrentDetailOwnerId){ kxToast('ไม่พบเจ้าของประกาศ'); return; }
+    kxStartChat(window.kxCurrentDetailOwnerId, window.kxCurrentDetailPostId);
+  };
+
   window.kxOpenPost = function(id, kind){
     var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
     navigateTo(page);
@@ -18377,7 +18504,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   window.kxLoadPostDetail = async function(id, kind){
     window.kxCurrentDetailKind = kind;
-    var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))';
+    var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,bidder_id,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))';
     var res = await sb.from('posts').select(base + (qaTableMissing ? '' : QA_SELECT))
       .eq('id', id).maybeSingle();
     // questions.sql may not have been run yet — the rest of the page is still
@@ -18633,6 +18760,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-rfq-offers') window.kxLoadMyPosts('rfq');
     if(id === 'page-my-offers') window.kxLoadMyPosts('offer');
     if(id === 'page-my-bids') window.kxLoadMyBids();
+    if(id === 'page-messages'){
+      if(window.kxLoadConversations) window.kxLoadConversations();
+      if(window.kxChatPollStart) window.kxChatPollStart();
+    }else if(window.kxChatPollStop) window.kxChatPollStop();
     return r;
   };
 })();
