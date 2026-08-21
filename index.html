@@ -10526,6 +10526,19 @@ html, body{
     /* The action buttons borrowed .btn-edit-offer, which is the little fixed-width
        ✎ square from the listing rows — "ตอบกลับด้วยใบเสนอราคา" was being wrapped
        one character per line inside it. These are the modal's own controls. */
+    /* .modal-box / .modal-close / .modal-title / .modal-sub are only defined
+       under #page-my-offers, and this modal is moved to <body> so it can open
+       from the feed too — these carry the same look once it is out of there. */
+    body > #quoteRequestsModal{ display:none; position:fixed; inset:0; z-index:1000;
+      background:rgba(20,30,55,.45); align-items:center; justify-content:center; padding:20px; }
+    body > #quoteRequestsModal.open{ display:flex; }
+    body > #quoteRequestsModal .modal-box{ background:var(--card); border-radius:16px; padding:28px;
+      width:100%; position:relative; max-height:90vh; overflow-y:auto; }
+    body > #quoteRequestsModal .modal-close{ position:absolute; top:16px; right:16px; width:32px; height:32px;
+      border-radius:50%; border:none; background:#f1f2f7; color:var(--ink-soft); font-size:15px; cursor:pointer; }
+    body > #quoteRequestsModal .modal-title{ font-size:18px; font-weight:800; margin:0 0 6px; color:var(--ink); padding-right:40px; }
+    body > #quoteRequestsModal .modal-sub{ font-size:12.5px; color:var(--ink-soft); margin:0 0 4px; line-height:1.6; }
+
     #quoteRequestsModal .modal-box{ max-width:640px; width:calc(100% - 32px); }
     #quoteRequestsModal .qr-toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px; }
     #quoteRequestsModal .qr-chip{ border:1.5px solid var(--line); background:#fff; color:var(--ink-soft);
@@ -10785,7 +10798,11 @@ html, body{
     document.getElementById('qrMoreNote').innerHTML = '';
     if(barEl) barEl.style.display = 'none';
     listEl.innerHTML = '<div style="padding:18px;text-align:center;font-size:13px;color:var(--ink-faint);">กำลังโหลด...</div>';
-    document.getElementById('quoteRequestsModal').classList.add('open');
+    // the modal is markup inside #page-my-offers, which is display:none on any
+    // other page — it has to move to the body to be openable from the feed
+    var mo = document.getElementById('quoteRequestsModal');
+    if(mo.parentElement !== document.body) document.body.appendChild(mo);
+    mo.classList.add('open');
 
     var res = await sb.from('quote_requests')
       .select('id,quantity,budget,needed_by,detail,quoted_price,seller_note,status,created_at,' +
@@ -18374,8 +18391,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var docs = post.post_attachments || [];
     var quotePrices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
-    var offerCount = quotePrices.length;
-    var avg = offerCount ? quotePrices.reduce(function(a, b){ return a + b; }, 0) / offerCount : null;
+    /* posts.quote_count / posts.request_count rather than the length of the
+       embed. Both source tables are private — quotes to the bidder and post
+       owner, quote_requests to the requester and seller — so the embed comes
+       back empty for anyone else, and the feed showed 0 on every card to
+       everyone not already involved. The counters are public; the rows behind
+       them are not. (The average below still comes from the embed, so it stays
+       visible only to people entitled to the prices.) */
+    var offerCount = isRfq
+      ? (post.quote_count != null ? post.quote_count : quotePrices.length)
+      : (post.request_count != null ? post.request_count : 0);
+    var avg = quotePrices.length ? quotePrices.reduce(function(a, b){ return a + b; }, 0) / quotePrices.length : null;
     var priceText = isRfq
       ? (avg != null ? money(avg) : 'ยังไม่มี')
       : (post.price_high != null ? money(post.price_high) : 'ยังไม่มี');
@@ -18439,7 +18465,12 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</div>' +
       thumbs +
       '<div class="pc-stats"><span class="pc-center">' +
-        '<span class="pc-offers"><b class="offer-num">' + offerCount + '</b> ' +
+        // your own Offer: the count is a way into the list of who asked
+        '<span class="pc-offers"' +
+          (!isRfq && mine
+            ? ' style="cursor:pointer;" title="ดูคำขอใบเสนอราคา" onclick="event.stopPropagation();openQuoteRequestsModal(\'' + post.id + '\')"'
+            : '') + '>' +
+          '<b class="offer-num">' + offerCount + '</b> ' +
           (isRfq ? 'ข้อเสนอ' : 'ผู้ขอใบเสนอราคา') + '</span>' +
         '<span class="pc-price"><span class="pc-price-lbl">' + (isRfq ? 'ราคาเฉลี่ย' : 'ราคาเริ่มต้น') + '</span>' +
           '<b class="pc-price-num">' + priceText + '</b></span>' +
@@ -18702,10 +18733,19 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(miniRows.length >= 3){
       miniRows[0].textContent = post.status === 'open' ? 'พร้อมรับงาน' : post.status === 'paused' ? 'พักไว้ชั่วคราว' : 'ปิดรับแล้ว';
       miniRows[1].textContent = fmtDateBE(post.created_at);
-      // same wrong-table bug as the badge on งานของฉัน — คำขอราคา lives in
-      // quote_requests, and RLS shows only the ones this viewer may see
-      var reqCount = (post.quote_requests || []).length;
+      // the public counter, same number the feed card and งานของฉัน show
+      var reqCount = post.request_count != null ? post.request_count : (post.quote_requests || []).length;
       miniRows[2].textContent = reqCount ? reqCount + ' คำขอ' : 'ยังไม่มี';
+      // and on your own listing it opens the list, like the badge and the card
+      var isMine = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
+      if(isMine && reqCount){
+        miniRows[2].style.cursor = 'pointer';
+        miniRows[2].style.color = 'var(--blue-700)';
+        miniRows[2].title = 'ดูคำขอใบเสนอราคา';
+        miniRows[2].onclick = function(){ openQuoteRequestsModal(post.id); };
+      }else{
+        miniRows[2].style.cursor = ''; miniRows[2].style.color = ''; miniRows[2].onclick = null;
+      }
     }
     // ส่งข้อความ on this page reads these two. Only renderRfqDetail used to set
     // the owner, so on an Offer they still held whichever RFQ was opened last —
@@ -19029,10 +19069,8 @@ body.kx-auth .kx-burger{ display:none !important; }
   function myOfferRowHTML(post){
     var images = post.post_images || [];
     var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
-    // คำขอราคา on an Offer comes from quote_requests. This counted `quotes`,
-    // which is the bidding table for RFQs, so the badge read 0 no matter how
-    // many requests had actually arrived.
-    var reqs = (post.quote_requests || []).length;
+    // the public counter, so this agrees with the feed card and the detail page
+    var reqs = post.request_count != null ? post.request_count : (post.quote_requests || []).length;
     var statusVal = post.status === 'open' ? 'active' : post.status;
     var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['paused', 'พักไว้'], closed: ['closed', 'ปิดแล้ว'] };
     var pill = pillMap[statusVal] || pillMap.active;
