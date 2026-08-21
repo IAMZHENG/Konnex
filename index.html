@@ -5020,6 +5020,36 @@ input[type="number"]:focus, textarea:focus, select:focus{
     color: var(--ink-faint);
     margin: 6px 0
     }
+/* One thread per person, so a run of messages can change subject. This marks
+   where it does, and clicking it opens the announcement being discussed. */
+#page-messages .kx-topic-sep {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 8px;
+    cursor: pointer
+    }
+#page-messages .kx-topic-sep::before,
+#page-messages .kx-topic-sep::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line)
+    }
+#page-messages .kx-topic-sep span {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--blue-700);
+    background: var(--blue-50);
+    border: 1px solid #dae6ff;
+    border-radius: 999px;
+    padding: 3px 12px;
+    white-space: nowrap;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis
+    }
+#page-messages .kx-topic-sep:hover span { background: #dae6ff }
 #page-messages .bubble-row {
     display: flex;
     gap: 10px;
@@ -9310,8 +9340,9 @@ html, body{
   var file   = document.getElementById('chatFile');
   var listEl = document.getElementById('convItems');
 
-  var CONVS = [];          // [{id, post_id, other:{...}, last, unread}]
+  var CONVS = [];          // [{id, other:{...}, last, unread}]
   var current = null;      // conversation id on screen
+  var postContext = null;  // which announcement the next message is about
   var poll = null;
   var missing = false;     // messaging.sql not run yet
 
@@ -9374,8 +9405,10 @@ html, body{
     var readAt = {};
     mine.data.forEach(function(r){ readAt[r.conversation_id] = r.last_read_at; });
 
+    // one thread per person now, so the row's subtitle is the topic of the
+    // latest message rather than a topic fixed to the whole conversation
     var convs = await sb.from('conversations')
-      .select('id,post_id,posts(title),conversation_participants(profile_id,profiles(id,company_name,avatar_url)),messages(id,body,file_name,sender_id,created_at)')
+      .select('id,conversation_participants(profile_id,profiles(id,company_name,avatar_url)),messages(id,body,file_name,sender_id,created_at,post_id,posts(title))')
       .in('id', ids);
     if(convs.error){ console.error('kxLoadConversations failed', convs.error); return; }
 
@@ -9391,7 +9424,7 @@ html, body{
       var seen = readAt[c.id];
       return {
         id: c.id,
-        postTitle: c.posts && c.posts.title,
+        postTitle: last && last.posts && last.posts.title,
         other: others[0] || { company_name:'ผู้ใช้ Konnex' },
         last: last,
         unread: msgs.some(function(m){
@@ -9433,7 +9466,7 @@ html, body{
           '<div class="conv-top-row"><span class="conv-name">' + esc(name) + '</span>' +
             '<span class="conv-time">' + esc(listTime(c.last && c.last.created_at)) + '</span></div>' +
           '<div class="conv-snippet' + (c.unread ? ' unread' : '') + '">' + esc(snippetOf(c.last)) + '</div>' +
-          (c.postTitle ? '<div class="conv-snippet" style="font-size:11px;color:var(--ink-faint);">เกี่ยวกับ: ' + esc(c.postTitle) + '</div>' : '') +
+          (c.postTitle ? '<div class="conv-snippet" style="font-size:11px;color:var(--ink-faint);">ล่าสุดเรื่อง: ' + esc(c.postTitle) + '</div>' : '') +
         '</div>' +
         (c.unread ? '<div class="conv-unread-dot"></div>' : '') +
       '</div>';
@@ -9482,21 +9515,42 @@ html, body{
     if(hav){ hav.style.overflow = 'hidden'; hav.innerHTML = avatarHTML(other, name); }
     head.querySelector('.chat-name').textContent = name;
     var st = head.querySelector('.chat-status');
-    if(st){ st.textContent = conv && conv.postTitle ? 'เกี่ยวกับ: ' + conv.postTitle : ''; st.classList.add('off'); }
+    if(st){ st.textContent = ''; st.classList.add('off'); }
 
     var res = await sb.from('messages')
-      .select('id,body,file_name,file_url,file_size,sender_id,created_at')
+      .select('id,body,file_name,file_url,file_size,sender_id,created_at,post_id,posts(title,kind)')
       .eq('conversation_id', id)
       .order('created_at', { ascending:true });
     if(res.error){ console.error('kxOpenConversation failed', res.error); return; }
 
     var me = window.kxSession.user.id;
-    var html = '', lastDay = '';
+    var html = '', lastDay = '', lastPost = 'init';
     res.data.forEach(function(m){
       var d = dayLabel(m.created_at);
       if(d !== lastDay){ html += '<div class="chat-date-sep">' + esc(d) + '</div>'; lastDay = d; }
+      // One thread per person means a single run of messages can cover several
+      // announcements. Without this, "ลดได้อีก 5%" sits in the thread with
+      // nothing saying which machine it was about.
+      var pid = m.post_id || null;
+      if(pid !== lastPost){
+        if(pid && m.posts){
+          html += '<div class="kx-topic-sep" onclick="kxOpenPost(\'' + pid + '\',\'' + (m.posts.kind || 'rfq') + '\')">' +
+            '<span>' + (m.posts.kind === 'offer' ? '🏷️' : '🛒') + ' เกี่ยวกับ: ' + esc(m.posts.title) + '</span></div>';
+        }
+        lastPost = pid;
+      }
       html += bubbleHTML(m, other, me);
     });
+    // replying continues whatever the last message was about
+    var lastMsg = res.data[res.data.length - 1];
+    postContext = lastMsg ? (lastMsg.post_id || null) : null;
+    // the header says what a reply typed right now will be filed under, since
+    // the thread as a whole no longer has one topic
+    if(st){
+      st.textContent = lastMsg && lastMsg.posts
+        ? 'ตอบกลับเรื่อง: ' + lastMsg.posts.title
+        : '';
+    }
     body.innerHTML = html || '<div style="padding:24px;text-align:center;font-size:13px;color:var(--ink-faint);">ยังไม่มีข้อความ — ทักทายกันก่อนได้เลย</div>';
     if(window.kxApplyIcons){ window.kxApplyIcons(head); window.kxApplyIcons(body); }
     body.scrollTop = body.scrollHeight;
@@ -9526,12 +9580,15 @@ html, body{
     navigateTo('page-messages');
     await kxLoadConversations();
     await kxOpenConversation(res.data);
+    // arriving from a post sets the topic for what you send next, even though
+    // the thread itself is shared with everything else you've discussed
+    postContext = postId || null;
   };
 
   // ---------- sending ----------
   async function sendMessage(fields){
     if(!current){ kxToast('เลือกการสนทนาก่อน'); return false; }
-    var row = { conversation_id: current, sender_id: window.kxSession.user.id };
+    var row = { conversation_id: current, sender_id: window.kxSession.user.id, post_id: postContext };
     for(var k in fields) row[k] = fields[k];
     var res = await sb.from('messages').insert(row);
     if(res.error){
