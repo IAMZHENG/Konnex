@@ -8087,8 +8087,12 @@ html, body{
     ['page-rfq-offers','briefcase','งานของฉัน'],
     ['page-my-bids','quote','ใบเสนอราคา'],
     ['page-dashboard','dashboard','แดชบอร์ด'],
-    ['page-messages','message','ข้อความ','5'],
-    ['page-notifications','bell','แจ้งเตือน','3'],
+    // No count baked in. The sidebar is rebuilt from this array on every
+    // navigation, so a literal here reappears on every page no matter what the
+    // real number is — which is why the rail kept showing 5 and 3. The counts
+    // are filled in by kxApplyNotifBadges / the chat's own badge pass.
+    ['page-messages','message','ข้อความ'],
+    ['page-notifications','bell','แจ้งเตือน'],
     ['page-saved','bookmark','บันทึกไว้'],
     ['page-history','clock','ประวัติการเข้าชม'],
     ['page-settings','gear','ตั้งค่า']
@@ -8133,7 +8137,11 @@ html, body{
         }).join('');
         return head + '<div class="side-subwrap">'+subs+'</div>';
       }
-      var cnt = it[3] ? '<span class="side-count">'+it[3]+'</span>' : '';
+      // these two carry live counts, so the span is always emitted (hidden at
+      // zero) for kxApplyNotifBadges / kxApplyChatBadges to fill
+      var live = (it[0] === 'page-messages' || it[0] === 'page-notifications');
+      var cnt = live ? '<span class="side-count" style="display:none">0</span>'
+                     : (it[3] ? '<span class="side-count">'+it[3]+'</span>' : '');
       var on = it[0]===navActive ? ' active' : '';
       return '<a href="#" onclick="navigateTo(\''+it[0]+'\');return false;" class="side-link'+on+'">'+kxNavIco(it[1])+'<span class="side-label">'+it[2]+'</span>'+cnt+'</a>';
     }).join('') + kxNavFooter(navActive);
@@ -8148,6 +8156,11 @@ html, body{
       }
       if(window.kxApplyIcons) window.kxApplyIcons(nav);
     });
+    // the rail is rebuilt from scratch on every navigation, which wipes any
+    // count already written into it — put them back
+    if(window.kxApplyNotifBadges) window.kxApplyNotifBadges();
+    if(window.kxApplyChatBadges)  window.kxApplyChatBadges();
+    if(window.kxApplyAvatars)     window.kxApplyAvatars();
   }
   window.renderSidebars = renderSidebars;
   renderSidebars((document.querySelector('.app-page.active')||{}).id);
@@ -9479,7 +9492,9 @@ html, body{
     if(window.kxApplyIcons) window.kxApplyIcons(listEl);
   }
 
-  // the sidebar and navbar both carry a count of unread conversations
+  // the sidebar and navbar both carry a count of unread conversations. On
+  // window because renderSidebars rebuilds the rail and has to put it back.
+  window.kxApplyChatBadges = updateUnreadBadges;
   function updateUnreadBadges(){
     var n = CONVS.filter(function(c){ return c.unread; }).length;
     Array.prototype.forEach.call(document.querySelectorAll('.side-link'), function(l){
