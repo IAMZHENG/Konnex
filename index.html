@@ -10522,12 +10522,66 @@ html, body{
   </div>
 
   <!-- MODAL: QUOTE REQUESTS LIST -->
+  <style>
+    /* The action buttons borrowed .btn-edit-offer, which is the little fixed-width
+       ✎ square from the listing rows — "ตอบกลับด้วยใบเสนอราคา" was being wrapped
+       one character per line inside it. These are the modal's own controls. */
+    #quoteRequestsModal .modal-box{ max-width:640px; width:calc(100% - 32px); }
+    #quoteRequestsModal .qr-toolbar{ display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px; }
+    #quoteRequestsModal .qr-chip{ border:1.5px solid var(--line); background:#fff; color:var(--ink-soft);
+      border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+      font-family:inherit; white-space:nowrap; }
+    #quoteRequestsModal .qr-chip:hover{ background:var(--bg); }
+    #quoteRequestsModal .qr-chip.active{ background:var(--blue-50); border-color:#c2d6ff; color:var(--blue-700); }
+
+    #quoteRequestsModal .qr-card{ border:1px solid var(--line); border-radius:12px; padding:14px; }
+    #quoteRequestsModal .qr-card.pending{ background:#fffdf7; border-color:#f3e2b8; }
+    #quoteRequestsModal .qr-top{ display:flex; gap:12px; align-items:flex-start; }
+    #quoteRequestsModal .qr-av{ width:38px; height:38px; border-radius:10px; background:var(--blue-600);
+      color:#fff; font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; overflow:hidden; cursor:pointer; }
+    #quoteRequestsModal .qr-who{ flex:1; min-width:0; }
+    #quoteRequestsModal .qr-name{ font-size:13.5px; font-weight:700; color:var(--ink);
+      overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #quoteRequestsModal .qr-when{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+    #quoteRequestsModal .qr-badge{ flex-shrink:0; font-size:11.5px; font-weight:700; border-radius:999px;
+      padding:4px 11px; white-space:nowrap; }
+    #quoteRequestsModal .qr-badge.pending{ color:var(--amber); background:#fff7e6; }
+    #quoteRequestsModal .qr-badge.done{ color:var(--green); background:var(--green-bg); }
+
+    #quoteRequestsModal .qr-meta{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0; }
+    #quoteRequestsModal .qr-meta span{ font-size:12px; color:var(--ink-soft); background:var(--bg);
+      border:1px solid var(--line); border-radius:8px; padding:4px 10px; }
+    #quoteRequestsModal .qr-detail{ font-size:12.5px; color:var(--ink); margin-top:8px; line-height:1.6;
+      white-space:pre-wrap; word-break:break-word; }
+    #quoteRequestsModal .qr-note{ font-size:12.5px; color:var(--green); margin-top:8px;
+      background:var(--green-bg); border-radius:8px; padding:7px 11px; line-height:1.6; }
+    #quoteRequestsModal .qr-files{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    #quoteRequestsModal .qr-files .file-chip{ max-width:200px; }
+
+    #quoteRequestsModal .qr-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;
+      padding-top:12px; border-top:1px solid var(--line); }
+    #quoteRequestsModal .qr-btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      border-radius:9px; padding:9px 16px; font-size:12.5px; font-weight:700; cursor:pointer;
+      font-family:inherit; white-space:nowrap; border:1.5px solid var(--line); background:#fff; color:var(--ink); }
+    #quoteRequestsModal .qr-btn.primary{ background:var(--blue-600); border-color:var(--blue-700); color:#fff; }
+    #quoteRequestsModal .qr-btn:hover{ filter:brightness(.97); }
+
+    @media (max-width:560px){
+      #quoteRequestsModal .qr-actions .qr-btn{ flex:1 1 100%; }
+    }
+  </style>
   <div class="modal-overlay" id="quoteRequestsModal">
-    <div class="modal-box" style="max-width:560px;">
+    <div class="modal-box">
       <button class="modal-close" onclick="closeQuoteRequestsModal()">✕</button>
       <div class="modal-title" id="qrModalTitle">คำขอใบเสนอราคาที่ได้รับ</div>
       <div class="modal-sub" id="qrModalSub">รายชื่อผู้ที่ขอใบเสนอราคาสำหรับประกาศนี้</div>
-      <div id="qrList" style="display:flex;flex-direction:column;gap:12px;max-height:420px;overflow-y:auto;"></div>
+      <div class="qr-toolbar" id="qrToolbar" style="display:none;">
+        <button type="button" class="qr-chip active" data-qrf="all"     onclick="kxQrFilter('all',this)">ทั้งหมด</button>
+        <button type="button" class="qr-chip"        data-qrf="waiting" onclick="kxQrFilter('waiting',this)">● ยังไม่ได้ตอบ</button>
+        <button type="button" class="qr-chip"        data-qrf="received" onclick="kxQrFilter('received',this)">✓ ตอบแล้ว</button>
+      </div>
+      <div id="qrList" style="display:flex;flex-direction:column;gap:12px;max-height:min(60vh,460px);overflow-y:auto;margin-top:12px;padding-right:2px;"></div>
       <div id="qrMoreNote" style="text-align:center;font-size:12.5px;color:var(--ink-faint);margin-top:14px;"></div>
     </div>
   </div>
@@ -10616,12 +10670,120 @@ html, body{
   }
   var QR_ROWS = [];
 
+  var QR_PAGE = 20;          // how many to draw at once
+  var qrFilter = 'all';
+  var qrShown  = QR_PAGE;
+
+  var QR_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function qrDate(iso){
+    if(!iso) return 'ไม่ระบุ';
+    var d = new Date(iso);
+    return d.getDate() + ' ' + QR_TH[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+  }
+
+  function qrCardHTML(r, offerId){
+    var done = r.status === 'received';
+    var who  = (r.profiles && r.profiles.company_name) || 'ผู้ซื้อ';
+    var pid  = (r.profiles && r.profiles.id) || '';
+    var av   = (r.profiles && r.profiles.avatar_url)
+      ? '<img src="' + qrEsc(r.profiles.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">'
+      : qrEsc(who.charAt(0).toUpperCase());
+
+    var meta = '<span>📦 จำนวน ' + qrEsc(r.quantity) + '</span>' +
+      '<span>💰 ' + (r.budget != null ? Math.round(r.budget).toLocaleString('en-US') + ' ฿' : 'ไม่ระบุงบ') + '</span>' +
+      (r.needed_by ? '<span>🗓️ ภายใน ' + qrDate(r.needed_by) + '</span>' : '');
+
+    var files = (r.quote_request_files || []).length
+      ? '<div class="qr-files">' + r.quote_request_files.map(function(f){
+          return '<a class="file-chip ' + qrEsc(f.file_kind) + '" target="_blank" rel="noopener" href="' + qrEsc(f.file_url) + '">' +
+            '<span class="fc-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
+            '<span class="fc-name">' + qrEsc(f.file_name) + '</span></a>';
+        }).join('') + '</div>'
+      : '';
+
+    return '<div class="qr-card' + (done ? '' : ' pending') + '">' +
+      '<div class="qr-top">' +
+        '<div class="qr-av" onclick="closeQuoteRequestsModal();kxViewProfile(\'' + pid + '\')">' + av + '</div>' +
+        '<div class="qr-who">' +
+          '<div class="qr-name">' + qrEsc(who) + '</div>' +
+          '<div class="qr-when">ขอเมื่อ ' + qrDate(r.created_at) + '</div>' +
+        '</div>' +
+        '<span class="qr-badge ' + (done ? 'done' : 'pending') + '">' +
+          (done ? '✓ ' + Math.round(r.quoted_price).toLocaleString('en-US') + ' ฿' : '● ยังไม่ได้ตอบ') +
+        '</span>' +
+      '</div>' +
+      '<div class="qr-meta">' + meta + '</div>' +
+      '<div class="qr-detail">' + qrEsc(r.detail) + '</div>' +
+      files +
+      (done && r.seller_note ? '<div class="qr-note">↳ ' + qrEsc(r.seller_note) + '</div>' : '') +
+      '<div class="qr-actions">' +
+        '<button type="button" class="qr-btn' + (done ? '' : ' primary') + '" onclick="openRespondQuoteModal(\'' + r.id + '\')">' +
+          (done ? '✎ แก้ไขราคาที่ส่ง' : '✎ ตอบกลับด้วยใบเสนอราคา') + '</button>' +
+        '<button type="button" class="qr-btn" onclick="closeQuoteRequestsModal();kxStartChat(\'' + pid + '\',\'' + offerId + '\')">💬 แชท</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  /* With one or two requests any order works. With fifty it matters, so:
+     unanswered first (those are the ones costing you a sale), newest first
+     within that, a filter for each status, and only QR_PAGE drawn at a time
+     so opening the modal on a popular listing doesn't build hundreds of
+     cards before it can paint. */
+  function qrRender(){
+    var listEl = document.getElementById('qrList');
+    var moreEl = document.getElementById('qrMoreNote');
+    if(!listEl) return;
+
+    var rows = QR_ROWS.filter(function(r){
+      return qrFilter === 'all' || r.status === qrFilter;
+    }).sort(function(a, b){
+      var byStatus = (a.status === 'received' ? 1 : 0) - (b.status === 'received' ? 1 : 0);
+      if(byStatus) return byStatus;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    if(!rows.length){
+      listEl.innerHTML = '<div style="padding:22px;text-align:center;font-size:13px;color:var(--ink-faint);">' +
+        (QR_ROWS.length
+          ? 'ไม่มีคำขอในหมวดนี้'
+          : 'ยังไม่มีคำขอ<br>เมื่อมีคนขอใบเสนอราคาจากประกาศนี้ รายการจะแสดงที่นี่') + '</div>';
+      if(moreEl) moreEl.innerHTML = '';
+      return;
+    }
+
+    var page = rows.slice(0, qrShown);
+    listEl.innerHTML = page.map(function(r){ return qrCardHTML(r, currentQuoteOfferId); }).join('');
+    if(moreEl){
+      var left = rows.length - page.length;
+      moreEl.innerHTML = left > 0
+        ? '<button type="button" class="qr-chip" onclick="kxQrMore()">ดูเพิ่มอีก ' + left + ' รายการ</button>'
+        : (rows.length > QR_PAGE ? 'แสดงครบ ' + rows.length + ' รายการแล้ว' : '');
+    }
+    if(window.kxApplyIcons) window.kxApplyIcons(listEl);
+  }
+
+  window.kxQrFilter = function(f, btn){
+    qrFilter = f; qrShown = QR_PAGE;
+    Array.prototype.forEach.call(document.querySelectorAll('#qrToolbar .qr-chip'), function(c){
+      c.classList.toggle('active', c === btn);
+    });
+    qrRender();
+    var l = document.getElementById('qrList'); if(l) l.scrollTop = 0;
+  };
+  window.kxQrMore = function(){ qrShown += QR_PAGE; qrRender(); };
+
   window.openQuoteRequestsModal = async function(offerId){
     currentQuoteOfferId = offerId;
+    qrFilter = 'all'; qrShown = QR_PAGE;
     var titleEl = document.getElementById('qrModalTitle');
     var subEl   = document.getElementById('qrModalSub');
     var listEl  = document.getElementById('qrList');
-    document.getElementById('qrMoreNote').innerText = '';
+    var barEl   = document.getElementById('qrToolbar');
+    Array.prototype.forEach.call(document.querySelectorAll('#qrToolbar .qr-chip'), function(c){
+      c.classList.toggle('active', c.dataset.qrf === 'all');
+    });
+    document.getElementById('qrMoreNote').innerHTML = '';
+    if(barEl) barEl.style.display = 'none';
     listEl.innerHTML = '<div style="padding:18px;text-align:center;font-size:13px;color:var(--ink-faint);">กำลังโหลด...</div>';
     document.getElementById('quoteRequestsModal').classList.add('open');
 
@@ -10640,6 +10802,7 @@ html, body{
       return;
     }
     QR_ROWS = res.data;
+
     var title = (res.data[0] && res.data[0].posts && res.data[0].posts.title) || '';
     if(titleEl) titleEl.innerText = title ? 'คำขอใบเสนอราคา — ' + title : 'คำขอใบเสนอราคา';
 
@@ -10647,64 +10810,15 @@ html, body{
     var pending  = res.data.length - answered;
     if(subEl){
       subEl.innerHTML = res.data.length
-        ? 'มีผู้ขอใบเสนอราคาทั้งหมด ' + res.data.length + ' ราย &nbsp;·&nbsp; ' +
-          '<span style="color:var(--amber);font-weight:700;">● ยังไม่ได้ตอบ ' + pending + '</span> &nbsp; ' +
-          '<span style="color:var(--green);font-weight:700;">✓ ส่งใบเสนอราคาแล้ว ' + answered + '</span>'
+        ? 'ทั้งหมด ' + res.data.length + ' ราย &nbsp;·&nbsp; ' +
+          '<span style="color:var(--amber);font-weight:700;">● ยังไม่ได้ตอบ ' + pending + '</span> &nbsp;·&nbsp; ' +
+          '<span style="color:var(--green);font-weight:700;">✓ ตอบแล้ว ' + answered + '</span>'
         : 'ยังไม่มีใครขอใบเสนอราคาสำหรับประกาศนี้';
     }
+    // the filter bar only earns its space once there is a mix to filter
+    if(barEl) barEl.style.display = (pending && answered) ? '' : 'none';
 
-    if(!res.data.length){
-      listEl.innerHTML = '<div style="padding:22px;text-align:center;font-size:13px;color:var(--ink-faint);">' +
-        'ยังไม่มีคำขอ<br>เมื่อมีคนขอใบเสนอราคาจากประกาศนี้ รายการจะแสดงที่นี่</div>';
-      return;
-    }
-
-    var TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-    function fmt(iso){
-      if(!iso) return 'ไม่ระบุ';
-      var d = new Date(iso);
-      return d.getDate() + ' ' + TH[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-    }
-    // unanswered first — those are the ones needing action
-    var sorted = res.data.slice().sort(function(a,b){
-      return (a.status === 'received' ? 1 : 0) - (b.status === 'received' ? 1 : 0);
-    });
-    listEl.innerHTML = sorted.map(function(r){
-      var done = r.status === 'received';
-      var who  = (r.profiles && r.profiles.company_name) || 'ผู้ซื้อ';
-      var av   = (r.profiles && r.profiles.avatar_url)
-        ? '<img src="' + qrEsc(r.profiles.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block;">'
-        : qrEsc(who.charAt(0).toUpperCase());
-      var badge = done
-        ? '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-bg);padding:3px 10px;border-radius:999px;">✓ ส่งใบเสนอราคาแล้ว ' + Math.round(r.quoted_price).toLocaleString('en-US') + ' ฿</span>'
-        : '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:var(--amber);background:#fff7e6;padding:3px 10px;border-radius:999px;">● ยังไม่ได้ตอบ</span>';
-      var files = (r.quote_request_files || []).length
-        ? '<div class="rfq-attach-grid" style="margin-top:8px;">' + r.quote_request_files.map(function(f){
-            return '<a class="file-chip ' + qrEsc(f.file_kind) + '" target="_blank" rel="noopener" href="' + qrEsc(f.file_url) + '">' +
-              '<span class="fc-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
-              '<span class="fc-name">' + qrEsc(f.file_name) + '</span></a>';
-          }).join('') + '</div>'
-        : '';
-      return '<div style="display:flex;gap:12px;border:1px solid ' + (done ? 'var(--line)' : '#f3e2b8') + ';border-radius:12px;padding:14px;' + (done ? '' : 'background:#fffdf7;') + '">' +
-        '<div onclick="closeQuoteRequestsModal();kxViewProfile(\'' + (r.profiles && r.profiles.id) + '\')" style="cursor:pointer;overflow:hidden;width:38px;height:38px;border-radius:10px;background:var(--blue-600);color:#fff;font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + av + '</div>' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:13px;font-weight:700;">' + qrEsc(who) + '</span>' + badge + '</div>' +
-          '<div style="font-size:11.5px;color:var(--ink-faint);margin-bottom:6px;">ขอใบเสนอราคาเมื่อ ' + fmt(r.created_at) + '</div>' +
-          '<div style="font-size:12.5px;color:var(--ink-soft);">📦 จำนวน: ' + qrEsc(r.quantity) +
-            ' &nbsp;•&nbsp; 💰 งบประมาณ: ' + (r.budget != null ? Math.round(r.budget).toLocaleString('en-US') + ' ฿' : 'ไม่ระบุ') +
-            (r.needed_by ? ' &nbsp;•&nbsp; 🗓️ ต้องการภายใน ' + fmt(r.needed_by) : '') + '</div>' +
-          '<div style="font-size:12.5px;color:var(--ink-soft);margin-top:2px;white-space:pre-wrap;">💬 ' + qrEsc(r.detail) + '</div>' +
-          files +
-          (done && r.seller_note ? '<div style="font-size:12.5px;color:var(--green);margin-top:6px;">↳ ' + qrEsc(r.seller_note) + '</div>' : '') +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-            '<button class="btn-edit-offer" style="margin-top:10px;' + (done ? 'background:#fff;border:1.5px solid var(--line);color:var(--ink);' : '') + '" onclick="openRespondQuoteModal(\'' + r.id + '\')">' +
-              (done ? '✎ แก้ไขใบเสนอราคาที่ส่ง' : '✎ ตอบกลับด้วยใบเสนอราคา') + '</button>' +
-            '<button class="btn-edit-offer" style="margin-top:10px;background:#fff;border:1.5px solid var(--line);color:var(--ink);" onclick="closeQuoteRequestsModal();kxStartChat(\'' + (r.profiles && r.profiles.id) + '\',\'' + offerId + '\')">💬 แชท</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-    if(window.kxApplyIcons) window.kxApplyIcons(listEl);
+    qrRender();
   };
   function closeQuoteRequestsModal(){
     document.getElementById('quoteRequestsModal').classList.remove('open');
