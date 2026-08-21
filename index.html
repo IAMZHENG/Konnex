@@ -11984,9 +11984,20 @@ html, body{
         <div class="au-form" id="auForgot">
           <h2>รีเซ็ตรหัสผ่าน</h2>
           <p class="au-sub">กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้คุณ</p>
-          <div class="au-field"><label>อีเมล</label><input type="email" placeholder="you@company.co.th"></div>
-          <button class="au-btn" onclick="authTab('login')">ส่งลิงก์รีเซ็ตรหัสผ่าน</button>
+          <div class="au-field"><label for="auForgotEmail">อีเมล</label><input type="email" id="auForgotEmail" placeholder="you@company.co.th"></div>
+          <div class="au-err" id="auForgotErr" hidden></div>
+          <button class="au-btn" id="auForgotBtn" onclick="authSendReset()">ส่งลิงก์รีเซ็ตรหัสผ่าน</button>
           <div class="au-switch"><a onclick="authTab('login')">‹ กลับไปหน้าเข้าสู่ระบบ</a></div>
+        </div>
+
+        <!-- shown when the emailed link brings you back here -->
+        <div class="au-form" id="auNewPw">
+          <h2>ตั้งรหัสผ่านใหม่</h2>
+          <p class="au-sub">ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ (อย่างน้อย 6 ตัวอักษร)</p>
+          <div class="au-field"><label for="auNewPw1">รหัสผ่านใหม่</label><input type="password" id="auNewPw1" placeholder="••••••••"></div>
+          <div class="au-field"><label for="auNewPw2">ยืนยันรหัสผ่านใหม่</label><input type="password" id="auNewPw2" placeholder="••••••••"></div>
+          <div class="au-err" id="auNewPwErr" hidden></div>
+          <button class="au-btn" id="auNewPwBtn" onclick="authSetNewPassword()">บันทึกรหัสผ่านใหม่</button>
         </div>
       </div>
       <div class="au-foot">© 2024 Konnex · ปลอดภัยด้วยการเข้ารหัส SSL</div>
@@ -11997,9 +12008,12 @@ html, body{
 <script>
   function authTab(which){
     var isLogin = which === 'login', isReg = which === 'register', isForgot = which === 'forgot';
+    var isNewPw = which === 'newpw';
     document.getElementById('auLogin').classList.toggle('active', isLogin);
     document.getElementById('auRegister').classList.toggle('active', isReg);
     document.getElementById('auForgot').classList.toggle('active', isForgot);
+    var np = document.getElementById('auNewPw');
+    if(np) np.classList.toggle('active', isNewPw);
     document.getElementById('auTabLogin').classList.toggle('active', isLogin || isForgot);
     document.getElementById('auTabReg').classList.toggle('active', isReg);
     var box = document.querySelector('#page-auth .au-card'); if(box) box.scrollTop = 0;
@@ -18227,6 +18241,15 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(event === 'SIGNED_OUT'){
       window.kxCurrentUser = null;
       navigateTo('page-auth');
+      return;
+    }
+    /* Arriving from the reset email. supabase-js reads the token out of the
+       URL and signs you in for the purpose of setting a password, so without
+       this the link just drops you into the app still not knowing your
+       password — and the guard would let you straight past the form. */
+    if(event === 'PASSWORD_RECOVERY'){
+      navigateTo('page-auth');
+      if(typeof authTab === 'function') authTab('newpw');
     }
   });
 
@@ -18296,6 +18319,75 @@ body.kx-auth .kx-burger{ display:none !important; }
   // lie about it — say so instead.
   window.authSocial = function(who){
     kxToast('เข้าสู่ระบบด้วย ' + who + ' ยังไม่เปิดใช้งาน — ใช้อีเมลด้านบนไปก่อนนะครับ');
+  };
+
+  /* ---- ลืมรหัสผ่าน ----
+     The form existed and its button called authTab('login') — it switched back
+     to the login tab and sent nothing, so "we'll email you a link" was never
+     true and there was no way to recover an account from inside the app. */
+  window.authSendReset = async function(){
+    var el  = document.getElementById('auForgotEmail');
+    var err = document.getElementById('auForgotErr');
+    var btn = document.getElementById('auForgotBtn');
+    var email = ((el && el.value) || '').trim();
+    if(err) err.hidden = true;
+    if(el) el.classList.remove('bad');
+    if(!email || email.indexOf('@') < 0){
+      if(el){ el.classList.add('bad'); el.focus(); }
+      if(err){ err.textContent = 'กรุณากรอกอีเมลที่ใช้สมัคร'; err.hidden = false; }
+      return;
+    }
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+    var res = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(res.error){
+      console.error('resetPasswordForEmail failed', res.error);
+      if(err){
+        // the shared auth mailer is rate limited, and that reads as a failure
+        // when it is really "wait a bit"
+        err.textContent = /rate limit/i.test(res.error.message || '')
+          ? 'ส่งอีเมลบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่'
+          : 'ส่งลิงก์ไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่');
+        err.hidden = false;
+      }
+      return;
+    }
+    kxToast('ส่งลิงก์ไปที่ ' + email + ' แล้ว — เปิดอีเมลเพื่อตั้งรหัสผ่านใหม่');
+    authTab('login');
+  };
+
+  window.authSetNewPassword = async function(){
+    var a = document.getElementById('auNewPw1'), b = document.getElementById('auNewPw2');
+    var err = document.getElementById('auNewPwErr');
+    var btn = document.getElementById('auNewPwBtn');
+    var p1 = (a && a.value) || '', p2 = (b && b.value) || '';
+    if(err) err.hidden = true;
+    [a,b].forEach(function(e){ if(e) e.classList.remove('bad'); });
+    if(p1.length < 6){
+      if(a){ a.classList.add('bad'); a.focus(); }
+      if(err){ err.textContent = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; err.hidden = false; }
+      return;
+    }
+    if(p1 !== p2){
+      if(b){ b.classList.add('bad'); b.focus(); }
+      if(err){ err.textContent = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'; err.hidden = false; }
+      return;
+    }
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+    var res = await sb.auth.updateUser({ password: p1 });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(res.error){
+      console.error('updateUser password failed', res.error);
+      if(err){ err.textContent = 'ตั้งรหัสผ่านไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'); err.hidden = false; }
+      return;
+    }
+    if(a) a.value = ''; if(b) b.value = '';
+    kxToast('ตั้งรหัสผ่านใหม่เรียบร้อย');
+    navigateTo('page-feed');
   };
 
   /* ถาม used to live here as a DOM-only stub. It writes to post_questions now
