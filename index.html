@@ -8936,7 +8936,7 @@ html, body{
           <h3>เกี่ยวกับบริษัท</h3>
           <div class="about-text pf-clamped">Prime CNC Co., Ltd. ให้บริการงานกลึง กัด เจาะ CNC ด้วยเครื่องจักรที่ทันสมัย และทีมงานที่มีประสบการณ์ เราให้ความสำคัญกับคุณภาพ ความแม่นยำ และการส่งมอบตรงเวลา เพื่อตอบสนองความต้องการของลูกค้าในอุตสาหกรรมต่างๆ</div>
           <div class="see-more" role="button" tabindex="0" onclick="pfMore(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pfMore(this);}">ดูเพิ่มเติม ⌄</div>
-          <div class="info-list">
+          <div class="info-list" id="pfInfoList">
             <div class="info-item"><div class="label">ประเภทธุรกิจ</div><div class="value">ผู้ผลิต / รับจ้างผลิต</div></div>
             <div class="info-item"><div class="label">ปีที่ก่อตั้ง</div><div class="value">2016</div></div>
             <div class="info-item"><div class="label">จำนวนพนักงาน</div><div class="value">25 - 50 คน</div></div>
@@ -9017,7 +9017,7 @@ html, body{
           <div class="pf-wins-note">แสดงเฉพาะงานที่ปิดดีลในระบบ ผู้ให้บริการแก้ไขหรือเพิ่มเองไม่ได้</div>
         </div>
 
-        <div class="card" data-pf-sec="overview">
+        <div class="card" data-pf-sec="overview" id="pfContactCard">
           <h3>ติดต่อบริษัท</h3>
           <div class="contact-list">
             <div class="contact-row"><div class="contact-ic">📞</div>038-123-456</div>
@@ -9028,7 +9028,7 @@ html, body{
           <button class="btn btn-primary btn-block" onclick="navigateTo('page-messages')">ส่งข้อความ</button>
         </div>
 
-        <div class="card" data-pf-sec="overview">
+        <div class="card" data-pf-sec="overview" id="pfVerifyCard">
           <h3>การยืนยันตัวตน</h3>
           <div class="verify-list">
             <div class="verify-row">ยืนยันเบอร์โทรศัพท์ <span class="check">✔</span></div>
@@ -9039,7 +9039,7 @@ html, body{
           <div class="verified-badge">✓ Verified Company</div>
         </div>
 
-        <div class="card" data-pf-sec="overview">
+        <div class="card" data-pf-sec="overview" id="pfCertCard">
           <h3>ใบรับรองและมาตรฐาน</h3>
           <div class="cert-row">
             <div class="cert-ic">🛡️</div>
@@ -9052,7 +9052,7 @@ html, body{
         </div>
 
 
-        <div class="card" data-pf-sec="overview">
+        <div class="card" data-pf-sec="overview" id="pfSkillsCard">
           <h3>ความเชี่ยวชาญ</h3>
           <div class="tags">
             <span class="tag">CNC Milling</span>
@@ -18422,7 +18422,13 @@ body.kx-auth .kx-burger{ display:none !important; }
       miniRows[1].textContent = fmtDateBE(post.created_at);
       miniRows[2].textContent = quotes.length ? quotes.length + ' คำขอ' : 'ยังไม่มี';
     }
-    window.kxCurrentDetailPostId = post.id;
+    // ส่งข้อความ on this page reads these two. Only renderRfqDetail used to set
+    // the owner, so on an Offer they still held whichever RFQ was opened last —
+    // the button either said "ไม่พบเจ้าของประกาศ" or, worse, would have opened a
+    // chat with the wrong person about the wrong post.
+    window.kxCurrentDetailPostId  = post.id;
+    window.kxCurrentDetailOwnerId = post.owner_id;
+    window.kxCurrentDetailCanBid  = false;
   }
 
   /* ===== ถาม-ตอบ =====
@@ -18430,14 +18436,24 @@ body.kx-auth .kx-burger{ display:none !important; }
      <div> — reload and the question was gone, and the owner never saw it.
      Both detail pages now render the same real list from post_questions.
 
-     Askers stay anonymous on screen ("ผู้ให้บริการ (ไม่ระบุชื่อ)"): on an
-     open RFQ the other askers are each other's competition, and who is
-     circling a job is not the poster's to broadcast. The row still records
-     asker_id, so a question is never truly unattributed. */
-  function qaItemHTML(q, isOwner, ownerName){
+     Whether the asker is named depends on which side of the market the post
+     is. On an RFQ the askers are suppliers competing for the same job, and
+     which of them is circling it is not the buyer's to broadcast — those stay
+     "ผู้ให้บริการ (ไม่ระบุชื่อ)". On an Offer there is no such competition:
+     the asker is a prospective customer talking to a seller, the way they
+     would be on any product listing, so they are named and their profile
+     opens. Note this does make it public that they were interested. */
+  function qaItemHTML(q, isOwner, ownerName, named){
     var answered = !!(q.answer && q.answer.trim());
     var mine = !!(window.kxSession && q.asker_id === window.kxSession.user.id);
-    var head = mine ? 'คุณ' : 'ผู้ให้บริการ (ไม่ระบุชื่อ)';
+    var asker = q.profiles || null;
+    var askerName = (asker && asker.company_name) || 'ผู้ใช้ Konnex';
+    var head = mine
+      ? 'คุณ'
+      : named
+        ? '<a href="#" onclick="kxViewProfile(\'' + q.asker_id + '\');return false;"' +
+          ' style="color:var(--blue-700);text-decoration:none;">' + esc(askerName) + '</a>'
+        : 'ผู้ให้บริการ (ไม่ระบุชื่อ)';
     var reply = answered
       ? '<div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">' +
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">' +
@@ -18484,7 +18500,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         '💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>' +
       (qs.length
         ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
-            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName); }).join('') + '</div>'
+            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.kind === 'offer'); }).join('') + '</div>'
         : '<div style="font-size:13px;color:var(--ink-faint);padding:6px 0 2px;">ยังไม่มีคำถามสำหรับงานนี้</div>') +
       (canAsk
         ? '<div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
@@ -18539,6 +18555,115 @@ body.kx-auth .kx-burger{ display:none !important; }
     await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
   };
 
+  /* ===== Viewing someone else's profile =====
+     page-company-profile has only ever shown *your* profile: applyToProfile()
+     fills it from the localStorage copy of your own data. Clicking through to
+     another company would therefore have shown the viewer themselves.
+
+     This fills the page from their `profiles` row instead, and hides the cards
+     that are still demo markup — ผลงานล่าสุด, บริการของเรา, รีวิว, ใบรับรอง,
+     ความเชี่ยวชาญ, การยืนยันตัวตน. Those are hidden rather than left showing
+     because their contents are specific claims: displaying a stranger's page
+     with "ISO 9001:2015" and "Verified Company" on it would be inventing
+     credentials for a real company, which is worse than an empty section. */
+  var GUEST_HIDDEN = ['pfRecentCard','pfServicesCard','pfReviewsCard',
+                      'pfCertCard','pfSkillsCard','pfVerifyCard'];
+
+  /* ข้อมูลบริษัท ships with a worked example in it — ISO 9001:2015, a tax
+     number, 5,000,000 baht of registered capital. Those are specific claims
+     about a real business, and nobody's row has ever filled them in, so they
+     are rebuilt from the profile row on every view — for your own profile too,
+     not just other people's. Rows with no data simply don't appear. */
+  function fillInfoList(pr){
+    var info = document.getElementById('pfInfoList');
+    if(!info) return;
+    var BIZ = { company:'บริษัท / นิติบุคคล', person:'บุคคลธรรมดา', shop:'ร้านค้า / ห้างหุ้นส่วน' };
+    var facts = [];
+    if(pr.business_type) facts.push(['ประเภทธุรกิจ', BIZ[pr.business_type] || pr.business_type]);
+    if(pr.founded_year)  facts.push(['ปีที่ก่อตั้ง', String(pr.founded_year)]);
+    if(pr.employees)     facts.push(['จำนวนพนักงาน', pr.employees]);
+    if(pr.province)      facts.push(['จังหวัด', pr.province]);
+    if(pr.rating_count)  facts.push(['คะแนน', pr.rating_avg + '/5.0 (' + pr.rating_count + ' รีวิว)']);
+    info.innerHTML = facts.map(function(f){
+      return '<div class="info-item"><div class="label">' + esc(f[0]) + '</div>' +
+             '<div class="value">' + esc(f[1]) + '</div></div>';
+    }).join('');
+    info.style.display = facts.length ? '' : 'none';
+  }
+
+  window.kxViewProfile = async function(id){
+    if(!id){ kxToast('ไม่พบโปรไฟล์นี้'); return; }
+    var p = document.getElementById('page-company-profile');
+    if(!p) return;
+
+    var res = await sb.from('profiles').select('*').eq('id', id).maybeSingle();
+    if(res.error || !res.data){ console.error('kxViewProfile failed', res.error); kxToast('ไม่พบโปรไฟล์นี้'); return; }
+    var pr = res.data;
+    var name = pr.company_name || 'ผู้ใช้ Konnex';
+
+    navigateTo('page-company-profile');
+    fillInfoList(pr);
+
+    // your own profile keeps the richer local view it has always had
+    if(window.kxSession && id === window.kxSession.user.id){
+      GUEST_HIDDEN.forEach(function(cid){
+        var el = document.getElementById(cid); if(el) el.style.display = '';
+      });
+      var cc = document.getElementById('pfContactCard');
+      if(cc) cc.style.display = '';
+      if(window.kxApplyProfile) window.kxApplyProfile();
+      return;
+    }
+
+    var h1 = p.querySelector('.hero-idblock h1');
+    if(h1){
+      var first = h1.firstChild;
+      if(first && first.nodeType === 3) first.nodeValue = name + ' ';
+      var pill = h1.querySelector('.verified-pill, .pill, span');
+      if(pill) pill.style.display = pr.is_verified ? '' : 'none';
+    }
+    var logo = p.querySelector('.hero-logo');
+    if(logo){
+      logo.innerHTML = pr.avatar_url
+        ? '<img src="' + esc(pr.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">'
+        : esc(name.charAt(0).toUpperCase());
+    }
+    var cover = p.querySelector('.cover');
+    if(cover) cover.src = pr.cover_url || 'assets/img/konnex-mark-3.png';
+
+    var about = p.querySelector('.about-text');
+    if(about) about.textContent = pr.about || 'ยังไม่มีข้อมูลแนะนำ';
+    var more = p.querySelector('.see-more'); if(more) more.style.display = pr.about ? '' : 'none';
+
+    // only the fields the row actually has; the rest of the demo contact list goes
+    var contactCard = document.getElementById('pfContactCard');
+    if(contactCard){
+      var bits = [];
+      if(pr.phone)    bits.push(['📞', pr.phone]);
+      if(pr.province) bits.push(['📍', pr.province]);
+      var list = contactCard.querySelector('.contact-list');
+      if(list){
+        list.innerHTML = bits.length
+          ? bits.map(function(b){ return '<div class="contact-row"><div class="contact-ic">' + b[0] + '</div>' + esc(b[1]) + '</div>'; }).join('')
+          : '<div class="contact-row" style="color:var(--ink-faint);">ยังไม่มีข้อมูลติดต่อ</div>';
+      }
+      var btn = contactCard.querySelector('button');
+      if(btn) btn.setAttribute('onclick', "kxStartChat('" + id + "', null)");
+      contactCard.style.display = '';
+    }
+
+    GUEST_HIDDEN.forEach(function(cid){
+      var el = document.getElementById(cid); if(el) el.style.display = 'none';
+    });
+    // applyToProfile builds this one from YOUR localStorage and leaves it in the
+    // page; without this it stays behind and shows your own company facts under
+    // someone else's name. It is rebuilt next time you view your own profile.
+    var ownFacts = document.getElementById('kxFactsCard');
+    if(ownFacts) ownFacts.remove();
+    if(window.kxApplyIcons) window.kxApplyIcons(p);
+    window.scrollTo({ top:0 });
+  };
+
   // The two "message this person" buttons that live in static markup and so
   // can't carry the id in their onclick — they read whichever post is open.
   window.kxChatWithWinner = function(){
@@ -18556,7 +18681,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxLoadPostDetail(id, kind);
   };
 
-  var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id)';
+  var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id,profiles!post_questions_asker_id_fkey(id,company_name,avatar_url))';
   var qaTableMissing = false;
 
   window.kxLoadPostDetail = async function(id, kind){
