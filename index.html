@@ -33,6 +33,13 @@
   window.sb = window.supabase.createClient(window.KX_SUPABASE_URL, window.KX_SUPABASE_ANON_KEY, {
     auth: { persistSession: true, autoRefreshToken: true }
   });
+
+  /* Read synchronously, right here: a password-reset link carries
+     #type=recovery, and supabase-js strips the hash as soon as it has consumed
+     it — by the time anything else runs, the only evidence is gone. Without
+     this the recovery link signs you in, boot() sees a session and forwards you
+     to the feed, and you never reach the set-a-new-password form. */
+  window.kxRecoveryInUrl = (window.location.hash || '').indexOf('type=recovery') >= 0;
 </script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18269,6 +18276,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.kxSession = res.data.session;
     kxAuthChecked = true;
     var activeId = (document.querySelector('.app-page.active') || {}).id;
+    // arrived from a reset email: the session exists only so a new password can
+    // be set, so stop here instead of forwarding into the app
+    if(window.kxRecoveryInUrl){
+      navigateTo('page-auth');
+      if(typeof authTab === 'function') authTab('newpw');
+      return;
+    }
     if(window.kxSession){
       await kxEnsureProfile(window.kxSession.user);
       if(activeId === 'page-auth') navigateTo('page-feed');
