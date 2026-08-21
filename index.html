@@ -12049,7 +12049,7 @@ html, body{
     <div>
       <div class="dash-head">
         <div>
-          <h1>สวัสดี, บริษัท บางกอกพรีซิชั่น 👋</h1>
+          <h1>สวัสดี 👋</h1>
           <p>สรุปงานใบเสนอราคาที่ต้องการความสนใจของคุณวันนี้</p>
         </div>
       </div>
@@ -12065,19 +12065,19 @@ html, body{
 
       <div class="dash-stats">
         <div class="dash-stat need active" id="dashCard0" onclick="dashTab(0)">
-          <div class="dash-stat-num">8</div>
+          <div class="dash-stat-num">0</div>
           <div class="dash-role sell">ผู้ขาย</div>
           <div class="dash-stat-lbl">งานใหม่</div>
-          <div class="dash-stat-sub">ตรงกับคุณ กดเสนอราคา</div>
+          <div class="dash-stat-sub">ที่คุณยังไม่ได้เสนอราคา</div>
         </div>
         <div class="dash-stat wait" id="dashCard1" onclick="dashTab(1)">
-          <div class="dash-stat-num">5</div>
+          <div class="dash-stat-num">0</div>
           <div class="dash-role sell">ผู้ขาย</div>
           <div class="dash-stat-lbl">รอผล</div>
           <div class="dash-stat-sub">ใบเสนอที่ส่งไป</div>
         </div>
         <div class="dash-stat mine" id="dashCard2" onclick="dashTab(2)">
-          <div class="dash-stat-num">3</div>
+          <div class="dash-stat-num">0</div>
           <div class="dash-role buy">ผู้ซื้อ</div>
           <div class="dash-stat-lbl">ใกล้ปิด</div>
           <div class="dash-stat-sub">ประกาศของฉัน รอเลือก</div>
@@ -12086,73 +12086,18 @@ html, body{
 
       <div class="dash-sec" id="dashSec0">
         <div class="dash-sec-head"><h2>🔔 งานใหม่ให้เสนอราคา</h2><a onclick="navigateTo('page-feed')">ดูทั้งหมด ›</a></div>
-        <div class="dash-list">
-          <div class="dash-row" onclick="navigateTo('page-rfq-detail')">
-            <div class="dash-tag buy">RFQ</div>
-            <div class="dash-row-body">
-              <div class="dash-row-title">ต้องการผลิตชิ้นส่วนเครื่องจักร CNC 1,000 ชิ้น</div>
-              <div class="dash-row-meta"><span>📍 ชลบุรี</span><span>💬 5 ข้อเสนอ</span><span>👥 ผู้ซื้อ: Apex Manufacturing</span></div>
-            </div>
-            <div class="dash-row-side"><div class="dash-deadline hot">ปิดใน 2 วัน</div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">เสนอราคา</button></div>
-          </div>
-          <div class="dash-row" onclick="navigateTo('page-rfq-detail')">
-            <div class="dash-tag buy">RFQ</div>
-            <div class="dash-row-body">
-              <div class="dash-row-title">ติดตั้ง Solar Rooftop 50 kW อาคารโรงงาน</div>
-              <div class="dash-row-meta"><span>📍 กรุงเทพฯ</span><span>💬 6 ข้อเสนอ</span><span>👥 ผู้ซื้อ: Green Energy Co.</span></div>
-            </div>
-            <div class="dash-row-side"><div class="dash-deadline">ปิดใน 5 วัน</div><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">เสนอราคา</button></div>
-          </div>
-        </div>
+        <div class="dash-list" id="dashList0"></div>
       </div>
 
       <div class="dash-sec" id="dashSec1">
         <div class="dash-sec-head"><h2>⏳ ใบเสนอราคาที่รอผล</h2><a onclick="navigateTo('page-my-bids')">ดูทั้งหมด ›</a></div>
-        <div class="dash-list">
-          <div class="dash-row" onclick="navigateTo('page-my-bids')">
-            <div class="dash-tag wait">รอผล</div>
-            <div class="dash-row-body">
-              <div class="dash-row-title">รับผลิตงานโลหะแผ่น — เสนอราคา 148,000 บาท</div>
-              <div class="dash-row-meta"><span>👥 ผู้ซื้อ: Siam Metal Works</span><span>🕗 ส่งเมื่อ 2 วันที่แล้ว</span></div>
-            </div>
-            <div class="dash-row-side"><div class="dash-pill wait">รอผู้ซื้อเลือก</div></div>
-          </div>
-          <div class="dash-row" onclick="navigateTo('page-my-bids')">
-            <div class="dash-tag win">ชนะ</div>
-            <div class="dash-row-body">
-              <div class="dash-row-title">งานกลึง CNC ตามแบบ — เสนอราคา 92,000 บาท</div>
-              <div class="dash-row-meta"><span>👥 ผู้ซื้อ: Apex Manufacturing</span><span>🏆 ได้รับเลือกแล้ว</span></div>
-            </div>
-            <div class="dash-row-side"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo('page-messages')">💬 คุยต่อ</button></div>
-          </div>
-        </div>
+        <div class="dash-list" id="dashList1"></div>
       </div>
 
       <div class="dash-sec" id="dashSec2" data-mine="1">
         <div class="dash-sec-head"><h2>📋 ประกาศซื้อของฉันที่ใกล้ปิด</h2><a onclick="navigateTo('page-create-post')">＋ สร้างใหม่</a></div>
-        <div class="dash-list" id="dashMineList">
-          <div class="dash-row mine-row" data-rfq="1">
-            <div class="dash-tag mine">ของฉัน</div>
-            <div class="dash-row-body" onclick="navigateTo('page-rfq-detail')">
-              <div class="dash-row-title">หาเช่ารถเครน 25 ตัน พร้อมคนขับ</div>
-              <div class="dash-row-meta"><span>💬 <b>7 ข้อเสนอ</b> เข้ามาแล้ว</span><span class="dash-deadline hot">ปิดรับใน 1 วัน</span></div>
-            </div>
-            <div class="dash-row-side">
-              <button class="btn btn-primary btn-sm" onclick="navigateTo('page-rfq-detail')">ดูข้อเสนอ</button>
-              <button class="btn-cancel-rfq" onclick="openCancelRfq(this,'หาเช่ารถเครน 25 ตัน พร้อมคนขับ')">ปิด RFQ</button>
-            </div>
-          </div>
-          <div class="dash-row mine-row" data-rfq="2">
-            <div class="dash-tag mine">ของฉัน</div>
-            <div class="dash-row-body" onclick="navigateTo('page-rfq-detail')">
-              <div class="dash-row-title">จ้างออกแบบและติดตั้งระบบระบายอากาศโรงงาน</div>
-              <div class="dash-row-meta"><span>💬 <b>4 ข้อเสนอ</b> เข้ามาแล้ว</span><span class="dash-deadline">ปิดรับใน 4 วัน</span></div>
-            </div>
-            <div class="dash-row-side">
-              <button class="btn btn-primary btn-sm" onclick="navigateTo('page-rfq-detail')">ดูข้อเสนอ</button>
-              <button class="btn-cancel-rfq" onclick="openCancelRfq(this,'จ้างออกแบบและติดตั้งระบบระบายอากาศโรงงาน')">ปิด RFQ</button>
-            </div>
-          </div>
+        <div class="dash-list" id="dashMineList"></div>
+</div>
         </div>
       </div>
     </div>
@@ -12178,15 +12123,26 @@ html, body{
     document.getElementById('cancelRfqModal').classList.add('open');
   }
   function closeCancelRfq(){ document.getElementById('cancelRfqModal').classList.remove('open'); }
-  function confirmCancelRfq(){
-    if(cancelRfqTargetRow){
-      cancelRfqTargetRow.classList.add('closed');
-      var side = cancelRfqTargetRow.querySelector('.dash-row-side');
-      if(side) side.innerHTML = '<span class="dash-pill closed">🔒 ปิดรับข้อเสนอแล้ว</span>';
-      var dl = cancelRfqTargetRow.querySelector('.dash-deadline');
-      if(dl){ dl.className = 'dash-deadline'; dl.textContent = 'ปิดรับแล้ว'; }
+  /* Only restyled the row, so the RFQ was still open and still taking bids.
+     It sets status='closed' now, which is also the one thing that lets an
+     owner pick a winner before the deadline — the เลือก buttons unlock on
+     `closed` as well as on an expired deadline. */
+  async function confirmCancelRfq(){
+    var row = cancelRfqTargetRow;
+    var postId = row && row.getAttribute('data-post-id');
+    if(!postId){ closeCancelRfq(); return; }
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); closeCancelRfq(); return; }
+
+    var upd = await sb.from('posts').update({ status:'closed' }).eq('id', postId);
+    if(upd.error){
+      console.error('confirmCancelRfq failed', upd.error);
+      kxToast('ปิด RFQ ไม่สำเร็จ: ' + (upd.error.message || 'กรุณาลองใหม่'));
+      closeCancelRfq();
+      return;
     }
     closeCancelRfq();
+    kxToast('ปิดรับข้อเสนอแล้ว — เลือกผู้ชนะได้เลย');
+    if(window.kxLoadDashboard) await window.kxLoadDashboard();
   }
   document.getElementById('cancelRfqModal').addEventListener('click', function(e){ if(e.target.id==='cancelRfqModal') closeCancelRfq(); });
 </script>
@@ -13097,6 +13053,175 @@ if('serviceWorker' in navigator && (location.protocol === 'https:' || location.h
 })();
 </script>
 <script>
+/* ===== แดชบอร์ด =====
+   Every number and every row on this page was written into the markup: the
+   greeting named a company nobody here owns, the three counters said 8 / 5 / 3
+   for everyone, and the lists underneath them were five invented jobs.
+
+   The three cards are the three questions this page exists to answer, so each
+   one is computed rather than stored:
+
+     งานใหม่   open RFQs from other people that you have not quoted on yet
+     รอผล      quotes you sent that nobody has decided on
+     ใกล้ปิด    your own open RFQs whose deadline is within a week
+
+   No new SQL — all three come from `posts` and `quotes`, and RLS already shows
+   you exactly the rows you are entitled to. */
+
+var DASH = { newJobs: [], myQuotes: [], myClosing: [] };
+
+function dashEsc(s){
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+  });
+}
+function dashDaysLeft(iso){
+  if(!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+}
+function dashDeadlinePill(iso){
+  var d = dashDaysLeft(iso);
+  if(d == null) return '<div class="dash-deadline">ไม่ระบุกำหนด</div>';
+  if(d < 0)  return '<div class="dash-deadline">ปิดรับแล้ว</div>';
+  if(d === 0) return '<div class="dash-deadline hot">ปิดวันนี้</div>';
+  return '<div class="dash-deadline' + (d <= 2 ? ' hot' : '') + '">ปิดใน ' + d + ' วัน</div>';
+}
+function dashAgo(iso){
+  var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if(mins < 60) return mins + ' นาทีที่แล้ว';
+  var hrs = Math.round(mins / 60);
+  if(hrs < 24) return hrs + ' ชั่วโมงที่แล้ว';
+  return Math.round(hrs / 24) + ' วันที่แล้ว';
+}
+function dashMoney(n){ return Math.round(n).toLocaleString('en-US'); }
+
+function dashEmpty(msg, btn){
+  return '<div style="padding:26px 18px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
+    msg + (btn || '') + '</div>';
+}
+
+function renderDash(){
+  var n0 = document.querySelector('#dashCard0 .dash-stat-num');
+  var n1 = document.querySelector('#dashCard1 .dash-stat-num');
+  var n2 = document.querySelector('#dashCard2 .dash-stat-num');
+  if(n0) n0.textContent = DASH.newJobs.length;
+  if(n1) n1.textContent = DASH.myQuotes.filter(function(q){ return q.status === 'pending'; }).length;
+  if(n2) n2.textContent = DASH.myClosing.length;
+
+  // งานใหม่ให้เสนอราคา
+  var l0 = document.getElementById('dashList0');
+  if(l0){
+    l0.innerHTML = DASH.newJobs.length ? DASH.newJobs.slice(0, 5).map(function(p){
+      var owner = (p.profiles && p.profiles.company_name) || 'ผู้ซื้อ';
+      return '<div class="dash-row" onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')">' +
+        '<div class="dash-tag buy">RFQ</div>' +
+        '<div class="dash-row-body">' +
+          '<div class="dash-row-title">' + dashEsc(p.title) + '</div>' +
+          '<div class="dash-row-meta"><span>📍 ' + dashEsc(p.province || 'ไม่ระบุ') + '</span>' +
+            '<span>💬 ' + (p.quote_count || 0) + ' ข้อเสนอ</span>' +
+            '<span>👥 ผู้ซื้อ: ' + dashEsc(owner) + '</span></div>' +
+        '</div>' +
+        '<div class="dash-row-side">' + dashDeadlinePill(p.deadline) +
+          '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();kxOpenPost(\'' + p.id + '\',\'rfq\')">เสนอราคา</button>' +
+        '</div></div>';
+    }).join('') : dashEmpty('ยังไม่มีงานใหม่ที่คุณยังไม่ได้เสนอราคา<br>' +
+        '<span style="font-size:12px;">งานที่คุณเสนอไปแล้วจะไม่แสดงซ้ำที่นี่</span>',
+        '<div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="navigateTo(\'page-feed\')">ไปที่ค้นหางาน</button></div>');
+  }
+
+  // ใบเสนอราคาที่รอผล
+  var l1 = document.getElementById('dashList1');
+  if(l1){
+    l1.innerHTML = DASH.myQuotes.length ? DASH.myQuotes.slice(0, 5).map(function(q){
+      var p = q.posts || {};
+      var tag = q.status === 'won' ? ['win','ชนะ'] : q.status === 'lost' ? ['lost','ไม่ผ่าน'] : ['wait','รอผล'];
+      var side = q.status === 'won'
+        ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo(\'page-messages\')">💬 คุยต่อ</button>'
+        : q.status === 'lost'
+          ? '<div class="dash-pill">ไม่ได้รับเลือก</div>'
+          : '<div class="dash-pill wait">รอผู้ซื้อเลือก</div>';
+      return '<div class="dash-row"' + (p.id ? ' onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')"' : '') + '>' +
+        '<div class="dash-tag ' + tag[0] + '">' + tag[1] + '</div>' +
+        '<div class="dash-row-body">' +
+          '<div class="dash-row-title">' + dashEsc(p.title || 'ประกาศนี้ถูกปิดแล้ว') +
+            ' — เสนอราคา ' + dashMoney(q.price) + ' บาท</div>' +
+          '<div class="dash-row-meta"><span>🕗 ส่งเมื่อ ' + dashAgo(q.created_at) + '</span>' +
+            (q.status === 'won' ? '<span>🏆 ได้รับเลือกแล้ว</span>' : '') + '</div>' +
+        '</div>' +
+        '<div class="dash-row-side">' + side + '</div></div>';
+    }).join('') : dashEmpty('คุณยังไม่ได้ส่งใบเสนอราคา',
+        '<div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="navigateTo(\'page-feed\')">หางานที่จะเสนอราคา</button></div>');
+  }
+
+  // ประกาศซื้อของฉันที่ใกล้ปิด
+  var l2 = document.getElementById('dashMineList');
+  if(l2){
+    l2.innerHTML = DASH.myClosing.length ? DASH.myClosing.map(function(p){
+      var closed = p.status !== 'open';
+      return '<div class="dash-row mine-row' + (closed ? ' closed' : '') + '" data-post-id="' + p.id + '">' +
+        '<div class="dash-tag mine">ของฉัน</div>' +
+        '<div class="dash-row-body" onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')">' +
+          '<div class="dash-row-title">' + dashEsc(p.title) + '</div>' +
+          '<div class="dash-row-meta"><span>💬 <b>' + (p.quote_count || 0) + ' ข้อเสนอ</b> เข้ามาแล้ว</span>' +
+            dashDeadlinePill(p.deadline).replace('<div class="', '<span class="').replace('</div>', '</span>') +
+          '</div>' +
+        '</div>' +
+        '<div class="dash-row-side">' +
+          (closed
+            ? '<span class="dash-pill closed">🔒 ปิดรับข้อเสนอแล้ว</span>'
+            : '<button class="btn btn-primary btn-sm" onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')">ดูข้อเสนอ</button>' +
+              '<button class="btn-cancel-rfq" onclick="openCancelRfq(this,\'' + dashEsc(p.title).replace(/'/g,'&#39;') + '\')">ปิด RFQ</button>') +
+        '</div></div>';
+    }).join('') : dashEmpty('ยังไม่มีประกาศซื้อของคุณที่ใกล้ปิด',
+        '<div style="margin-top:12px;"><button class="btn btn-primary btn-sm" onclick="navigateTo(\'page-create-post\')">＋ สร้างประกาศ</button></div>');
+  }
+}
+
+window.kxLoadDashboard = async function(){
+  if(!window.kxSession) return;
+  var me = window.kxSession.user.id;
+
+  // greeting and the verify banner both belong to whoever is signed in
+  var h1 = document.querySelector('#page-dashboard .dash-head h1');
+  if(h1) h1.textContent = 'สวัสดี, ' + ((window.kxCurrentUser && window.kxCurrentUser.company_name) || 'คุณ') + ' 👋';
+  var banner = document.getElementById('dashVerifyBanner');
+  if(banner) banner.style.display = (window.kxCurrentUser && window.kxCurrentUser.is_verified) ? 'none' : '';
+
+  // what I have already bid on — so งานใหม่ can exclude it
+  var mine = await sb.from('quotes')
+    .select('id,post_id,price,status,created_at,posts(id,title,province)')
+    .eq('bidder_id', me)
+    .order('created_at', { ascending:false });
+  if(mine.error){ console.error('kxLoadDashboard quotes failed', mine.error); return; }
+  DASH.myQuotes = mine.data;
+  var quotedIds = {};
+  mine.data.forEach(function(q){ quotedIds[q.post_id] = true; });
+
+  var nowIso = new Date().toISOString();
+
+  var open = await sb.from('posts')
+    .select('id,title,province,deadline,quote_count,profiles!posts_owner_id_fkey(company_name)')
+    .eq('kind', 'rfq').eq('status', 'open').neq('owner_id', me)
+    .gt('deadline', nowIso)
+    .order('deadline', { ascending:true })
+    .limit(40);
+  if(open.error){ console.error('kxLoadDashboard open failed', open.error); return; }
+  DASH.newJobs = open.data.filter(function(p){ return !quotedIds[p.id]; });
+
+  // my own RFQs closing within a week, soonest first
+  var weekOut = new Date(Date.now() + 7 * 86400000).toISOString();
+  var closing = await sb.from('posts')
+    .select('id,title,deadline,status,quote_count')
+    .eq('kind', 'rfq').eq('owner_id', me).eq('status', 'open')
+    .lt('deadline', weekOut)
+    .order('deadline', { ascending:true })
+    .limit(10);
+  if(closing.error){ console.error('kxLoadDashboard closing failed', closing.error); return; }
+  DASH.myClosing = closing.data;
+
+  renderDash();
+};
+
 function dashTab(n){
   for(var i=0;i<3;i++){
     var c=document.getElementById('dashCard'+i), s=document.getElementById('dashSec'+i);
@@ -19686,6 +19811,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-notifications' && window.kxLoadNotifications) window.kxLoadNotifications();
     if(id === 'page-saved' && window.kxLoadSaved) window.kxLoadSaved();
     if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
+    if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
     if(id === 'page-messages'){
       if(window.kxLoadConversations) window.kxLoadConversations();
       if(window.kxChatPollStart) window.kxChatPollStart();
