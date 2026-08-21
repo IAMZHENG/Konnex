@@ -16570,20 +16570,17 @@ body.kx-auth .kx-burger{ display:none !important; }
   var KEY = 'kx.profile';
   var AREAS = ['ชลบุรี','ระยอง','ฉะเชิงเทรา','กรุงเทพมหานคร','สมุทรปราการ','ปทุมธานี','อยุธยา','ทั่วประเทศ'];
 
+  /* These were Prime CNC's details — a company name, an ISO 9001 certificate,
+     a tax number, a phone and an email — so a brand-new account's own profile
+     page presented all of it as theirs until they edited it. Empty now: a
+     profile shows what its owner actually entered, and nothing else. */
   var DEFAULTS = {
-    name: 'Prime CNC Co., Ltd.',
-    tagline: 'ผู้เชี่ยวชาญด้านงาน CNC มาตรฐานสูง ส่งตรงเวลา ในราคาที่เหมาะสม',
-    about: 'Prime CNC Co., Ltd. ให้บริการงานกลึง กัด เจาะ CNC ด้วยเครื่องจักรที่ทันสมัย และทีมงานที่มีประสบการณ์ เราให้ความสำคัญกับคุณภาพ ความแม่นยำ และการส่งมอบตรงเวลา',
-    bizType: 'ผู้ผลิต / รับจ้างผลิต', founded: '2016', employees: '25 - 50 คน',
-    capital: '5,000,000', taxId: '0205560001234',
+    name: '', tagline: '', about: '',
+    bizType: '', founded: '', employees: '',
+    capital: '', taxId: '',
     occupation: '', experience: '',
-    phone: '038-123-456', email: 'sales@primecnc.co.th',
-    website: 'www.primecnc.co.th', hours: 'จันทร์ - เสาร์ 08:00 - 17:00',
-    address: 'ชลบุรี, ประเทศไทย',
-    skills: ['CNC Milling','CNC Turning','5 Axis','เหล็ก','สแตนเลส'],
-    certs: [{ name:'ISO 9001:2015', desc:'Quality Management' },
-            { name:'THAILAND BOARD OF INVESTMENT', desc:'BOI Certified' }],
-    areas: ['ชลบุรี','ระยอง','ฉะเชิงเทรา'],
+    phone: '', email: '', website: '', hours: '', address: '',
+    skills: [], certs: [], areas: [],
     cover: '', avatar: ''
   };
 
@@ -16600,6 +16597,77 @@ body.kx-auth .kx-burger{ display:none !important; }
   function persist(){
     try{ localStorage.setItem(KEY, JSON.stringify(data)); }
     catch(e){ /* quota — the session copy still works */ }
+  }
+
+  /* ---- the profiles row is the real store ----
+     localStorage stays as a same-browser cache so the form still fills
+     instantly, but the row is what other people see and what wins on load. */
+  var PROFILE_COLS = {
+    name:'company_name', tagline:'tagline', about:'about', bizType:'industry',
+    founded:'founded_year', employees:'employees', capital:'capital', taxId:'tax_id',
+    occupation:'occupation', experience:'experience', phone:'phone', email:'email',
+    website:'website', hours:'hours', address:'address', avatar:'avatar_url', cover:'cover_url'
+  };
+  var profileExtrasMissing = false;   // profile_fields.sql not run yet
+
+  window.kxProfileFromRow = function(row){
+    if(!row) return;
+    for(var local in PROFILE_COLS){
+      var col = PROFILE_COLS[local];
+      if(!(col in row)) continue;
+      var v = row[col];
+      data[local] = (v === null || v === undefined) ? '' : String(v);
+    }
+    if(Array.isArray(row.skills)) data.skills = row.skills.slice();
+    if(Array.isArray(row.areas))  data.areas  = row.areas.slice();
+    if(Array.isArray(row.certs))  data.certs  = row.certs.slice();
+    persist();
+    fill();
+    applyToProfile();
+  };
+
+  window.kxLoadProfile = async function(){
+    if(!window.kxSession) return;
+    var res = await sb.from('profiles').select('*').eq('id', window.kxSession.user.id).maybeSingle();
+    if(res.error || !res.data){ if(res.error) console.error('kxLoadProfile failed', res.error); return; }
+    window.kxCurrentUser = res.data;
+    kxProfileFromRow(res.data);
+  };
+
+  async function saveProfileToDb(){
+    if(!window.kxSession) return true;
+    var row = {};
+    for(var local in PROFILE_COLS){
+      var col = PROFILE_COLS[local];
+      if(col === 'avatar_url' || col === 'cover_url') continue;   // handled separately
+      var v = data[local];
+      if(col === 'founded_year'){
+        var n = parseInt(String(v).replace(/\D/g,''), 10);
+        row[col] = isNaN(n) ? null : n;
+      }else{
+        row[col] = (v === '' || v == null) ? null : v;
+      }
+    }
+    row.skills = data.skills || [];
+    row.areas  = data.areas  || [];
+    row.certs  = filledCerts();
+
+    var upd = await sb.from('profiles').update(row).eq('id', window.kxSession.user.id);
+    // profile_fields.sql may not have been run — save what the table does have
+    if(upd.error && /column .* does not exist|schema cache/i.test(upd.error.message || '')){
+      profileExtrasMissing = true;
+      var basic = { company_name: row.company_name, about: row.about, phone: row.phone,
+                    tax_id: row.tax_id, employees: row.employees, founded_year: row.founded_year };
+      upd = await sb.from('profiles').update(basic).eq('id', window.kxSession.user.id);
+      if(!upd.error) kxToast('บันทึกแล้ว — บางช่องยังไม่ได้ติดตั้ง (ยังไม่ได้รัน profile_fields.sql)');
+    }
+    if(upd.error){
+      console.error('saveProfileToDb failed', upd.error);
+      kxToast('บันทึกโปรไฟล์ไม่สำเร็จ: ' + (upd.error.message || 'กรุณาลองใหม่'));
+      return false;
+    }
+    if(window.kxCurrentUser) for(var k in row) window.kxCurrentUser[k] = row[k];
+    return true;
   }
   function $(id){ return document.getElementById(id); }
   function val(id){ var el = $(id); return el ? el.value.trim() : ''; }
@@ -16951,8 +17019,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     persist();
     applyToProfile();
+    var ok = await saveProfileToDb();
     await saveAvatarToDb();
+    if(!ok) return;                       // stay on the form so nothing is lost
     if(typeof toast === 'function') toast('บันทึกโปรไฟล์เรียบร้อย');
+    else kxToast('บันทึกโปรไฟล์เรียบร้อย');
     navigateTo('page-company-profile');
   };
   window.kxProfileCancel = function(){ data = load(); fill(); navigateTo('page-company-profile'); };
@@ -18034,6 +18105,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(window.kxLoadNotifications) window.kxLoadNotifications();
       // and the feed needs to know what is saved before it draws its bookmarks
       if(window.kxLoadSavedIds) window.kxLoadSavedIds();
+      // the profiles row is the real store for the profile page, so it fills
+      // the form and the display from here rather than from this browser
+      if(window.kxProfileFromRow) window.kxProfileFromRow(existing.data);
       return existing.data;
     }
     var pending = null;
@@ -19408,8 +19482,11 @@ body.kx-auth .kx-burger{ display:none !important; }
      because their contents are specific claims: displaying a stranger's page
      with "ISO 9001:2015" and "Verified Company" on it would be inventing
      credentials for a real company, which is worse than an empty section. */
-  var GUEST_HIDDEN = ['pfRecentCard','pfServicesCard','pfReviewsCard',
-                      'pfCertCard','pfSkillsCard','pfVerifyCard'];
+  /* Still demo markup with no table behind it. ใบรับรอง and ความเชี่ยวชาญ have
+     left this list — they are real columns now, so they are filled from the row
+     when the owner entered something and hidden when they didn't, rather than
+     showing this page's worked example on someone else's profile. */
+  var GUEST_HIDDEN = ['pfRecentCard','pfServicesCard','pfReviewsCard','pfVerifyCard'];
 
   /* ข้อมูลบริษัท ships with a worked example in it — ISO 9001:2015, a tax
      number, 5,000,000 baht of registered capital. Those are specific claims
@@ -19421,9 +19498,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(!info) return;
     var BIZ = { company:'บริษัท / นิติบุคคล', person:'บุคคลธรรมดา', shop:'ร้านค้า / ห้างหุ้นส่วน' };
     var facts = [];
-    if(pr.business_type) facts.push(['ประเภทธุรกิจ', BIZ[pr.business_type] || pr.business_type]);
+    if(pr.industry)      facts.push(['ประเภทธุรกิจ', pr.industry]);
+    else if(pr.business_type) facts.push(['ประเภทกิจการ', BIZ[pr.business_type] || pr.business_type]);
     if(pr.founded_year)  facts.push(['ปีที่ก่อตั้ง', String(pr.founded_year)]);
     if(pr.employees)     facts.push(['จำนวนพนักงาน', pr.employees]);
+    if(pr.capital)       facts.push(['ทุนจดทะเบียน', pr.capital + ' บาท']);
+    if(pr.occupation)    facts.push(['อาชีพ / ตำแหน่ง', pr.occupation]);
+    if(pr.experience)    facts.push(['ประสบการณ์', pr.experience + ' ปี']);
     if(pr.province)      facts.push(['จังหวัด', pr.province]);
     if(pr.rating_count)  facts.push(['คะแนน', pr.rating_avg + '/5.0 (' + pr.rating_count + ' รีวิว)']);
     info.innerHTML = facts.map(function(f){
@@ -19484,7 +19565,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(contactCard){
       var bits = [];
       if(pr.phone)    bits.push(['📞', pr.phone]);
-      if(pr.province) bits.push(['📍', pr.province]);
+      if(pr.email)    bits.push(['✉️', pr.email]);
+      if(pr.website)  bits.push(['🌐', pr.website]);
+      if(pr.hours)    bits.push(['🕗', pr.hours]);
+      if(pr.address)  bits.push(['📍', pr.address]);
+      else if(pr.province) bits.push(['📍', pr.province]);
       var list = contactCard.querySelector('.contact-list');
       if(list){
         list.innerHTML = bits.length
@@ -19494,6 +19579,26 @@ body.kx-auth .kx-burger{ display:none !important; }
       var btn = contactCard.querySelector('button');
       if(btn) btn.setAttribute('onclick', "kxStartChat('" + id + "', null)");
       contactCard.style.display = '';
+    }
+
+    // ความเชี่ยวชาญ and ใบรับรอง: their own, or the card goes
+    var skillsCard = document.getElementById('pfSkillsCard');
+    if(skillsCard){
+      var tagBox = skillsCard.querySelector('.tags');
+      var sk = Array.isArray(pr.skills) ? pr.skills : [];
+      if(tagBox) tagBox.innerHTML = sk.map(function(s){ return '<span class="tag">' + esc(s) + '</span>'; }).join('');
+      skillsCard.style.display = sk.length ? '' : 'none';
+    }
+    var certCard = document.getElementById('pfCertCard');
+    if(certCard){
+      var cs = Array.isArray(pr.certs) ? pr.certs.filter(function(c){ return c && (c.name || c.desc); }) : [];
+      Array.prototype.forEach.call(certCard.querySelectorAll('.cert-row'), function(r){ r.remove(); });
+      certCard.insertAdjacentHTML('beforeend', cs.map(function(c){
+        return '<div class="cert-row"><div class="cert-ic">🛡️</div>' +
+          '<div><div class="cert-title">' + esc(c.name || '') + '</div>' +
+          '<div class="cert-sub">' + esc(c.desc || '') + '</div></div></div>';
+      }).join(''));
+      certCard.style.display = cs.length ? '' : 'none';
     }
 
     GUEST_HIDDEN.forEach(function(cid){
