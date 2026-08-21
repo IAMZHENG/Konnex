@@ -9237,31 +9237,28 @@ html, body{
   }
   function pfClose(){ document.getElementById('pfModal').classList.remove('open'); }
   function pfPreview(input){ var f=input.files&&input.files[0]; if(!f) return; var r=new FileReader(); r.onload=function(e){ pfImg=e.target.result; var d=document.getElementById('pfDrop'); d.className='pf-drop has-img'; d.innerHTML='<img src="'+pfImg+'">'; }; r.readAsDataURL(f); }
-  function pfSubmit(){
+  /* Both branches used to build a DOM node and stop — the service vanished on
+     reload and was never visible to anyone else, and the review went to a
+     client-side list that no longer exists. They write to `services` and
+     `reviews` now, so the modal closes only once the row is really saved. */
+  async function pfSubmit(){
     var name=document.getElementById('pfName').value.trim();
     var desc=document.getElementById('pfDesc').value.trim();
+    var btn=document.querySelector('#pfModal .pf-btn.primary, #pfModal .btn-submit');
+    var was=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='กำลังบันทึก...'; }
+    var ok=false;
     if(pfMode==='svc'){
-      var el=document.createElement('div'); el.className='svc';
-      el.innerHTML='<img src="'+(pfImg||PF_PH)+'"><div class="svc-body"><div class="svc-title">'+(name||'บริการใหม่')+'</div><div class="svc-sub">'+desc+'</div></div>';
-      var g=document.getElementById('pfServices'); g.insertBefore(el, g.firstChild);
-    } else {
-      var avg=(Object.keys(pfCrit).map(function(x){return pfCrit[x];}).reduce(function(a,b){return a+b;},0)/4).toFixed(1);
-      // the profile no longer holds a review list, so a new review is handed to the
-      // reviews page, which owns the data and redraws its own counts and filters
-      if(typeof window.rvAddReview === 'function'){
-        window.rvAddReview({
-          name: name || 'ผู้ใช้ใหม่',
-          av: '#0846c7',
-          date: new Date().toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }),
-          score: +avg,
-          crit: [pfCrit.quality, pfCrit.ontime, pfCrit.comm, pfCrit.value],
-          job: 'งานที่ปิดดีลแล้ว',
-          text: desc || ''
-        });
-        pfTab('reviews', document.querySelector('#page-company-profile .tabs .tab:nth-child(2)'));
-      }
+      if(!name){ if(btn){btn.disabled=false;btn.textContent=was;} kxToast('กรุณากรอกชื่อบริการ'); return; }
+      ok = await window.kxAddService(name, desc, pfImg);
+    }else{
+      // the four criteria average into the 1-5 the table stores
+      var avg = Math.round(Object.keys(pfCrit).map(function(x){return pfCrit[x];})
+        .reduce(function(a,b){return a+b;},0) / 4);
+      ok = await window.kxSubmitReview(Math.min(5, Math.max(1, avg)), desc);
     }
-    pfClose();
+    if(btn){ btn.disabled=false; btn.textContent=was; }
+    if(ok) pfClose();
   }
   document.getElementById('pfCrit').addEventListener('click', function(e){ var sp=e.target; if(sp.dataset && sp.dataset.v){ var row=sp.closest('.pf-crit-row'); if(row) pfSetCrit(row.dataset.k, parseInt(sp.dataset.v,10)); } });
   document.getElementById('pfModal').addEventListener('click', function(e){ if(e.target.id==='pfModal') pfClose(); });
@@ -19757,7 +19754,9 @@ body.kx-auth .kx-burger{ display:none !important; }
      left this list — they are real columns now, so they are filled from the row
      when the owner entered something and hidden when they didn't, rather than
      showing this page's worked example on someone else's profile. */
-  var GUEST_HIDDEN = ['pfRecentCard','pfServicesCard','pfReviewsCard','pfVerifyCard'];
+  // pfServicesCard / pfReviewsCard / pfVerifyCard have left this list — they read
+  // real tables now and render their own empty state for visitors too
+  var GUEST_HIDDEN = ['pfRecentCard'];
   var kxProfileNavIntent = false;
 
   /* The hero and the two unbuilt tabs, for whoever's profile is on screen.
@@ -19819,21 +19818,10 @@ body.kx-auth .kx-burger{ display:none !important; }
         });
     }else if(strip) strip.style.display = 'none';
 
-    var rev = document.getElementById('pfReviewsCard');
-    if(rev){
-      var head = rev.querySelector('.card-head');
-      rev.innerHTML = (head ? head.outerHTML : '<div class="card-head"><h3>รีวิวจากลูกค้า</h3></div>') +
-        '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
-        'ยังไม่มีรีวิว<br>รีวิวจะปรากฏที่นี่เมื่อระบบรีวิวเปิดใช้งาน</div>';
-      var h3 = rev.querySelector('h3'); if(h3) h3.textContent = 'รีวิวจากลูกค้า (' + (pr.rating_count || 0) + ')';
-    }
-    var svc = document.getElementById('pfServicesCard');
-    if(svc){
-      var shead = svc.querySelector('.card-head');
-      svc.innerHTML = (shead ? shead.outerHTML : '<div class="card-head"><h3>บริการของเรา</h3></div>') +
-        '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
-        'ยังไม่มีบริการที่เพิ่มไว้</div>';
-    }
+    // these three read their own tables now
+    if(window.kxLoadReviews)   window.kxLoadReviews(pr.id, mine);
+    if(window.kxLoadServices)  window.kxLoadServices(pr.id, mine);
+    if(window.kxRenderVerify)  window.kxRenderVerify(pr, mine);
     /* Headings follow the profile being viewed. applyToProfile does this too,
        but only from kxEntity() — the *viewer's* type — so an individual's page
        read "เกี่ยวกับบริษัท / ติดต่อบริษัท" whenever a company account opened
@@ -20327,6 +20315,211 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(window.kxChatPollStart) window.kxChatPollStart();
     }else if(window.kxChatPollStop) window.kxChatPollStop();
     return r;
+  };
+})();
+</script>
+<script>
+/* ===== บริการของฉัน / รีวิว / การยืนยันตัวตน =====
+   The last three parts of the profile that only pretended. เพิ่มบริการ and
+   เขียนรีวิว built a <div> and stopped, so both vanished on reload and neither
+   was ever visible to anyone else; การยืนยันตัวตน showed four ticks and a
+   Verified Company badge on every profile regardless of is_verified.
+
+   `services` and `reviews` were already in schema.sql with usable policies —
+   only the rating aggregate and the "who may review whom" rule needed SQL
+   (database/reviews.sql). */
+(function(){
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
+    });
+  }
+  function ago(iso){
+    var d = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
+    if(d < 1) return 'วันนี้';
+    if(d === 1) return 'เมื่อวาน';
+    if(d < 30) return d + ' วันที่แล้ว';
+    return Math.round(d / 30) + ' เดือนที่แล้ว';
+  }
+  function stars(n){
+    var s = '';
+    for(var i = 1; i <= 5; i++) s += (i <= n ? '★' : '☆');
+    return s;
+  }
+
+  // ---------- บริการของฉัน ----------
+  window.kxLoadServices = async function(profileId, isOwner){
+    var card = document.getElementById('pfServicesCard');
+    if(!card || !profileId) return;
+    var res = await sb.from('services')
+      .select('id,title,description,image_url,sort')
+      .eq('profile_id', profileId).order('sort', { ascending:true });
+    if(res.error){ console.error('kxLoadServices failed', res.error); return; }
+
+    var head = '<div class="card-head"><h3>' + (isOwner ? 'บริการของฉัน' : 'บริการของเรา') + '</h3>' +
+      (isOwner ? '<button type="button" class="pf-seeall" onclick="pfOpen(\'svc\')">＋ เพิ่มบริการ</button>' : '') +
+      '</div>';
+    card.innerHTML = head + (res.data.length
+      ? '<div class="svc-grid" id="pfServices">' + res.data.map(function(s){
+          return '<div class="svc" data-id="' + s.id + '">' +
+            '<img src="' + esc(s.image_url || 'assets/img/konnex-mark-3.png') + '">' +
+            '<div class="svc-body"><div class="svc-title">' + esc(s.title) + '</div>' +
+            '<div class="svc-sub">' + esc(s.description || '') + '</div></div>' +
+            (isOwner ? '<button type="button" class="pf-seeall" style="margin:0 12px 12px;" ' +
+                       'onclick="kxDeleteService(\'' + s.id + '\')">ลบ</button>' : '') +
+          '</div>';
+        }).join('') + '</div>'
+      : '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
+        (isOwner ? 'ยังไม่มีบริการ — กด “＋ เพิ่มบริการ” เพื่อเพิ่มรายการแรก' : 'ยังไม่มีบริการที่เพิ่มไว้') + '</div>');
+    card.style.display = '';
+  };
+
+  window.kxDeleteService = async function(id){
+    if(!confirm('ลบบริการนี้ออกจากโปรไฟล์?')) return;
+    var res = await sb.from('services').delete().eq('id', id);
+    if(res.error){ console.error('kxDeleteService failed', res.error); kxToast('ลบไม่สำเร็จ'); return; }
+    kxToast('ลบบริการแล้ว');
+    kxLoadServices(window.kxSession.user.id, true);
+  };
+
+  // ---------- รีวิว ----------
+  window.kxLoadReviews = async function(profileId, isOwner){
+    var card = document.getElementById('pfReviewsCard');
+    if(!card || !profileId) return;
+    var res = await sb.from('reviews')
+      .select('id,rating,body,created_at,profiles!reviews_reviewer_id_fkey(company_name,avatar_url),posts(title)')
+      .eq('reviewee_id', profileId).order('created_at', { ascending:false }).limit(50);
+    if(res.error){ console.error('kxLoadReviews failed', res.error); return; }
+
+    // only offer to review someone you have actually closed a deal with
+    var canReview = false;
+    if(!isOwner && window.kxSession){
+      var deals = await kxReviewableDeals(profileId);
+      canReview = deals.length > 0;
+    }
+    var head = '<div class="card-head"><h3>รีวิวจากลูกค้า (' + res.data.length + ')</h3>' +
+      (canReview ? '<button type="button" class="pf-seeall" onclick="kxOpenReview(\'' + profileId + '\')">✎ เขียนรีวิว</button>' : '') +
+      '</div>';
+    card.innerHTML = head + (res.data.length
+      ? res.data.map(function(r){
+          var who = (r.profiles && r.profiles.company_name) || 'ผู้ใช้ Konnex';
+          return '<div style="border-top:1px solid var(--line);padding:14px 0;">' +
+            '<div style="display:flex;align-items:center;gap:10px;">' +
+              '<div style="width:34px;height:34px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;overflow:hidden;flex-shrink:0;">' +
+                ((r.profiles && r.profiles.avatar_url)
+                  ? '<img src="' + esc(r.profiles.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover;">'
+                  : esc(who.charAt(0).toUpperCase())) + '</div>' +
+              '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;">' + esc(who) + '</div>' +
+                '<div style="font-size:11.5px;color:var(--ink-faint);">' + ago(r.created_at) +
+                  (r.posts ? ' · ' + esc(r.posts.title) : '') + '</div></div>' +
+              '<div style="color:#f59e0b;font-size:14px;letter-spacing:1px;">' + stars(r.rating) + '</div>' +
+            '</div>' +
+            (r.body ? '<div style="font-size:13px;color:var(--ink);margin-top:8px;line-height:1.7;white-space:pre-wrap;">' + esc(r.body) + '</div>' : '') +
+          '</div>';
+        }).join('')
+      : '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
+        'ยังไม่มีรีวิว<br><span style="font-size:12px;">รีวิวเขียนได้เมื่อทำงานร่วมกันจบแล้ว</span></div>');
+    card.style.display = '';
+  };
+
+  /* Deals the two of you closed together — you own a post they won, or they own
+     one you won. This is also exactly what the insert policy checks, so the
+     picker can only ever offer something the database will accept. */
+  window.kxReviewableDeals = async function(otherId){
+    if(!window.kxSession) return [];
+    var me = window.kxSession.user.id;
+    var mine = await sb.from('posts').select('id,title,quotes(bidder_id,status)').eq('owner_id', me);
+    var theirs = await sb.from('posts').select('id,title,quotes(bidder_id,status)').eq('owner_id', otherId);
+    var out = [];
+    (mine.data || []).forEach(function(p){
+      if((p.quotes||[]).some(function(q){ return q.status==='won' && q.bidder_id===otherId; })) out.push(p);
+    });
+    (theirs.data || []).forEach(function(p){
+      if((p.quotes||[]).some(function(q){ return q.status==='won' && q.bidder_id===me; })) out.push(p);
+    });
+    return out;
+  };
+
+  window.kxOpenReview = async function(revieweeId){
+    var deals = await kxReviewableDeals(revieweeId);
+    if(!deals.length){ kxToast('เขียนรีวิวได้เมื่อทำงานร่วมกันจบแล้ว'); return; }
+    window.kxReviewTarget = revieweeId;
+    window.kxReviewDeals = deals;
+    pfOpen('rev');
+    // the picker replaces "ชื่อผู้รีวิว", which the reviewer should not be typing
+    var nameField = document.getElementById('pfNameField');
+    var lbl = document.getElementById('pfNameLabel');
+    if(lbl) lbl.innerText = 'งานที่ร่วมงานกัน';
+    var inp = document.getElementById('pfName');
+    if(inp && nameField){
+      var sel = document.createElement('select');
+      sel.id = 'pfReviewPost';
+      sel.style.cssText = inp.style.cssText || '';
+      sel.className = inp.className;
+      sel.innerHTML = deals.map(function(d){ return '<option value="' + d.id + '">' + esc(d.title) + '</option>'; }).join('');
+      inp.style.display = 'none';
+      if(!document.getElementById('pfReviewPost')) nameField.appendChild(sel);
+    }
+  };
+
+  window.kxSubmitReview = async function(rating, body){
+    var sel = document.getElementById('pfReviewPost');
+    var postId = sel && sel.value;
+    if(!postId || !window.kxReviewTarget || !window.kxSession){ kxToast('ส่งรีวิวไม่สำเร็จ'); return false; }
+    var res = await sb.from('reviews').insert({
+      post_id: postId, reviewer_id: window.kxSession.user.id,
+      reviewee_id: window.kxReviewTarget, rating: rating, body: body || null
+    });
+    if(res.error){
+      console.error('kxSubmitReview failed', res.error);
+      kxToast(res.error.code === '23505'
+        ? 'คุณรีวิวงานนี้ไปแล้ว'
+        : 'ส่งรีวิวไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return false;
+    }
+    kxToast('ขอบคุณสำหรับรีวิว');
+    kxLoadReviews(window.kxReviewTarget, false);
+    return true;
+  };
+
+  window.kxAddService = async function(title, desc, imgDataUrl){
+    if(!window.kxSession) return false;
+    var url = null;
+    try{
+      if(imgDataUrl && imgDataUrl.indexOf('data:') === 0){
+        var blob = await (await fetch(imgDataUrl)).blob();
+        var ext = (String(blob.type).split('/')[1] || 'jpg').replace('jpeg','jpg');
+        url = await window.kxUploadFile('post-images', new File([blob], 'service.' + ext, { type: blob.type }));
+      }
+    }catch(e){ console.error('service image upload failed', e); }
+    var res = await sb.from('services').insert({
+      profile_id: window.kxSession.user.id, title: title, description: desc || null, image_url: url
+    });
+    if(res.error){
+      console.error('kxAddService failed', res.error);
+      kxToast('เพิ่มบริการไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return false;
+    }
+    kxToast('เพิ่มบริการแล้ว');
+    kxLoadServices(window.kxSession.user.id, true);
+    return true;
+  };
+
+  // ---------- การยืนยันตัวตน ----------
+  window.kxRenderVerify = function(pr, isOwner){
+    var card = document.getElementById('pfVerifyCard');
+    if(!card) return;
+    var ok = !!(pr && pr.is_verified);
+    var person = pr && pr.business_type === 'person';
+    card.innerHTML =
+      '<h3>การยืนยันตัวตน</h3>' +
+      (ok
+        ? '<div class="verified-badge">✓ ' + (person ? 'ยืนยันตัวตนแล้ว' : 'Verified Company') + '</div>'
+        : '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;padding:4px 0 10px;">' +
+          (isOwner ? 'ยังไม่ได้ยืนยันตัวตน — ยืนยันแล้วผู้ซื้อจะไว้ใจข้อเสนอของคุณมากขึ้น'
+                   : 'ยังไม่ได้ยืนยันตัวตน') + '</div>' +
+          (isOwner ? '<button type="button" class="btn btn-primary btn-sm" onclick="openVerify()">ยืนยันตัวตน</button>' : ''));
+    card.style.display = '';
   };
 })();
 </script>
