@@ -11860,7 +11860,7 @@ html, body{
 
         return '<div class="bid-row" data-status="' + r.status + '"' +
             (r.postId ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + r.postId + '\',\'offer\')"' : '') + '>' +
-          '<img class="bid-thumb" src="' + r.img + '" alt="" loading="lazy">' +
+          window.kxCardThumbHTML(r.imgs, 'bid-thumb') +
           '<div class="bid-body">' +
             '<div class="bid-title">' + r.title + '</div>' +
             '<div class="bid-buyer"><span class="bid-buyer-av" style="background:' + r.avc + '"' +
@@ -11914,7 +11914,7 @@ html, body{
           postId: post.id || null,
           sellerId: post.owner_id || null,
           seller: (post.profiles && post.profiles.company_name) || 'ผู้ขาย',
-          img: imgs.length ? imgs[0].url : 'assets/img/konnex-mark-3.png',
+          imgs: imgs,
           avc: '#0846c7',
           title: post.title || 'ประกาศนี้ถูกปิดแล้ว',
           loc: post.province || 'ไม่ระบุ',
@@ -12499,7 +12499,7 @@ html, body{
     <div class="pf-actions"><button class="pf-btn ghost" onclick="closeOfferAttachments()">ปิด</button><button class="pf-btn primary" onclick="navigateTo('page-company-profile');closeOfferAttachments()">ดูโปรไฟล์ผู้เสนอ</button></div>
   </div>
 </div>
-<div class="oa-lightbox" id="oaLightbox" onclick="this.classList.remove('open')"><img id="oaLightboxImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""><div id="lbNav" class="lb-nav" style="display:none"><button class="lb-arrow" onclick="lbStep(-1,event)">‹</button><span id="lbCount" class="lb-count"></span><button class="lb-arrow" onclick="lbStep(1,event)">›</button></div></div>
+<div class="oa-lightbox" id="oaLightbox" onclick="this.classList.remove('open');window.kxLbReset&&window.kxLbReset()"><img id="oaLightboxImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""><div class="lb-hint">ดับเบิลคลิกหรือเลื่อนล้อเพื่อซูม · สองนิ้วเพื่อย่อ-ขยาย</div><div id="lbNav" class="lb-nav" style="display:none"><button class="lb-arrow" onclick="lbStep(-1,event)">‹</button><span id="lbCount" class="lb-count"></span><button class="lb-arrow" onclick="lbStep(1,event)">›</button></div></div>
 
 <div class="pf-modal-ov" id="filesListModal">
   <div class="pf-modal" id="filesListBox" style="max-width:420px;">
@@ -12715,6 +12715,8 @@ html, body{
   function lbShow(i){
     if(!lbImgs.length) return;
     lbIdx = (i + lbImgs.length) % lbImgs.length;
+    // a new picture starts at 1x rather than inheriting the last one's zoom
+    if(window.kxLbReset) window.kxLbReset();
     document.getElementById('oaLightboxImg').src = lbImgs[lbIdx];
     var nav = document.getElementById('lbNav');
     if(nav) nav.style.display = lbImgs.length > 1 ? 'flex' : 'none';
@@ -12722,6 +12724,115 @@ html, body{
     if(cnt) cnt.textContent = (lbIdx+1) + ' / ' + lbImgs.length;
   }
   function lbStep(d, ev){ if(ev) ev.stopPropagation(); lbShow(lbIdx + d); }
+
+  /* ===== ซูมรูปในหน้าจอเต็ม =====
+     The lightbox fitted a picture to the screen and stopped there, which on a
+     drawing or a spec sheet is exactly where you start wanting to look closer.
+
+     Double-click or double-tap zooms to where you pointed; the wheel zooms
+     about the cursor; two fingers pinch; dragging pans once you are in. A
+     single click still closes, so the way out has not moved — and every path
+     back to 1x snaps to centre so the next picture starts clean. */
+  var lbZoom = 1, lbX = 0, lbY = 0, lbMax = 6;
+  var lbImgEl = null, lbDrag = null, lbPinch = null, lbLastTap = 0;
+  function lbEl(){ return lbImgEl || (lbImgEl = document.getElementById('oaLightboxImg')); }
+  function lbApply(){
+    var im = lbEl(); if(!im) return;
+    if(lbZoom <= 1.001){
+      lbZoom = 1; lbX = 0; lbY = 0;
+      im.style.transform = '';
+      im.style.cursor = 'zoom-in';
+    }else{
+      im.style.transform = 'translate(' + lbX + 'px,' + lbY + 'px) scale(' + lbZoom + ')';
+      im.style.cursor = lbDrag ? 'grabbing' : 'grab';
+    }
+  }
+  window.kxLbReset = function(){ lbZoom = 1; lbX = 0; lbY = 0; lbApply(); };
+  /* Zoom about a point: the pixel under the cursor has to stay under it, so
+     the offset is corrected by how much that point moves as the scale changes. */
+  function lbZoomAt(next, cx, cy){
+    var im = lbEl(); if(!im) return;
+    next = Math.min(lbMax, Math.max(1, next));
+    var r = im.getBoundingClientRect();
+    var mx = cx - (r.left + r.width / 2);
+    var my = cy - (r.top + r.height / 2);
+    var k = next / lbZoom;
+    lbX = lbX - mx * (k - 1);
+    lbY = lbY - my * (k - 1);
+    lbZoom = next;
+    lbApply();
+  }
+  (function wireZoom(){
+    var ov = document.getElementById('oaLightbox');
+    var im = lbEl();
+    if(!ov || !im) return;
+
+    im.addEventListener('dblclick', function(e){
+      e.preventDefault(); e.stopPropagation();
+      lbZoomAt(lbZoom > 1 ? 1 : 2.5, e.clientX, e.clientY);
+    });
+    ov.addEventListener('wheel', function(e){
+      if(!ov.classList.contains('open')) return;
+      e.preventDefault();
+      lbZoomAt(lbZoom * (e.deltaY < 0 ? 1.18 : 1 / 1.18), e.clientX, e.clientY);
+    }, { passive:false });
+
+    // a click on a zoomed picture pans it rather than closing the lightbox
+    im.addEventListener('mousedown', function(e){
+      if(lbZoom <= 1) return;
+      e.preventDefault(); e.stopPropagation();
+      lbDrag = { x:e.clientX - lbX, y:e.clientY - lbY, moved:false };
+      lbApply();
+    });
+    window.addEventListener('mousemove', function(e){
+      if(!lbDrag) return;
+      lbX = e.clientX - lbDrag.x; lbY = e.clientY - lbDrag.y; lbDrag.moved = true;
+      lbApply();
+    });
+    window.addEventListener('mouseup', function(){ if(lbDrag){ lbDrag = null; lbApply(); } });
+    // the overlay closes on click; a drag that ended over it must not
+    im.addEventListener('click', function(e){ if(lbZoom > 1) e.stopPropagation(); });
+
+    im.addEventListener('touchstart', function(e){
+      if(e.touches.length === 2){
+        var a = e.touches[0], b = e.touches[1];
+        lbPinch = { d:Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), z:lbZoom };
+        e.preventDefault();
+      }else if(e.touches.length === 1){
+        var now = Date.now();
+        if(now - lbLastTap < 300){
+          lbZoomAt(lbZoom > 1 ? 1 : 2.5, e.touches[0].clientX, e.touches[0].clientY);
+          e.preventDefault();
+        }
+        lbLastTap = now;
+        if(lbZoom > 1) lbDrag = { x:e.touches[0].clientX - lbX, y:e.touches[0].clientY - lbY, moved:false };
+      }
+    }, { passive:false });
+    im.addEventListener('touchmove', function(e){
+      if(lbPinch && e.touches.length === 2){
+        var a = e.touches[0], b = e.touches[1];
+        var d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        lbZoomAt(lbPinch.z * (d / lbPinch.d), (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+        e.preventDefault();
+      }else if(lbDrag && e.touches.length === 1 && lbZoom > 1){
+        lbX = e.touches[0].clientX - lbDrag.x; lbY = e.touches[0].clientY - lbDrag.y;
+        lbDrag.moved = true; lbApply(); e.preventDefault();
+      }
+    }, { passive:false });
+    im.addEventListener('touchend', function(e){
+      if(e.touches.length < 2) lbPinch = null;
+      if(!e.touches.length) lbDrag = null;
+    });
+
+    // +/- and 0, for anyone who would rather not use a pointer
+    document.addEventListener('keydown', function(e){
+      if(!ov.classList.contains('open')) return;
+      var c = { left:innerWidth / 2, top:innerHeight / 2 };
+      if(e.key === '+' || e.key === '=') lbZoomAt(lbZoom * 1.25, c.left, c.top);
+      else if(e.key === '-' || e.key === '_') lbZoomAt(lbZoom / 1.25, c.left, c.top);
+      else if(e.key === '0') window.kxLbReset();
+    });
+  })();
   function bigSrc(img){ return (img.currentSrc || img.src).replace(/([?&])(w|h)=\d+/g, '$1$2=1200').replace('fit=crop','fit=max'); }
   // click-to-zoom for feed / RFQ / Offer thumbnails
   document.addEventListener('click', function(e){
@@ -12731,7 +12842,8 @@ html, body{
        +N badge itself is a click target for the same reason. */
     var cell = e.target.closest('.kx-gcell');
     if(cell){
-      var gal = cell.closest('.kx-gal');
+      // .kx-cthumb is the list card's one-at-a-time version of the same thing
+      var gal = cell.closest('.kx-gal, .kx-cthumb');
       var cells = gal ? Array.prototype.slice.call(gal.querySelectorAll('.kx-gcell')) : [cell];
       var all = [];
       try{ all = JSON.parse(gal && gal.getAttribute('data-all') || '[]'); }catch(err){ all = []; }
@@ -13982,10 +14094,17 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 
 /* ===== Full-screen image lightbox ===== */
-.oa-lightbox{ padding:0 !important; }
+.oa-lightbox{ padding:0 !important; overflow:hidden; touch-action:none; }
 .oa-lightbox img{
   max-width:100vw !important; max-height:100vh !important;
   width:100vw; height:100vh; object-fit:contain; border-radius:0 !important;
+  /* zoom is a transform, so it must not animate away under a pinch */
+  transform-origin:center center; cursor:zoom-in; will-change:transform;
+  -webkit-user-select:none; user-select:none; -webkit-user-drag:none;
+}
+.oa-lightbox .lb-hint{
+  position:absolute; top:calc(14px + env(safe-area-inset-top)); left:0; right:0;
+  text-align:center; color:rgba(255,255,255,.72); font-size:12px; pointer-events:none;
 }
 .oa-lightbox .lb-nav{ bottom:calc(20px + env(safe-area-inset-bottom)); }
 
@@ -14503,7 +14622,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .kx-wall .pc-who{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
 #page-company-profile .kx-wall .pc-nameline{ display:flex; align-items:center; gap:5px; min-width:0; }
 #page-company-profile .kx-wall .pc-head .pp-name{
-  font-size:14px; font-weight:700; color:var(--ink); cursor:pointer;
+  font-size:15.5px; font-weight:700; color:var(--ink); cursor:pointer;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 #page-company-profile .kx-wall .pc-head .pp-name:hover{ color:var(--blue-700); }
@@ -15345,8 +15464,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 #page-feed .pc-who{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
 #page-feed .pc-nameline{ display:flex; align-items:center; gap:5px; min-width:0; }
+/* 15.5, up from 14. Who posted it is the first thing on the card and it was
+   set two steps below the title beneath it, so the name read as a caption for
+   the listing rather than the person behind it. */
 #page-feed .pc-head .pp-name{
-  font-size:14px; font-weight:700; color:var(--ink); cursor:pointer;
+  font-size:15.5px; font-weight:700; color:var(--ink); cursor:pointer;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
 #page-feed .pc-head .pp-name:hover{ color:var(--blue-700); }
@@ -16361,13 +16483,28 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 .kx-waiting-banner b{ color:#92610a; }
 .kx-waiting-banner span{ font-size:12px; color:var(--ink-faint); }
+/* คำขอราคา and รอตอบ are the two numbers this page exists to show, and both
+   were 11.5px pills sitting in a row of 12.5px grey metadata — the view count
+   beside them carried the same weight. They are the size of a control now,
+   with รอตอบ the louder of the two because it is the one asking for something.
+   วิว and the date stay small: they are context, not the point. */
+#page-my-offers .offer-stats-row .quote-badge,
 #page-my-offers .offer-stats-row .kx-waiting{
-  display:inline-flex; align-items:center; gap:5px;
-  padding:3px 10px; border-radius:999px;
-  background:#fff4dd; border:1px solid #f2dcae;
-  color:#92610a; font-weight:700; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 13px; border-radius:999px;
+  font-size:13.5px; font-weight:800; white-space:nowrap;
+  transition:background-color .15s ease, border-color .15s ease;
 }
-#page-my-offers .offer-stats-row .kx-waiting:hover{ background:#ffecc4; }
+#page-my-offers .offer-stats-row .quote-badge{
+  color:var(--blue-700); background:var(--blue-50); border:1px solid #c2d6ff;
+}
+#page-my-offers .offer-stats-row .quote-badge:hover{ background:#dae6ff; }
+#page-my-offers .offer-stats-row .kx-waiting{
+  background:#fff4dd; border:1px solid #e6c274; color:#8a5a06;
+}
+#page-my-offers .offer-stats-row .kx-waiting:hover{ background:#ffe6b8; border-color:#d9ae52; }
+/* the dot in front of รอตอบ, so it reads as a state rather than a count */
+#page-my-offers .offer-stats-row .kx-waiting::first-letter{ font-size:15px; }
 
 /* ===== One card shape for งานของฉัน and ใบเสนอราคา =====
    The three lists had grown three different proportions, and within each list
@@ -16435,6 +16572,45 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-body > .files-sum{
   align-self:flex-start; margin:8px 0 0; max-width:100%;
 }
+
+/* ===== รูปบนการ์ดในลิสต์: เลื่อนดูได้ =====
+   The sizing class is on this frame, so #page-my-offers .offer-thumb and its
+   siblings still decide how big the picture is; only what happens inside it
+   is new. */
+.kx-cthumb{
+  position:relative; overflow:hidden; display:block;
+  background:var(--bg); cursor:zoom-in;
+}
+.kx-cthumb .kx-cthumb-track{
+  display:flex; width:100%; height:100%;
+  transform:translateX(0); transition:transform .28s ease;
+}
+.kx-cthumb .kx-gcell{ flex:0 0 100%; width:100%; height:100%; background:var(--bg); }
+.kx-cthumb .kx-gimg{ width:100%; height:100%; object-fit:cover; display:block; }
+.kx-cthumb-nav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:26px; height:26px; border-radius:50%; border:none; padding:0;
+  background:rgba(20,30,55,.55); color:#fff; font-size:15px; line-height:1;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  opacity:0; transition:opacity .15s ease; z-index:2;
+}
+.kx-cthumb:hover .kx-cthumb-nav,
+.kx-cthumb-nav:focus-visible{ opacity:1; }
+.kx-cthumb-nav.prev{ left:6px; }
+.kx-cthumb-nav.next{ right:6px; }
+.kx-cthumb-nav:hover{ background:rgba(20,30,55,.78); }
+.kx-cthumb-dots{
+  position:absolute; left:0; right:0; bottom:7px; z-index:2;
+  display:flex; justify-content:center; gap:4px; pointer-events:none;
+}
+.kx-cthumb-dots i{
+  width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.55);
+}
+.kx-cthumb-dots i.on{ background:#fff; }
+/* a touch screen has no hover to reveal the arrows with */
+@media (hover: none){
+  .kx-cthumb-nav{ opacity:1; }
+}
 /* same tone note as the seller's card: the reply is text, not a green surface */
 #page-my-requests .mr-note{
   color:var(--ink) !important; background:var(--bg) !important;
@@ -16453,12 +16629,53 @@ body.kx-auth .kx-burger{ display:none !important; }
   justify-content:space-between !important; flex-shrink:0;
 }
 
+/* ===== The same cards on a phone =====
+   Stacked, every block took the full width in its own row, so the price sat in
+   a 121px box alone on one line and the status on the next — a row that is
+   190px on a desktop came out 633px tall for the same three facts.
+
+   A two-column grid instead: the picture and the text span both columns
+   because they want the width, and the two short blocks that do not — the
+   price and the status — sit beside each other on one line. Same card, about
+   a third less scrolling. */
 @media (max-width: 1024px){
-  /* stacked, a card is as tall as its content and the picture goes full width */
   #page-rfq-offers .rfq-card,
   #page-my-offers .offer-row,
   #page-my-bids .bid-row,
-  #page-my-requests .bid-row{ height:auto; min-height:0; overflow:visible; }
+  #page-my-requests .bid-row{
+    display:grid !important;
+    grid-template-columns:1fr 1fr;
+    gap:10px 12px;
+    align-items:center;
+    height:auto; min-height:0; overflow:visible;
+  }
+  #page-rfq-offers .rfq-card > .rfq-thumb,
+  #page-rfq-offers .rfq-card > .rfq-body,
+  #page-my-offers .offer-row > .offer-thumb,
+  #page-my-offers .offer-row > .offer-body,
+  #page-my-bids .bid-row > .bid-thumb,
+  #page-my-bids .bid-row > .bid-body,
+  #page-my-requests .bid-row > .bid-thumb,
+  #page-my-requests .bid-row > .bid-body{ grid-column:1 / -1; }
+
+  #page-rfq-offers .rfq-card > .rfq-offers,
+  #page-my-offers .offer-row > .offer-price-col,
+  #page-my-bids .bid-row > .bid-price-col,
+  #page-my-requests .bid-row > .bid-price-col{
+    grid-column:1; justify-self:stretch; width:auto !important; margin:0;
+    text-align:left; align-self:stretch;
+  }
+  #page-rfq-offers .rfq-card > .rfq-status-col,
+  #page-my-offers .offer-row > .offer-status-col,
+  #page-my-bids .bid-row > .bid-status-col,
+  #page-my-requests .bid-row > .bid-status-col{
+    grid-column:2; justify-self:end; width:auto !important;
+    text-align:right; align-items:flex-end; justify-content:center;
+  }
+  /* the ✎ and the status dot were spreading to the full width of their column */
+  #page-rfq-offers .rfq-card .status-top,
+  #page-my-offers .offer-row .offer-status-top{ justify-content:flex-end; }
+  #page-my-offers .offer-row .offer-action-btns{ align-self:flex-end; }
   #page-rfq-offers .rfq-thumb,
   #page-my-offers .offer-thumb,
   #page-my-bids .bid-thumb,
@@ -20345,6 +20562,50 @@ body.kx-auth .kx-burger{ display:none !important; }
   }
   window.kxFilesSummary = filesSummaryHTML;
 
+  /* ===== รูปบนการ์ดในลิสต์ =====
+     งานของฉัน and ใบเสนอราคา showed images[0] and nothing else, so a listing
+     with four photos looked like a listing with one — the feed and the post
+     page both show the set, and these did not.
+
+     One frame with the pictures on a track behind it, stepped by the arrows.
+     A card in a list is not the place to lay four photos side by side; the
+     point is being able to look through them without leaving the row. Clicking
+     opens the lightbox on the whole set, which is where they are big.
+
+     The sizing class stays on the wrapper so every existing rule for
+     .offer-thumb / .rfq-thumb / .bid-thumb still applies to the frame. */
+  function cardThumbHTML(images, cls){
+    var list = (images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
+    var urls = list.map(function(im){ return im.url; });
+    if(!urls.length) urls = ['assets/img/konnex-mark-3.png'];
+    var one = urls.length === 1;
+    return '<div class="' + cls + ' kx-cthumb" data-i="0"' +
+        ' data-all="' + esc(JSON.stringify(urls)) + '" onclick="event.stopPropagation()">' +
+      '<div class="kx-cthumb-track">' + urls.map(function(u){
+        return '<span class="kx-gcell"><img class="kx-gimg" src="' + esc(u) + '" alt="" loading="lazy"></span>';
+      }).join('') + '</div>' +
+      (one ? '' :
+        '<button type="button" class="kx-cthumb-nav prev" aria-label="รูปก่อนหน้า" onclick="event.stopPropagation();kxCardThumb(this,-1)">‹</button>' +
+        '<button type="button" class="kx-cthumb-nav next" aria-label="รูปถัดไป" onclick="event.stopPropagation();kxCardThumb(this,1)">›</button>' +
+        '<span class="kx-cthumb-dots">' + urls.map(function(_, i){
+          return '<i' + (i ? '' : ' class="on"') + '></i>';
+        }).join('') + '</span>') +
+    '</div>';
+  }
+  window.kxCardThumbHTML = cardThumbHTML;
+
+  window.kxCardThumb = function(btn, dir){
+    var wrap = btn.closest('.kx-cthumb');
+    if(!wrap) return;
+    var track = wrap.querySelector('.kx-cthumb-track');
+    var n = track.children.length;
+    var i = ((parseInt(wrap.dataset.i || '0', 10) + dir) % n + n) % n;
+    wrap.dataset.i = i;
+    track.style.transform = 'translateX(-' + (i * 100) + '%)';
+    var dots = wrap.querySelectorAll('.kx-cthumb-dots i');
+    Array.prototype.forEach.call(dots, function(d, k){ d.classList.toggle('on', k === i); });
+  };
+
   function postCardHTML(post){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
@@ -21283,7 +21544,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var statusLabel = post.status === 'open' ? 'เปิดรับ' : post.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว';
     return '<div class="rfq-card" data-status="' + esc(statusVal) + '" data-post-id="' + post.id + '"' +
         ' onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
-      '<img class="rfq-thumb" src="' + esc(thumb) + '">' +
+      cardThumbHTML(images, 'rfq-thumb') +
       '<div class="rfq-body">' +
         '<div class="rfq-title">' + esc(post.title) + '</div><div class="rfq-id"><span class="lock-badge">' + lockLabel + '</span></div>' +
         (docs.length ? '<div class="files-sum">' + docs.length + ' ไฟล์แนบ</div>' : '') +
@@ -21311,7 +21572,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var pill = pillMap[statusVal] || pillMap.active;
     return '<div class="offer-row" data-status="' + statusVal + '" data-post-id="' + post.id + '"' +
         ' onclick="kxOpenPost(\'' + post.id + '\',\'offer\')">' +
-      '<img class="offer-thumb" src="' + esc(thumb) + '">' +
+      cardThumbHTML(images, 'offer-thumb') +
       '<div class="offer-body">' +
         '<div class="offer-title">' + esc(post.title) + '</div>' +
         '<div class="offer-stats-row"><span>👁️ ' + (post.view_count || 0) + ' วิว</span>' +
@@ -21353,7 +21614,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var files = filesSummaryHTML(q.quote_attachments);
     return '<div class="bid-row" data-status="' + esc(q.status) + '" data-origin="rfq"' +
         (post ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')"' : '') + '>' +
-      '<img class="bid-thumb" src="' + esc(thumb) + '" alt="" loading="lazy">' +
+      cardThumbHTML(images, 'bid-thumb') +
       '<div class="bid-body">' +
         '<div class="bid-title">' + esc(post ? post.title : 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
         '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);overflow:hidden;">' +
