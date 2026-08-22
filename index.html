@@ -8422,10 +8422,16 @@ html, body{
 
 <script>
   function switchTab(el){
-    document.querySelectorAll('.status-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('#page-rfq-offers .status-tab').forEach(t=>t.classList.remove('active'));
     el.classList.add('active');
+    // the tab actually filters now; kxPaintRfqTabs tags each card with its bucket
+    var want = el.dataset.bucket || null;
+    document.querySelectorAll('#page-rfq-offers .rfq-card').forEach(function(c){
+      c.style.display = (!want || !c.dataset.bucket || c.dataset.bucket === want) ? '' : 'none';
+    });
     kxToggleEmpty('#page-rfq-offers .rfq-card', 'rfqEmpty');
   }
+  window.switchTab = switchTab;
   function kxToggleEmpty(cardSel, emptyId){
     var vis = [].filter.call(document.querySelectorAll(cardSel), function(c){ return c.offsetParent !== null && getComputedStyle(c).display !== 'none'; }).length;
     var e = document.getElementById(emptyId);
@@ -9301,6 +9307,12 @@ html, body{
   }
   function pfOpen(mode){
     pfMode=mode; pfImg=''; pfRating=5;
+    /* kxOpenReview replaces ชื่อผู้รีวิว with a picker of the deals you closed
+       together — it hides the text input and appends a <select>. Neither was
+       ever put back, so opening เขียนรีวิว once left เพิ่มบริการ with no visible
+       ชื่อบริการ field, and a second review offered the first one's deals. */
+    var oldPick=document.getElementById('pfReviewPost'); if(oldPick) oldPick.remove();
+    document.getElementById('pfName').style.display='';
     document.getElementById('pfName').value=''; document.getElementById('pfDesc').value=''; pfResetDrop();
     var t=document.getElementById('pfTitle'), s=document.getElementById('pfSubt');
     document.getElementById('pfImgField').style.display=(mode!=='rev')?'block':'none';
@@ -10019,6 +10031,20 @@ html, body{
           <input id="cpPrice" type="text" inputmode="numeric" placeholder="เช่น 15,000" style="width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;color:var(--ink);background:#fff;">
           <div id="cpPriceErr" style="font-size:11.5px;color:#c0392b;margin-top:6px;" hidden>กรุณากรอกราคาเป็นตัวเลข</div>
           <div style="font-size:11.5px;color:#565b6e;margin-top:6px;">ราคานี้จะแสดงบนการ์ดประกาศของคุณในฟีด</div>
+        </div>
+
+        <!-- An RFQ had nowhere to say what it expects to spend, while the post
+             page has always had a 💰 งบประมาณ line reading price_low/price_high.
+             Optional: leaving it blank shows ไม่ระบุงบประมาณ, as before. -->
+        <div id="cpBudgetCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;" hidden>
+          <label style="display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:7px;">งบประมาณเบื้องต้น (บาท)</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input id="cpBudgetLow" type="text" inputmode="numeric" placeholder="ตั้งแต่" style="flex:1;min-width:0;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;color:var(--ink);background:#fff;">
+            <span style="color:#565b6e;font-size:14px;">–</span>
+            <input id="cpBudgetHigh" type="text" inputmode="numeric" placeholder="ถึง" style="flex:1;min-width:0;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;color:var(--ink);background:#fff;">
+          </div>
+          <div id="cpBudgetErr" style="font-size:11.5px;color:#c0392b;margin-top:6px;" hidden>งบประมาณต้องเป็นตัวเลข และค่าเริ่มต้นต้องไม่มากกว่าค่าสูงสุด</div>
+          <div style="font-size:11.5px;color:#565b6e;margin-top:6px;">ไม่ระบุก็ได้ — ใส่ไว้ช่วยให้ผู้ขายเสนอราคาได้ตรงกว่า และจะแสดงบนหน้าประกาศ</div>
         </div>
 
         <div id="cpBidStep"><div style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;">2</span><span style="font-size:17px;font-weight:800;color:var(--ink);">เลือกประเภทการประมูล <span style="color:var(--red)">*</span></span></div>
@@ -12885,10 +12911,13 @@ function kxPostTypeForm(isRfq){
   var bid = document.getElementById('cpBidStep');
   var dl  = document.getElementById('cpDeadlineCard');
   var pr  = document.getElementById('cpPriceCard');
+  var bud = document.getElementById('cpBudgetCard');
   var lbl = document.getElementById('cpDescLabel');
   if(bid) bid.hidden = !isRfq;
   if(dl)  dl.hidden  = !isRfq;
   if(pr)  pr.hidden  =  isRfq;
+  // the mirror of ราคาเริ่มต้น: a seller opens at a price, a buyer states a budget
+  if(bud) bud.hidden = !isRfq;
   if(lbl) lbl.innerHTML = (isRfq ? 'รายละเอียดงาน' : 'รายละเอียดสินค้า / บริการ') +
     ' <span style="color:var(--red)">*</span>';
   var title = document.getElementById('cpTitle');
@@ -17447,9 +17476,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(src.indexOf('http') === 0) return { url:src, changed:false }; // already stored
     if(src.indexOf('blob:') !== 0 && src.indexOf('data:') !== 0) return { url:currentUrl, changed:false };
 
-    var blob = await (await fetch(src)).blob();
-    var ext = (String(blob.type).split('/')[1] || 'jpg').replace('jpeg', 'jpg');
-    var url = await kxUploadFile('post-images', new File([blob], label + '.' + ext, { type: blob.type || 'image/jpeg' }));
+    // through the canvas, so a HEIC or an 8MB photo off a phone lands as a
+    // JPEG every browser can show
+    var url = await kxUploadFile('post-images', await window.kxImageFile(src, label));
     return { url:url, changed:true };
   }
 
@@ -17942,6 +17971,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     var d = document.querySelector('#page-create-post textarea'); if(d) d.value = '';
     var p = document.getElementById('cpPrice'); if(p){ p.value = ''; p.classList.remove('bad'); }
     var pe = document.getElementById('cpPriceErr'); if(pe) pe.hidden = true;
+    var bl = document.getElementById('cpBudgetLow'); if(bl) bl.value = '';
+    var bh = document.getElementById('cpBudgetHigh'); if(bh) bh.value = '';
+    var be = document.getElementById('cpBudgetErr'); if(be) be.hidden = true;
     var dl = document.getElementById('cpDeadline'); if(dl) dl.value = '';
     if(typeof render === 'function' && document.getElementById('cpImgs')) render();
   }
@@ -17975,6 +18007,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(descEl) descEl.value = post.description || '';
     var priceEl = document.getElementById('cpPrice');
     if(priceEl) priceEl.value = (!isRfq && post.price_high != null) ? String(post.price_high) : '';
+    var budLowEl = document.getElementById('cpBudgetLow');
+    if(budLowEl) budLowEl.value = (isRfq && post.price_low != null) ? String(post.price_low) : '';
+    var budHighEl = document.getElementById('cpBudgetHigh');
+    if(budHighEl) budHighEl.value = (isRfq && post.price_high != null) ? String(post.price_high) : '';
     var dlEl = document.getElementById('cpDeadline');
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
 
@@ -18094,6 +18130,36 @@ body.kx-auth .kx-burger{ display:none !important; }
   // attachment on an open post is meant to be seen by anyone browsing the feed.
   // on window because the bid modal (submitOffer, in its own script block)
   // uploads quote attachments through the same path
+  /* Photos straight off a phone need normalising before they are uploaded.
+     An iPhone hands over HEIC, which Storage will take but no browser outside
+     Safari will display, and the file is routinely 4-8MB. Both go away by
+     drawing the picture onto a canvas and re-encoding: Safari decodes HEIC
+     into an <img> for us, every other platform passes its JPEG or PNG
+     straight through, and the long edge is capped so a card thumbnail is not
+     a 4000px original.
+
+     Returns a File. If the picture cannot be decoded at all it throws, which
+     is the point — the caller has to say so rather than saving a row with no
+     picture and letting the placeholder stand in for it. */
+  window.kxImageFile = async function(src, name){
+    var img = await new Promise(function(resolve, reject){
+      var i = new Image();
+      i.onload = function(){ resolve(i); };
+      i.onerror = function(){ reject(new Error('อ่านไฟล์รูปไม่ได้')); };
+      i.src = src;
+    });
+    var MAX = 1600;
+    var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    if(!w || !h) throw new Error('อ่านไฟล์รูปไม่ได้');
+    var scale = Math.min(1, MAX / Math.max(w, h));
+    var cv = document.createElement('canvas');
+    cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    var blob = await new Promise(function(resolve){ cv.toBlob(resolve, 'image/jpeg', 0.85); });
+    if(!blob) throw new Error('แปลงไฟล์รูปไม่สำเร็จ');
+    return new File([blob], (name || 'image') + '.jpg', { type:'image/jpeg' });
+  };
+
   window.kxUploadFile = async function(bucket, file){
     var safe = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
     var path = window.kxSession.user.id + '/' + Date.now() + '-' +
@@ -18134,6 +18200,31 @@ body.kx-auth .kx-burger{ display:none !important; }
       pErr.hidden = true; pEl.classList.remove('bad');
     }
 
+    /* An RFQ states a budget instead, and both ends are optional — one alone
+       reads as "from X" or "up to Y", which is a real thing a buyer wants to
+       say. Only nonsense is refused: a non-number, or a floor above a ceiling. */
+    var budLow = null, budHigh = null;
+    if(isRfq){
+      var lowEl = document.getElementById('cpBudgetLow');
+      var highEl = document.getElementById('cpBudgetHigh');
+      var bErr = document.getElementById('cpBudgetErr');
+      function budVal(el){
+        var raw = ((el && el.value) || '').replace(/[, ]/g, '');
+        if(!raw) return null;
+        var n = parseFloat(raw);
+        return (isNaN(n) || n < 0) ? NaN : n;
+      }
+      budLow = budVal(lowEl); budHigh = budVal(highEl);
+      var bad = (budLow !== null && isNaN(budLow)) || (budHigh !== null && isNaN(budHigh)) ||
+                (budLow != null && budHigh != null && !isNaN(budLow) && !isNaN(budHigh) && budLow > budHigh);
+      if(bad){
+        if(bErr) bErr.hidden = false;
+        (lowEl || highEl).focus();
+        return;
+      }
+      if(bErr) bErr.hidden = true;
+    }
+
     var editing = !!EDIT_ID;
     var btn = document.getElementById('cpPublishBtn');
     var wasText = btn ? btn.textContent : '';
@@ -18149,7 +18240,10 @@ body.kx-auth .kx-burger{ display:none !important; }
       // post that the poster left in place
       var imageUrls = [];
       for(var i = 0; i < IMGS.length; i++){
-        imageUrls.push(IMGS[i].file ? await kxUploadFile('post-images', IMGS[i].file) : IMGS[i].url);
+        // new picks go through the canvas first — see kxImageFile
+        imageUrls.push(IMGS[i].file
+          ? await kxUploadFile('post-images', await window.kxImageFile(IMGS[i].url || URL.createObjectURL(IMGS[i].file), 'photo'))
+          : IMGS[i].url);
       }
       var attachmentRows = [];
       for(var j = 0; j < DOCS.length; j++){
@@ -18168,7 +18262,8 @@ body.kx-auth .kx-burger{ display:none !important; }
         description: desc || 'ไม่มีรายละเอียดเพิ่มเติม',
         category_id: 'other',
         province: (window.kxCurrentUser && window.kxCurrentUser.province) || 'ไม่ระบุ',
-        price_high: isRfq ? null : num,
+        price_low:  isRfq ? budLow : null,
+        price_high: isRfq ? budHigh : num,
         bid_type: isRfq ? bidType : null,
         deadline: chosenDeadline || new Date(Date.now() + days * 86400000).toISOString()
       };
@@ -20248,15 +20343,19 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     /* Own profile vs somebody else's. The page was showing the same controls
        either way, so on your own profile it offered to send you a message,
-       ask you for a quote and write you a review — and offered no way to edit,
-       which is the one thing you actually want there. */
+       ask you for a quote and write you a review.
+
+       On your own profile the row is now empty. แก้ไขโปรไฟล์ already sits in
+       the avatar menu and in ตั้งค่า; a third copy stretched across the whole
+       card was the loudest thing on a page about who you are. */
     var mine = !!(window.kxSession && pr.id && pr.id === window.kxSession.user.id);
     var actions = document.getElementById('pfHeroActions');
     if(actions){
       actions.innerHTML = mine
-        ? '<button class="btn btn-outline" onclick="navigateTo(\'page-edit-profile\')">✎ แก้ไขโปรไฟล์</button>'
+        ? ''
         : '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>' +
           '<button class="btn btn-primary" onclick="openReqQuote()">📄 ขอใบเสนอราคา</button>';
+      actions.style.display = mine ? 'none' : '';
     }
 
     var pill = p.querySelector('.hero-idblock .verified-pill');
@@ -20546,7 +20645,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     var lockLabel = post.bid_type === 'open' ? '🔓 เปิดราคา' : '🔒 ปิดราคา';
     var statusVal = post.status === 'open' ? 'active' : post.status;
     var statusLabel = post.status === 'open' ? 'เปิดรับ' : post.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว';
-    return '<div class="rfq-card" data-status="' + esc(statusVal) + '" onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
+    return '<div class="rfq-card" data-status="' + esc(statusVal) + '" data-post-id="' + post.id + '"' +
+        ' onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
       '<img class="rfq-thumb" src="' + esc(thumb) + '">' +
       '<div class="rfq-body">' +
         '<div class="rfq-title">' + esc(post.title) + '</div><div class="rfq-id"><span class="lock-badge">' + lockLabel + '</span></div>' +
@@ -20722,7 +20822,45 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var loadMore = document.querySelector(pageSel + ' .load-more');
     if(loadMore) loadMore.style.display = 'none';
+    if(kind !== 'offer') kxPaintRfqTabs(res.data);
   };
+
+  /* The three tabs on งานของฉัน were เปิดรับ (5) · พิจารณา (3) · เสร็จสิ้น (8)
+     written into the markup, and switchTab only moved the highlight — so an
+     account with no posts at all was told it had sixteen, and clicking a tab
+     filtered nothing.
+
+     The three states are the post's own life: still taking offers, bidding
+     over and waiting for the owner to choose, and decided. "พิจารณา" is where
+     a post lands the moment its deadline passes, which is also exactly when
+     the เลือก button unlocks. */
+  function rfqBucket(p){
+    if(p.status === 'closed') return 'done';
+    if(p.status === 'paused') return 'review';
+    var over = !!p.deadline && new Date(p.deadline).getTime() <= Date.now();
+    return over ? 'review' : 'open';
+  }
+  function kxPaintRfqTabs(rows){
+    var tabs = document.querySelectorAll('#page-rfq-offers .status-tabs .status-tab');
+    if(!tabs.length) return;
+    var keys = ['open', 'review', 'done'];
+    var labels = ['เปิดรับ', 'พิจารณา', 'เสร็จสิ้น'];
+    var counts = { open:0, review:0, done:0 };
+    (rows || []).forEach(function(p){ counts[rfqBucket(p)]++; });
+    Array.prototype.forEach.call(tabs, function(tab, i){
+      if(!keys[i]) return;
+      tab.dataset.bucket = keys[i];
+      var ic = tab.querySelector('.tab-ic');
+      tab.innerHTML = (ic ? ic.outerHTML : '') + labels[i] + ' (' + counts[keys[i]] + ')';
+    });
+    // rows are tagged so switchTab can filter without re-reading the database
+    (rows || []).forEach(function(p){
+      var card = document.querySelector('#page-rfq-offers .rfq-card[data-post-id="' + p.id + '"]');
+      if(card) card.dataset.bucket = rfqBucket(p);
+    });
+    var active = document.querySelector('#page-rfq-offers .status-tab.active');
+    if(active && window.switchTab) window.switchTab(active);
+  }
 
   var loaded = false;
   var feedQaMissing = false;
@@ -20949,7 +21087,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       sel.className = inp.className;
       sel.innerHTML = deals.map(function(d){ return '<option value="' + d.id + '">' + esc(d.title) + '</option>'; }).join('');
       inp.style.display = 'none';
-      if(!document.getElementById('pfReviewPost')) nameField.appendChild(sel);
+      nameField.appendChild(sel);   // pfOpen removed any earlier one
     }
   };
 
@@ -20976,13 +21114,20 @@ body.kx-auth .kx-burger{ display:none !important; }
   window.kxAddService = async function(title, desc, imgDataUrl){
     if(!window.kxSession) return false;
     var url = null;
-    try{
-      if(imgDataUrl && imgDataUrl.indexOf('data:') === 0){
-        var blob = await (await fetch(imgDataUrl)).blob();
-        var ext = (String(blob.type).split('/')[1] || 'jpg').replace('jpeg','jpg');
-        url = await window.kxUploadFile('post-images', new File([blob], 'service.' + ext, { type: blob.type }));
+    /* This used to swallow the failure and save the service anyway, so a photo
+       from a phone — HEIC, several megabytes — quietly became the Konnex mark
+       and the owner had no way to tell it had not worked. If a picture was
+       chosen and it cannot be stored, nothing is saved and the reason is
+       shown. */
+    if(imgDataUrl){
+      try{
+        url = await window.kxUploadFile('post-images', await window.kxImageFile(imgDataUrl, 'service'));
+      }catch(e){
+        console.error('service image upload failed', e);
+        kxToast('อัปโหลดรูปไม่สำเร็จ: ' + (e.message || 'กรุณาลองใหม่หรือเลือกรูปอื่น'));
+        return false;
       }
-    }catch(e){ console.error('service image upload failed', e); }
+    }
     var res = await sb.from('services').insert({
       profile_id: window.kxSession.user.id, title: title, description: desc || null, image_url: url
     });
