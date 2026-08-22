@@ -2653,6 +2653,13 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #page-rfq-detail .offer-card.kx-q.lost{ opacity:.6; }
 /* the file list rides inside the button, so it must not lay itself out there */
 #page-rfq-detail .offer-card.kx-q .btn-view .files-data{ display:none !important; }
+/* เลือก before the auction is over: in place, plainly not usable yet, and it
+   still answers when tapped instead of swallowing the tap silently */
+#page-rfq-detail .btn-choose.is-off{
+  background:var(--blue-600); opacity:.4; cursor:not-allowed;
+}
+#page-rfq-detail .btn-choose.is-off:hover{ background:var(--blue-600); opacity:.5; }
+#page-rfq-detail .btn-choose.is-off:active{ transform:none; }
 /* Narrow screens are already handled: the ≤1024px block further down stacks
    .offer-card's children by class, and this card uses the same ones. */
 #page-rfq-detail .btn-choose {
@@ -19652,7 +19659,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     return out.length ? '<div class="offer-stats">' + out.join('') + '</div>' : '';
   }
 
-  function quoteCardHTML(q, isOwner, decided, canPick, avg){
+  // the greyed-out เลือก explains itself rather than doing nothing at all
+  window.kxPickHint = function(el){
+    if(window.kxToast) kxToast(el.getAttribute('data-hint') || 'ยังเลือกผู้ชนะไม่ได้');
+  };
+
+  function quoteCardHTML(q, isOwner, decided, canPick, avg, pickHint){
     var bidder = q.profiles || {};
     var name = esc(bidder.company_name || 'ผู้เสนอราคา');
     var open = bidder.id ? 'event.stopPropagation();kxViewProfile(\'' + bidder.id + '\')' : '';
@@ -19672,11 +19684,18 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
 
     var files = q.quote_attachments || [];
-    // Only the post's owner picks a winner, only once the auction has actually
-    // ended, and only while nothing is decided yet.
-    var pickBtn = (isOwner && !decided && canPick)
-      ? '<button class="btn-choose" onclick="kxPickWinner(\'' + q.id + '\',\'' + name.replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
-      : '';
+    /* Only the post's owner picks a winner, only once the auction has actually
+       ended, and only while nothing is decided yet. Before the deadline the
+       button still stands in its place, greyed out — an owner who cannot find
+       it at all has no way to tell whether it is missing, broken, or simply not
+       due yet, so it stays put and says which. */
+    var pickBtn = '';
+    if(isOwner && !decided){
+      pickBtn = canPick
+        ? '<button class="btn-choose" onclick="kxPickWinner(\'' + q.id + '\',\'' + name.replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
+        : '<button class="btn-choose is-off" data-hint="' + esc(pickHint || '') + '"' +
+          ' title="' + esc(pickHint || '') + '" onclick="kxPickHint(this)">✓ เลือก</button>';
+    }
     var fileBtn = files.length
       ? '<button class="btn-view" onclick="openFilesList(this)">📎 ไฟล์แนบ (' + files.length + ')' +
           '<span class="files-data" style="display:none">' + files.map(function(f){
@@ -19803,14 +19822,15 @@ body.kx-auth .kx-burger{ display:none !important; }
         : 'ยังไม่มีผู้เสนอราคาเข้ามา';
     }
     if(offerListEl){
-      // tell the owner why there is no เลือก button yet, rather than leaving
-      // them to guess whether it is missing or broken
+      // tell the owner why the เลือก button is greyed out, rather than leaving
+      // them to guess whether it is broken
+      var pickHint = 'เลือกผู้ชนะได้เมื่อหมดเวลารับข้อเสนอ (' + fmtDateBE(post.deadline) + ')';
       var waitNote = (isOwner && !decided && !canPick && quotes.length)
-        ? '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--blue-50);border:1px solid #dae6ff;border-radius:9px;padding:10px 13px;margin-bottom:12px;">⏳ เลือกผู้ชนะได้เมื่อหมดเวลารับข้อเสนอ (' + fmtDateBE(post.deadline) + ')</div>'
+        ? '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--blue-50);border:1px solid #dae6ff;border-radius:9px;padding:10px 13px;margin-bottom:12px;">⏳ ' + esc(pickHint) + '</div>'
         : '';
       offerListEl.innerHTML = waitNote + (quotes.length
         ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
-            .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick, avgPrice); }).join('')
+            .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick, avgPrice, pickHint); }).join('')
         : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>');
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
