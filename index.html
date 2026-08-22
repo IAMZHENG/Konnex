@@ -5123,6 +5123,27 @@ input[type="number"]:focus, textarea:focus, select:focus{
     text-overflow: ellipsis
     }
 #page-messages .kx-topic-sep:hover span { background: #dae6ff }
+/* the general-chat marker is not a link to anywhere */
+#page-messages .kx-topic-sep.plain { cursor: default }
+#page-messages .kx-topic-sep.plain span {
+    color: var(--ink-faint); background: var(--bg); border-color: var(--line)
+    }
+#page-messages .kx-topic-sep.plain:hover span { background: var(--bg) }
+/* the composer's topic picker */
+#page-messages .chat-topic-bar {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 16px 0; min-width: 0
+    }
+#page-messages .chat-topic-bar .ctb-lbl {
+    font-size: 11.5px; font-weight: 700; color: var(--ink-faint); white-space: nowrap
+    }
+#page-messages .chat-topic-bar select {
+    flex: 1; min-width: 0;
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 6px 10px; font-size: 12.5px; font-family: inherit;
+    color: var(--ink); background: var(--bg); cursor: pointer
+    }
+#page-messages .chat-topic-bar select:focus { outline: none; border-color: var(--blue-600) }
 #page-messages .bubble-row {
     display: flex;
     gap: 10px;
@@ -7426,6 +7447,20 @@ html, body{
   #page-dashboard .layout,
   #page-settings .layout,
   .page-layout{ max-width:1300px !important; }
+
+  /* The frame widening was right; letting the cards take all of it was not. On
+     these four the content column has no right-hand rail to stop it, so a row
+     ran the full 1300 and gave its text block 688px — a title on one line with
+     half the card empty beside it. Capping the column instead of the card keeps
+     the heading, the tabs, the search box and the rows on one left edge, which
+     is the part that reads as "จัด layout". 980 puts the text block at ~370,
+     between the 182 it had before the widening and the 688 it had after. */
+  #page-rfq-offers .layout,
+  #page-my-offers .layout,
+  #page-my-bids .layout,
+  #page-my-requests .layout{
+    grid-template-columns:230px minmax(0,980px) !important;
+  }
 }
 #page-feed .layout > div:nth-child(3){ display:none !important; }
 /* flatten cards: lighter border, no heavy shadow */
@@ -9469,6 +9504,15 @@ html, body{
 
         <div class="chat-body"></div>
 
+        <!-- One thread per person covers several announcements, so a reply has
+             to say which one it is about. It inherited the last message's topic
+             silently, which is right until you want to talk about something
+             else — and then there was no way to say so. -->
+        <div class="chat-topic-bar" id="chatTopicBar" style="display:none;">
+          <span class="ctb-lbl">ตอบกลับเรื่อง</span>
+          <select id="chatTopic" onchange="kxSetChatTopic(this.value)"></select>
+        </div>
+
         <div class="chat-input-row">
           <input type="file" id="chatFile" multiple hidden>
           <span class="chat-attach" role="button" tabindex="0" aria-label="แนบไฟล์">📎</span>
@@ -9673,6 +9717,33 @@ html, body{
     '</div>';
   }
 
+  /* The composer's topic. Every listing already spoken about in this thread is
+     offered, plus "คุยเรื่องทั่วไป" for a message that belongs to none of them.
+     Switching draws a divider in the thread as soon as the next message lands,
+     which is what makes a change of subject visible instead of implied. */
+  function kxPaintTopicBar(seen){
+    var bar = document.getElementById('chatTopicBar');
+    var sel = document.getElementById('chatTopic');
+    if(!bar || !sel) return;
+    var ids = Object.keys(seen || {});
+    // with nothing but general chat there is no topic to choose between
+    if(!ids.length){ bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    sel.innerHTML = ids.map(function(id){
+      return '<option value="' + id + '">' + esc(seen[id]) + '</option>';
+    }).join('') + '<option value="">— คุยเรื่องทั่วไป —</option>';
+    sel.value = postContext || '';
+  }
+  window.kxSetChatTopic = function(v){
+    postContext = v || null;
+    var sel = document.getElementById('chatTopic');
+    // the select is only already on this value when the change came from it
+    if(sel && sel.value !== (v || '')) sel.value = v || '';
+    var st = document.querySelector('#page-messages .chat-status');
+    var label = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
+    if(st) st.textContent = v ? ('ตอบกลับเรื่อง: ' + label) : '';
+  };
+
   window.kxOpenConversation = async function(id){
     if(!window.kxSession) return;
     current = id;
@@ -9693,7 +9764,7 @@ html, body{
     if(res.error){ console.error('kxOpenConversation failed', res.error); return; }
 
     var me = window.kxSession.user.id;
-    var html = '', lastDay = '', lastPost = 'init';
+    var html = '', lastDay = '', lastPost = 'init', topicSeen = {};
     res.data.forEach(function(m){
       var d = dayLabel(m.created_at);
       if(d !== lastDay){ html += '<div class="chat-date-sep">' + esc(d) + '</div>'; lastDay = d; }
@@ -9705,9 +9776,14 @@ html, body{
         if(pid && m.posts){
           html += '<div class="kx-topic-sep" onclick="kxOpenPost(\'' + pid + '\',\'' + (m.posts.kind || 'rfq') + '\')">' +
             '<span>' + (m.posts.kind === 'offer' ? '🏷️' : '🛒') + ' เกี่ยวกับ: ' + esc(m.posts.title) + '</span></div>';
+        }else if(lastPost !== 'init'){
+          // going from a listing to no listing is a change of subject too, and
+          // it used to pass in silence because only the has-a-post case drew
+          html += '<div class="kx-topic-sep plain"><span>💬 คุยเรื่องทั่วไป</span></div>';
         }
         lastPost = pid;
       }
+      if(pid && m.posts && !topicSeen[pid]) topicSeen[pid] = m.posts.title;
       html += bubbleHTML(m, other, me);
     });
     // replying continues whatever the last message was about
@@ -9720,6 +9796,7 @@ html, body{
         ? 'ตอบกลับเรื่อง: ' + lastMsg.posts.title
         : '';
     }
+    kxPaintTopicBar(topicSeen);
     body.innerHTML = html || '<div style="padding:24px;text-align:center;font-size:13px;color:var(--ink-faint);">ยังไม่มีข้อความ — ทักทายกันก่อนได้เลย</div>';
     if(window.kxApplyIcons){ window.kxApplyIcons(head); window.kxApplyIcons(body); }
     body.scrollTop = body.scrollHeight;
@@ -11171,6 +11248,7 @@ html, body{
       var note = box.querySelector('textarea');
       if(note) note.value = row.seller_note || '';
     }
+    if(window.kxFormatMoneyFields) window.kxFormatMoneyFields(box);
     document.getElementById('respondQuoteModal').classList.add('open');
   };
   function closeRespondQuoteModal(){
@@ -16770,39 +16848,55 @@ body.kx-auth .kx-burger{ display:none !important; }
   var SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h8M4 17h4M17 5v14M17 19l3-3M17 19l-3-3"></path></svg>';
 
   function rfq(){ return document.getElementById('page-rfq-detail'); }
-  function isSealed(){ var p = rfq(); return !!(p && p.querySelector('.offer-list.sealed')); }
-  function countdown(){
-    var p = rfq(); if(!p) return '';
-    var el = p.querySelector('.sealed-count');
-    if(!el) return '';
-    return el.textContent.replace(/เปิดเผยใน/, '').trim();
+  function isSealed(){ return !!window.kxCurrentDetailSealed; }
+  /* Was reading the demo "04:16:14" out of the hidden countdown element, so the
+     modal quoted a fixed number of hours on every post forever. The deadline is
+     a real date and is stated as one. */
+  function untilWhen(){
+    var d = window.kxCurrentDetailDeadline;
+    if(!d) return '';
+    var TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    var t = new Date(d);
+    return t.getDate() + ' ' + TH[t.getMonth()] + ' ' + (t.getFullYear() + 543);
   }
   function sortRule(){
     var p = rfq(); if(!p) return '';
     var el = p.querySelector('.sort-select');
     return el ? el.textContent.replace(/\s+/g,' ').replace(/^เรียงตาม:\s*/,'').trim() : '';
   }
-  function bidderCount(){ var p = rfq(); return p ? p.querySelectorAll('.offer-card').length : 0; }
+  function bidderCount(){ return window.kxCurrentDetailQuoteCount || 0; }
 
   function row(icon, html, live){
     return '<div class="kx-rule' + (live ? ' kx-rule--live' : '') + '">' + icon + '<div>' + html + '</div></div>';
   }
 
+  /* This panel is a promise, so it has to describe the post in front of you.
+     It used to say "ราคาของคุณถูกปิดไว้ ... เปิดพร้อมกันทุกรายใน 04:16:14" on
+     every listing including ประมูลแบบเปิด, where the price is on show the
+     moment it is sent — a bidder was told their number was private and then it
+     was not. It also claimed every bidder is identity-verified, which nothing
+     in the app enforces. */
   function panel(kind){
     var rows = [];
+    var when = untilWhen();
     if(kind === 'bid'){
       if(isSealed()){
-        var t = countdown();
-        rows.push(row(LOCK, 'ราคาของคุณถูกปิดไว้ ผู้ซื้อและผู้เสนอรายอื่นยังไม่เห็น' +
-          (t ? ' — เปิดพร้อมกันทุกรายใน <b>' + t + '</b>' : ' และจะเปิดพร้อมกันทุกราย'), !!t));
+        rows.push(row(LOCK, 'ประมูลแบบปิด — ราคาของคุณถูกซ่อนไว้ ผู้เสนอรายอื่นไม่เห็น' +
+          (when ? ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ (<b>' + when + '</b>)'
+                : ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ'), true));
+      }else{
+        rows.push(row(LOCK, 'ประมูลแบบเปิด — <b>ราคาที่คุณเสนอจะแสดงให้ผู้ซื้อเห็นทันที</b>' +
+          ' หากต้องการให้ราคาเป็นความลับ ให้เลือกงานที่เป็นประมูลแบบปิด'));
       }
       rows.push(row(SCALE, 'ผู้เสนอทุกรายเห็นรายละเอียดงานชุดเดียวกัน <b>ลำดับการแสดงผลซื้อไม่ได้</b>'));
-      rows.push(row(SHIELD, 'ผู้เสนอทุกรายต้องผ่านการยืนยันตัวตนก่อนจึงเสนอราคาได้'));
+      rows.push(row(SHIELD, 'ไฟล์ใบเสนอราคาที่คุณแนบ เห็นได้เฉพาะคุณกับผู้ซื้อเท่านั้น'));
     } else {
       var n = bidderCount(), s = sortRule();
       if(s) rows.push(row(SORT, 'รายการนี้เรียงด้วยเกณฑ์ <b>' + s + '</b> เกณฑ์เดียวกับที่ผู้เสนอเห็น'));
-      rows.push(row(SHIELD, 'ผู้เสนอ' + (n ? ' <b>' + n + ' ราย</b>' : 'ทุกราย') + 'ผ่านการยืนยันตัวตนแล้ว'));
-      rows.push(row(LOCK, 'ผลการเลือกจะถูกบันทึกและแจ้งผู้เสนอทุกรายพร้อมกัน'));
+      rows.push(row(SHIELD, 'ผู้เสนอแต่ละรายเห็นเฉพาะข้อเสนอของตัวเอง ไม่เห็นของรายอื่น'));
+      rows.push(row(LOCK, isSealed()
+        ? 'ราคาทุกรายถูกซ่อนไว้จนหมดเวลารับข้อเสนอ' + (when ? ' (<b>' + when + '</b>)' : '')
+        : 'ผลการเลือกจะถูกบันทึกและแจ้งผู้เสนอทุกรายพร้อมกัน'));
     }
     return '<div class="kx-rules" role="note" aria-label="กติกาของรายการนี้">' + rows.join('') + '</div>';
   }
@@ -18234,6 +18328,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(budLowEl) budLowEl.value = (isRfq && post.price_low != null) ? String(post.price_low) : '';
     var budHighEl = document.getElementById('cpBudgetHigh');
     if(budHighEl) budHighEl.value = (isRfq && post.price_high != null) ? String(post.price_high) : '';
+    // values put in by script want the thousands separators too
+    if(window.kxFormatMoneyFields) window.kxFormatMoneyFields(document.getElementById('page-create-post'));
     var dlEl = document.getElementById('cpDeadline');
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
 
@@ -18374,6 +18470,49 @@ body.kx-auth .kx-burger{ display:none !important; }
            /does not exist|schema cache/i.test(err.message || '');
   };
   var kxTableMissing = window.kxTableMissing;
+
+  /* ===== ตัวคั่นหลักพันในช่องกรอกราคา =====
+     Every money field in the app was a bare text box, so "1200000" stayed
+     "1200000" while you typed it and there was no way to see at a glance
+     whether that was one million or twelve. It groups as you type.
+
+     The caret is put back by counting digits rather than characters — the
+     naive "restore selectionStart" jumps a place every time a comma is
+     inserted to the left of it. Every reader of these fields already strips
+     commas before parseFloat, so nothing downstream changes.
+
+     Delegated on the document, so fields built later are covered too. */
+  var KX_MONEY = '#cpPrice,#cpBudgetLow,#cpBudgetHigh,#rqPrice,#rqjBudget,' +
+                 '#advMin,#advMax,#offerPrice,#brPrice';
+  function kxGroup(s){
+    var neg = /^-/.test(s);
+    var digits = String(s).replace(/[^\d]/g, '');
+    if(!digits) return '';
+    return (neg ? '-' : '') + digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function kxFormatMoneyInput(el){
+    var before = el.value, caret = el.selectionStart;
+    // how many digits sit to the left of the caret — the position that survives
+    var digitsLeft = (before.slice(0, caret).match(/\d/g) || []).length;
+    var after = kxGroup(before);
+    if(after === before) return;
+    el.value = after;
+    if(el.selectionStart == null) return;
+    var i = 0, seen = 0;
+    while(i < after.length && seen < digitsLeft){ if(/\d/.test(after[i])) seen++; i++; }
+    try{ el.setSelectionRange(i, i); }catch(e){}
+  }
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if(!el || !el.matches || !el.matches(KX_MONEY)) return;
+    kxFormatMoneyInput(el);
+  });
+  // fields filled by script (editing a post, editing a reply) get grouped too
+  window.kxFormatMoneyFields = function(root){
+    (root || document).querySelectorAll(KX_MONEY).forEach(function(el){
+      if(el.value) kxFormatMoneyInput(el);
+    });
+  };
 
   window.kxImageFile = async function(src, name){
     var img = await new Promise(function(resolve, reject){
@@ -19852,16 +19991,18 @@ body.kx-auth .kx-burger{ display:none !important; }
     return bits.join(' · ');
   }
 
+  /* The reason line came off the card. It sat above the title in blue and was
+     the first thing read on every post — "คุณดูงานหมวดนี้บ่อย · ไม่ระบุ ·
+     เหลือ 2 วัน · ยังมีผู้เสนอน้อย" — while saying nothing about the listing
+     itself, and half of it repeated the meta row directly below.
+
+     The ranking it explains is untouched: score() still orders the feed. Only
+     the running commentary is gone. reason() is kept because it is the written
+     form of the score and the rail's lanes still use it as a tooltip. */
   function paint(card){
     var el = card.querySelector('.pc-why');
-    if(!el){
-      el = document.createElement('div');
-      el.className = 'pc-why';
-      var text = card.querySelector('.pc-text');
-      if(text) text.insertBefore(el, text.firstChild); else return;
-    }
-    el.textContent = reason(card);
-    el.hidden = (lane === 'recent');
+    if(el) el.remove();
+    card.title = reason(card);
   }
 
   /* A feed that only ever returns your best match is a feed you stop learning from.
@@ -20618,6 +20759,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.kxCurrentDetailOwnerId   = post.owner_id;
     window.kxCurrentDetailOwnerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
     window.kxCurrentDetailCanBid    = canBid;
+    // the fairness panel in the bid modal describes this post; it was reading
+    // the demo countdown element and telling every bidder their price was hidden
+    window.kxCurrentDetailSealed    = sealed;
+    window.kxCurrentDetailDeadline  = post.deadline || null;
+    window.kxCurrentDetailQuoteCount = quotes.length;
   }
 
   function renderOfferDetail(post){
