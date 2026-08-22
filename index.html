@@ -7406,7 +7406,26 @@ html, body{
 /* ===== "โล่งลง" (4b) — app-wide calm treatment ===== */
 /* feed → 2 columns, hide right rail */
 @media (min-width:1025px){
-  #page-feed .layout{ grid-template-columns:230px minmax(0,1fr) !important; max-width:1180px !important; }
+  #page-feed .layout{ grid-template-columns:230px minmax(0,1fr) !important; max-width:1300px !important; }
+}
+/* The frame widens with the column so the 760 sits in a sensible margin rather
+   than being centred in a lot of empty white — and the list pages come with
+   it, or งานของฉัน and ใบเสนอราคา would still be laying a 216px picture, a
+   price column and a status column across 866px and leaving the title about
+   180px to live in. Stated once here rather than editing the dozen places
+   that each wrote 1180 for themselves. */
+@media (min-width:1025px){
+  #page-company-profile .profile-layout,
+  #page-rfq-offers .layout,
+  #page-my-offers .layout,
+  #page-my-bids .layout,
+  #page-my-requests .layout,
+  #page-notifications .layout,
+  #page-saved .layout,
+  #page-history .layout,
+  #page-dashboard .layout,
+  #page-settings .layout,
+  .page-layout{ max-width:1300px !important; }
 }
 #page-feed .layout > div:nth-child(3){ display:none !important; }
 /* flatten cards: lighter border, no heavy shadow */
@@ -11701,8 +11720,10 @@ html, body{
           ? '<div class="mr-quotedoc">' + r.replyFiles.map(function(f){ return fileChip(f, 'strong'); }).join('') + '</div>'
           : '';
         var files = (r.myFiles && r.myFiles.length
+              // the chips get their own row so the label keeps its line while
+              // they scroll sideways — see the height note on these cards
               ? '<div class="mr-files"><span class="mr-files-lbl">ไฟล์ที่คุณแนบไป</span>' +
-                r.myFiles.map(function(f){ return fileChip(f); }).join('') + '</div>'
+                '<div class="mr-files-row">' + r.myFiles.map(function(f){ return fileChip(f); }).join('') + '</div></div>'
               : '') +
             (got && r.note ? '<div class="mr-note">↳ ' + mrEsc(r.note) + '</div>' : '');
 
@@ -14194,7 +14215,7 @@ body.kx-auth .kx-burger{ display:none !important; }
    was as wide as whatever happened to be inside it. It reached 640px only
    because the demo content was wide enough; once that came out the whole page
    narrowed to about 400px. */
-#page-company-profile .wrap{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; }
+#page-company-profile .wrap{ width:100%; max-width:760px; margin-left:auto; margin-right:auto; }
 
 /* ===== the profile's wall of posts =====
    The same card as the feed, down to the ข้อเสนอ / ราคาเฉลี่ย row and the
@@ -14564,7 +14585,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 /* the same column the feed uses, so a win reads like a post rather than a table row */
 #page-company-profile .pf-wins-list{
   display:flex; flex-direction:column; gap:16px;
-  max-width:640px; margin-left:auto; margin-right:auto;
+  max-width:760px; margin-left:auto; margin-right:auto;
 }
 #page-company-profile .pf-win{
   display:block; padding:0;
@@ -15019,6 +15040,10 @@ body.kx-auth .kx-burger{ display:none !important; }
    The list caps at 640 and centres inside the existing track, so the header, the filter
    row and the posts stay aligned with each other. The picture is 16:9 from there —
    638x359 — which is the shape people expect a post photo to be. */
+/* 760, up from 640. The column was set at a reading measure for running text,
+   but a post here is mostly a title, a row of numbers and pictures — the
+   pictures were the thing being squeezed. The outer rail-plus-content frame
+   widens with it below so the column is not sitting in two wide margins. */
 #page-feed .feed-list,
 #page-feed .feed-header,
 #page-feed .filter-tabs,
@@ -15026,7 +15051,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .adv-panel,
 #page-feed .feed-empty,
 #page-feed .load-more{
-  max-width:640px;
+  max-width:760px;
   margin-left:auto; margin-right:auto;
 }
 
@@ -16009,6 +16034,74 @@ body.kx-auth .kx-burger{ display:none !important; }
   #page-feed .post-thumb-track .post-thumb{ max-width:none; }
 }
 
+/* ===== Reading size on a phone =====
+   The type scale was set on a desktop and carried to mobile unchanged, so text
+   that reads as "small print" beside a 1280px layout became the main text on a
+   375px screen — 11.5px metadata and 12.5px body, at arm's length.
+
+   Only the small end moves, and only on phones: nothing under 12.5px survives,
+   body text lands at 14, and the two things you actually scan — the title and
+   the price — go up with it so the hierarchy holds. Desktop is untouched. */
+@media (max-width: 600px){
+  /* who posted, on a feed card */
+  #page-feed .pc-head .pp-name,
+  #page-company-profile .kx-wall .pc-head .pp-name{ font-size:15px; }
+  #page-feed .pc-sub,
+  #page-company-profile .kx-wall .pc-sub{ font-size:13px; }
+  #page-feed .pc-kind,
+  #page-company-profile .kx-wall .pc-kind{ font-size:12.5px; }
+
+  /* what it is */
+  #page-feed .pc-text .post-title,
+  #page-company-profile .kx-wall .pc-text .post-title{ font-size:18px; }
+  #page-feed .pc-text .post-desc,
+  #page-company-profile .kx-wall .pc-text .post-desc{ font-size:14px; }
+
+  /* the numbers and the actions */
+  #page-feed .pc-offers, #page-company-profile .kx-wall .pc-offers{ font-size:13px; }
+  #page-feed .pc-offers .offer-num, #page-company-profile .kx-wall .pc-offers .offer-num{ font-size:15px; }
+  #page-feed .pc-price-lbl, #page-company-profile .kx-wall .pc-price-lbl{ font-size:12.5px; }
+  #page-feed .pc-price-num, #page-company-profile .kx-wall .pc-price-num{ font-size:19px; }
+  #page-feed .pc-actions .pc-act,
+  #page-company-profile .kx-wall .pc-actions .pc-act{ font-size:13.5px; }
+
+  /* the list cards */
+  #page-rfq-offers .rfq-title,
+  #page-my-offers .offer-title,
+  #page-my-bids .bid-title,
+  #page-my-requests .bid-title{ font-size:16px; }
+  #page-rfq-offers .rfq-meta, #page-rfq-offers .rfq-id,
+  #page-my-offers .offer-stats-row,
+  #page-my-bids .bid-meta, #page-my-bids .bid-buyer,
+  #page-my-requests .bid-meta, #page-my-requests .bid-buyer{ font-size:13px; }
+  #page-my-bids .price-lbl, #page-my-requests .price-lbl,
+  #page-my-offers .price-lbl, #page-rfq-offers .rfq-offers .label{ font-size:12.5px; }
+
+  /* the post pages */
+  #page-rfq-detail .desc-text,
+  #page-offer-detail .offer-desc{ font-size:14px; line-height:1.75; }
+  #page-rfq-detail .meta-row span,
+  #page-offer-detail .offer-meta-row span{ font-size:13px; }
+  #page-rfq-detail .offer-card.kx-q .offer-loc,
+  #page-rfq-detail .offer-card.kx-q .offer-stats{ font-size:12.5px; }
+  #page-rfq-detail .offer-card.kx-q .offer-name-row{ font-size:15px; }
+  #page-rfq-detail .kx-qnote{ font-size:14px; }
+
+  /* ถาม-ตอบ, ข้อความ, แจ้งเตือน — all conversation, all at 12.5 before */
+  #page-rfq-detail .kx-askin, #page-offer-detail .kx-askin,
+  #page-messages .conv-item, #page-notifications .notif-item{ font-size:14px; }
+
+  /* the profile */
+  #page-company-profile .card h3{ font-size:16px; }
+  #page-company-profile .about-text,
+  #page-company-profile .info-item .value{ font-size:14px; }
+  #page-company-profile .info-item .label{ font-size:12.5px; }
+
+  /* and the floor: nothing on a phone reads below this */
+  .file-chip, .mr-file, .bid-file, .qr-meta span,
+  .status-pill, .lock-badge, .kx-waiting{ font-size:12.5px; }
+}
+
 /* ===== ยังไม่ได้ตอบ =====
    A notification fires once, when the request lands, and then scrolls away —
    it says a request arrived, not that it is still sitting there unanswered.
@@ -16089,15 +16182,39 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-note{
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
-/* file chips stay on one line: three attachments used to wrap to three rows and
-   make that one card 40px taller than its neighbours. The row opens the quote,
-   where all of them are listed. */
+/* File chips stay on one line: three attachments used to wrap to three rows and
+   make that one card 40px taller than its neighbours.
+
+   ที่ขอ names its list .mr-files, not .bid-files, so it was missed — and since
+   that card is the one that carries "ไฟล์ที่คุณแนบไป" it is exactly the card
+   that wraps. With the height now fixed, the extra rows were being cut off
+   mid-line. It scrolls sideways rather than wrapping, so every file stays
+   reachable and the card keeps its height. */
 #page-my-bids .bid-files,
 #page-my-requests .bid-files{
-  flex-wrap:nowrap; overflow:hidden; min-width:0;
+  flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; min-width:0;
+  scrollbar-width:thin; -webkit-overflow-scrolling:touch;
 }
 #page-my-bids .bid-files > *,
 #page-my-requests .bid-files > *{ flex:0 0 auto; }
+/* ไฟล์ที่คุณแนบไป keeps its own line and the chips scroll under it. The label
+   used to claim its line with flex:0 0 100%, which needs the row to wrap — so
+   it has to sit outside the scroller rather than in it. */
+#page-my-requests .mr-files{ display:block; }
+#page-my-requests .mr-files-lbl{ display:block; margin-bottom:5px; }
+#page-my-requests .mr-files-row{
+  display:flex; flex-wrap:nowrap; gap:7px; min-width:0;
+  overflow-x:auto; overflow-y:hidden;
+  scrollbar-width:thin; -webkit-overflow-scrolling:touch;
+}
+#page-my-requests .mr-files-row > *{ flex:0 0 auto; }
+#page-my-requests .mr-files-row::-webkit-scrollbar{ height:4px; }
+#page-my-requests .mr-files-row::-webkit-scrollbar-thumb{ background:#d8dde6; border-radius:999px; }
+/* same tone note as the seller's card: the reply is text, not a green surface */
+#page-my-requests .mr-note{
+  color:var(--ink) !important; background:var(--bg) !important;
+  border-left:3px solid var(--blue-600); border-radius:0 8px 8px 0;
+}
 /* and the two right-hand columns hold the card's full height between them */
 #page-rfq-offers .rfq-offers,
 #page-my-offers .offer-price-col,
