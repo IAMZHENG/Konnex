@@ -2621,6 +2621,40 @@ input[type="number"]:focus, textarea:focus, select:focus{
     gap: 8px;
     min-width: 110px
     }
+/* ===== the real comparison card =====
+   Four columns, not six: the design's วันส่งมอบ and ข้อเสนอพิเศษ have no data
+   behind them, and the space is better spent on the note the bidder actually
+   wrote. Everything else is the design's own styling, inherited as-is. */
+/* Wide screens only, and !important to answer the declutter override further
+   down which restates the demo's column list at that weight. Below 1025px the
+   shared .offer-card block stacks these same children, and this must not
+   outrank it — hence the min-width rather than a blanket rule. */
+@media (min-width: 1025px){
+  #page-rfq-detail .offer-card.kx-q{
+    grid-template-columns: auto minmax(150px,1fr) 132px 138px !important;
+  }
+}
+#page-rfq-detail .offer-card.kx-q{ align-items: start; }
+#page-rfq-detail .offer-card.kx-q .offer-av{ margin-top:2px; }
+#page-rfq-detail .offer-card.kx-q .offer-name-row span:hover{ color:var(--blue-700); }
+#page-rfq-detail .offer-card.kx-q .offer-col{ text-align:right; }
+#page-rfq-detail .offer-card.kx-q .price-num{ color:var(--blue-700); font-weight:800; }
+#page-rfq-detail .kx-qnote{
+  font-size:13px; color:var(--ink); line-height:1.65;
+  margin-top:9px; padding-left:11px; border-left:3px solid var(--line);
+  white-space:pre-wrap; word-break:break-word;
+}
+#page-rfq-detail .kx-qpill{
+  font-size:11px; font-weight:700; border-radius:999px; padding:3px 10px; white-space:nowrap;
+}
+#page-rfq-detail .kx-qpill.won{ color:var(--green); background:var(--green-bg); }
+#page-rfq-detail .kx-qpill.lost{ color:var(--ink-faint); background:var(--bg); }
+#page-rfq-detail .offer-card.kx-q.won{ border-color:var(--green); }
+#page-rfq-detail .offer-card.kx-q.lost{ opacity:.6; }
+/* the file list rides inside the button, so it must not lay itself out there */
+#page-rfq-detail .offer-card.kx-q .btn-view .files-data{ display:none !important; }
+/* Narrow screens are already handled: the ≤1024px block further down stacks
+   .offer-card's children by class, and this card uses the same ones. */
 #page-rfq-detail .btn-choose {
     background: var(--blue-600);
     color: #fff;
@@ -14997,6 +15031,41 @@ body.kx-auth .kx-burger{ display:none !important; }
   flex:0 0 100%; object-fit:cover; border-radius:0 !important;
 }
 
+/* ===== several pictures at once =====
+   Both scopes are named because every .post-thumb-wrap rule above is written
+   under #page-feed or #page-company-profile .kx-wall, and a bare class would
+   lose to them on specificity. */
+#page-feed .post-card > .post-thumb-wrap.pc-gal,
+#page-company-profile .kx-wall .post-thumb-wrap.pc-gal{
+  display:grid; gap:3px; aspect-ratio:16/10;
+}
+#page-feed .post-card > .post-thumb-wrap.pc-gal[data-n="1"],
+#page-company-profile .kx-wall .post-thumb-wrap.pc-gal[data-n="1"]{
+  grid-template-columns:1fr; aspect-ratio:16/9;
+}
+.post-thumb-wrap.pc-gal[data-n="2"]{ grid-template-columns:1fr 1fr; }
+.post-thumb-wrap.pc-gal[data-n="3"]{ grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; }
+.post-thumb-wrap.pc-gal[data-n="3"] .pc-cell:first-child{ grid-row:span 2; }
+.post-thumb-wrap.pc-gal[data-n="4"]{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.post-thumb-wrap.pc-gal .pc-cell{
+  position:relative; display:block; overflow:hidden; min-width:0; min-height:0; background:var(--bg);
+}
+/* the height:100% the feed's own thumb rule sets is against the flex track it
+   no longer lives in, so the cell restates it against the grid area */
+#page-feed .post-card > .post-thumb-wrap.pc-gal .pc-cell > .post-thumb,
+#page-company-profile .kx-wall .post-thumb-wrap.pc-gal .pc-cell > .post-thumb{
+  width:100% !important; height:100% !important; max-width:none !important;
+  object-fit:cover; display:block; border-radius:0 !important; cursor:zoom-in;
+}
+.post-thumb-wrap.pc-gal .pc-more{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(11,18,33,.55); color:#fff; font-size:22px; font-weight:800;
+  letter-spacing:-.5px; pointer-events:none;
+}
+@media (max-width:600px){
+  .post-thumb-wrap.pc-gal .pc-more{ font-size:18px; }
+}
+
 /* the numbers */
 /* The number a buyer actually scans for was set in 13.5px bold inside a flat grey
    line, weighing the same as the view count beside it. The price is now the only
@@ -19421,10 +19490,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
   }
 
-  /* gidNs namespaces the image carousel's element id. The profile wall renders
-     the same card for the same post, so both copies live in the document at
-     once and cycleThumb()'s getElementById would always drive the feed's. */
-  function postCardHTML(post, gidNs){
+  function postCardHTML(post){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
     var ownerName = owner.company_name || 'ผู้ใช้ Konnex';
@@ -19447,20 +19513,22 @@ body.kx-auth .kx-burger{ display:none !important; }
       ? (avg != null ? money(avg) : 'ยังไม่มี')
       : (post.price_high != null ? money(post.price_high) : 'ยังไม่มี');
     var detailPage = isRfq ? 'page-rfq-detail' : 'page-offer-detail';
-    var gid = 'gal-' + (gidNs || 'db') + '-' + post.id.slice(0, 8);
 
+    /* A post with several pictures showed one of them and hid the rest behind
+       arrows, so what you saw of a listing depended on whether you thought to
+       click. They are laid out together now — up to four at once, the fourth
+       carrying a +N for anything past it. Every picture still opens the
+       lightbox, which is where the full set has always been browsable, and
+       .post-thumb stays on each <img> because that is what the lightbox and
+       kxToggleSave both look for. */
+    var shown = images.slice(0, 4);
     var thumbs = images.length
-      ? '<div class="post-thumb-wrap" onclick="event.stopPropagation()">' +
-          '<div class="post-thumb-track" id="' + gid + '">' +
-            images.map(function(im){ return '<img class="post-thumb" src="' + esc(im.url) + '">'; }).join('') +
-          '</div>' +
-          (images.length > 1
-            ? '<button class="thumb-nav prev" onclick="cycleThumb(\'' + gid + '\',-1)">‹</button>' +
-              '<button class="thumb-nav next" onclick="cycleThumb(\'' + gid + '\',1)">›</button>' +
-              '<div class="thumb-dots" id="' + gid + '-dots">' +
-                images.map(function(_, i){ return '<span class="thumb-dot' + (i ? '' : ' active') + '"></span>'; }).join('') +
-              '</div>'
-            : '') +
+      ? '<div class="post-thumb-wrap pc-gal" data-n="' + shown.length + '" onclick="event.stopPropagation()">' +
+          shown.map(function(im, i){
+            var extra = (i === shown.length - 1 && images.length > shown.length)
+              ? '<span class="pc-more">+' + (images.length - shown.length) + '</span>' : '';
+            return '<span class="pc-cell"><img class="post-thumb" src="' + esc(im.url) + '" alt="" loading="lazy">' + extra + '</span>';
+          }).join('') +
         '</div>'
       : '';
 
@@ -19560,39 +19628,81 @@ body.kx-auth .kx-burger{ display:none !important; }
     return 'เหลือ ' + days + ' วัน';
   }
 
-  function quoteCardHTML(q, isOwner, decided, canPick){
+  /* The comparison card the page was designed around — avatar, who they are,
+     what they can show for themselves, the price, and the two actions — built
+     from the real quote instead of the three invented bidders in the markup.
+     It reuses that design's own classes so it inherits the styling directly.
+
+     วันส่งมอบ and ข้อเสนอพิเศษ are gone. A quote in this database is a price, a
+     note and its files; there is no delivery date and no feature list behind
+     those two columns, and "3 วัน · เร็วกว่ากำหนด 2 วัน" over a real bidder's
+     name is a claim the app would be making on their behalf.
+
+     The three stats say only what is actually known. คะแนน appears once
+     someone has been reviewed, งานสำเร็จ once profiles.wins_count exists
+     (database/profile_wins.sql), ยืนยันตัวตน only when is_verified is true —
+     the markup's version showed all three, filled in, on everyone. */
+  function quoteStatsHTML(b){
+    var out = [];
+    if(b.rating_count > 0){
+      out.push('<span>⭐ คะแนน ' + Number(b.rating_avg).toFixed(1) + '/5.0 (' + b.rating_count + ')</span>');
+    }
+    if(b.wins_count > 0) out.push('<span>📋 งานสำเร็จ ' + b.wins_count + ' งาน</span>');
+    if(b.is_verified)    out.push('<span>🛡️ ยืนยันตัวตนแล้ว</span>');
+    return out.length ? '<div class="offer-stats">' + out.join('') + '</div>' : '';
+  }
+
+  function quoteCardHTML(q, isOwner, decided, canPick, avg){
     var bidder = q.profiles || {};
     var name = esc(bidder.company_name || 'ผู้เสนอราคา');
+    var open = bidder.id ? 'event.stopPropagation();kxViewProfile(\'' + bidder.id + '\')' : '';
     var pill = q.status === 'won'
-      ? '<span style="font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border-radius:999px;padding:3px 10px;">🏆 ผู้ชนะ</span>'
-      : q.status === 'lost'
-        ? '<span style="font-size:11px;font-weight:700;color:var(--ink-faint);background:var(--bg);border-radius:999px;padding:3px 10px;">ไม่ผ่าน</span>'
-        : '';
+      ? '<span class="kx-qpill won">🏆 ผู้ชนะ</span>'
+      : q.status === 'lost' ? '<span class="kx-qpill lost">ไม่ผ่าน</span>' : '';
+
+    // where this price sits against the others on the same post — the one
+    // comparison the owner is on this page to make
+    var diff = '';
+    if(avg && q.price != null && avg > 0){
+      var pct = Math.round(Math.abs(q.price - avg) / avg * 100);
+      if(pct >= 1){
+        diff = '<div class="price-sub' + (q.price > avg ? ' high' : '') + '">' +
+          (q.price > avg ? 'สูงกว่าเฉลี่ย ' : 'ต่ำกว่าเฉลี่ย ') + pct + '%</div>';
+      }
+    }
+
+    var files = q.quote_attachments || [];
     // Only the post's owner picks a winner, only once the auction has actually
     // ended, and only while nothing is decided yet.
     var pickBtn = (isOwner && !decided && canPick)
-      ? '<button class="btn-choose" style="margin-top:8px;" onclick="kxPickWinner(\'' + q.id + '\',\'' + esc(name).replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
+      ? '<button class="btn-choose" onclick="kxPickWinner(\'' + q.id + '\',\'' + name.replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
       : '';
-    return '<div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid ' +
-        (q.status === 'won' ? 'var(--green)' : 'var(--line)') + ';border-radius:12px;margin-bottom:10px;' +
-        (q.status === 'lost' ? 'opacity:.6;' : '') + '">' +
-      '<div style="width:38px;height:38px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;overflow:hidden;">' + avatarInner(bidder, name) + '</div>' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:700;font-size:13.5px;color:var(--ink);">' + name + ' ' + pill + '</div>' +
-        '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px;">' + relTime(q.created_at) + '</div>' +
-        (q.note ? '<div style="font-size:13px;color:var(--ink);margin-top:8px;">' + esc(q.note) + '</div>' : '') +
-        ((q.quote_attachments || []).length
-          ? '<div class="rfq-attach-grid" style="margin-top:8px;">' + q.quote_attachments.map(function(f){
-              return '<a class="file-chip ' + f.file_kind + '" target="_blank" rel="noopener" href="' + esc(f.file_url) + '">' +
-                '<span class="fc-ic">' + fileKindTag(f.file_kind) + '</span><span class="fc-name">' + esc(f.file_name) + '</span></a>';
-            }).join('') + '</div>'
-          : '') +
+    var fileBtn = files.length
+      ? '<button class="btn-view" onclick="openFilesList(this)">📎 ไฟล์แนบ (' + files.length + ')' +
+          '<span class="files-data" style="display:none">' + files.map(function(f){
+            return '<a class="file-chip ' + f.file_kind + '" target="_blank" rel="noopener" href="' + esc(f.file_url) + '"' +
+              ' data-ftype="' + f.file_kind + '" data-fname="' + esc(f.file_name) + '" data-fsize="' + fileSize(f.file_size) + '">' +
+              '<span class="fc-ic">' + fileKindTag(f.file_kind) + '</span>' +
+              '<span class="fc-name">' + esc(f.file_name) + '</span></a>';
+          }).join('') + '</span></button>'
+      : '';
+
+    return '<div class="offer-card kx-q' + (q.status === 'won' ? ' won' : q.status === 'lost' ? ' lost' : '') + '">' +
+      '<div class="offer-av"' + (open ? ' style="cursor:pointer;overflow:hidden" title="ดูโปรไฟล์" onclick="' + open + '"' : ' style="overflow:hidden"') + '>' +
+        avatarInner(bidder, name) + '</div>' +
+      '<div class="offer-main">' +
+        '<div class="offer-name-row"><span' + (open ? ' style="cursor:pointer" title="ดูโปรไฟล์" onclick="' + open + '"' : '') + '>' +
+          name + '</span>' + pill + '</div>' +
+        '<div class="offer-loc">' + esc(bidder.province || 'ไม่ระบุจังหวัด') + ' · ' + relTime(q.created_at) + '</div>' +
+        quoteStatsHTML(bidder) +
+        (q.note ? '<div class="kx-qnote">' + esc(q.note) + '</div>' : '') +
       '</div>' +
-      '<div style="text-align:right;flex-shrink:0;">' +
-        '<div style="font-size:11px;color:var(--ink-faint);">ราคาเสนอ</div>' +
-        '<div style="font-size:17px;font-weight:800;color:var(--blue-700);">' + money(q.price) + '</div>' +
-        pickBtn +
+      '<div class="offer-col">' +
+        '<div class="col-label">ราคาเสนอ</div>' +
+        '<div class="price-num">' + money(q.price) + '</div>' +
+        diff +
       '</div>' +
+      '<div class="offer-actions">' + pickBtn + fileBtn + '</div>' +
     '</div>';
   }
 
@@ -19685,10 +19795,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(offerListEl) offerListEl.classList.remove('sealed');
 
     var prices = quotes.map(function(q){ return q.price; }).filter(function(v){ return v != null; });
+    var avgPrice = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
     var sub = document.getElementById('rfqCompareSub');
     if(sub){
       sub.textContent = prices.length
-        ? 'มีผู้เสนอราคาเข้ามา ' + prices.length + ' ราย • เฉลี่ย ' + money(prices.reduce(function(a, b){ return a + b; }, 0) / prices.length)
+        ? 'มีผู้เสนอราคาเข้ามา ' + prices.length + ' ราย • เฉลี่ย ' + money(avgPrice)
         : 'ยังไม่มีผู้เสนอราคาเข้ามา';
     }
     if(offerListEl){
@@ -19699,7 +19810,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         : '';
       offerListEl.innerHTML = waitNote + (quotes.length
         ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
-            .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick); }).join('')
+            .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick, avgPrice); }).join('')
         : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>');
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
@@ -20214,19 +20325,29 @@ body.kx-auth .kx-burger{ display:none !important; }
   var QR_SELECT = ', quote_requests(id)';
   var qaTableMissing = false;
   var qrTableMissing = false;
+  var winsColMissing = false;
 
   window.kxLoadPostDetail = async function(id, kind){
     window.kxCurrentDetailKind = kind;
-    var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(id,price,note,status,created_at,bidder_id,quote_attachments(file_name,file_url,file_kind,file_size),profiles!quotes_bidder_id_fkey(company_name,avatar_url))';
     function sel(){
+      // the bidder fields the comparison card reads; wins_count arrives with
+      // database/profile_wins.sql, and งานสำเร็จ is simply left off until then
+      var bidderCols = 'id,company_name,avatar_url,province,is_verified,rating_avg,rating_count' +
+        (winsColMissing ? '' : ',wins_count');
+      var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort),' +
+        ' post_attachments(file_name,file_url,file_kind,file_size),' +
+        ' quotes(id,price,note,status,created_at,bidder_id,' +
+        'quote_attachments(file_name,file_url,file_kind,file_size),' +
+        'profiles!quotes_bidder_id_fkey(' + bidderCols + '))';
       return base + (qaTableMissing ? '' : QA_SELECT) + (qrTableMissing ? '' : QR_SELECT);
     }
     var res = await sb.from('posts').select(sel()).eq('id', id).maybeSingle();
     // questions.sql / quote_requests.sql may not have been run yet — the rest
     // of the page is still worth showing, so drop the embed and stop asking
-    if(res.error && /post_questions|quote_requests/i.test(res.error.message || '')){
+    if(res.error && /post_questions|quote_requests|wins_count/i.test(res.error.message || '')){
       if(/post_questions/i.test(res.error.message)) qaTableMissing = true;
       if(/quote_requests/i.test(res.error.message)) qrTableMissing = true;
+      if(/wins_count/i.test(res.error.message))     winsColMissing = true;
       res = await sb.from('posts').select(sel()).eq('id', id).maybeSingle();
     }
     if(res.error || !res.data){ console.error('kxLoadPostDetail failed', res.error); if(window.kxToast) kxToast('ไม่พบประกาศนี้'); return; }
@@ -20757,7 +20878,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         (isOwner ? '<a href="#" class="pf-seeall" onclick="newPost();return false;">＋ โพสต์ใหม่</a>' : '') +
       '</div>' +
       (res.data.length ? '<div class="kx-wall">' + res.data.map(function(p){
-        var html = window.kxPostCardHTML(p, 'pf');
+        var html = window.kxPostCardHTML(p);
         if(p.status !== 'open'){
           // the owner's own view of a listing that is no longer taking offers
           html = html.replace('<div class="pc-actions">',
