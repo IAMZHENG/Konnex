@@ -8498,6 +8498,8 @@ html, body{
         </div>
         <img class="header-thumb" src="assets/img/header-thumb-1.jpg">
       </div>
+      <!-- the post's pictures, laid out the same way the feed lays them out -->
+      <div id="rfqGallery"></div>
       <div class="desc-text">
         ต้องการเช่ารถเครน 25 ตัน พร้อมคนขับ ที่มีใบอนุญาตถูกต้อง สำหรับยกอุปกรณ์เครื่องจักรเข้าโรงงาน ต้องการคนขับที่มีประสบการณ์ สามารถทำงานวันเสาร์-อาทิตย์ได้ มีพื้นที่ทำงานกว้างปลอดภัย
       </div>
@@ -11216,6 +11218,7 @@ html, body{
     <div class="content">
       <div>
         <!-- GALLERY -->
+        <div id="offerGallerySlot"></div>
         <div class="gallery-wrap">
           <div class="gallery-track" id="offerGallery">
             <img src="assets/img/offergallery-1.jpg">
@@ -12431,6 +12434,24 @@ html, body{
   function bigSrc(img){ return (img.currentSrc || img.src).replace(/([?&])(w|h)=\d+/g, '$1$2=1200').replace('fit=crop','fit=max'); }
   // click-to-zoom for feed / RFQ / Offer thumbnails
   document.addEventListener('click', function(e){
+    /* A .kx-gal lays out at most four pictures but carries every one of them
+       on data-all, so the lightbox opens the whole set — including the ones
+       behind the +N, which are never in the DOM to be found by selector. The
+       +N badge itself is a click target for the same reason. */
+    var cell = e.target.closest('.kx-gcell');
+    if(cell){
+      var gal = cell.closest('.kx-gal');
+      var cells = gal ? Array.prototype.slice.call(gal.querySelectorAll('.kx-gcell')) : [cell];
+      var all = [];
+      try{ all = JSON.parse(gal && gal.getAttribute('data-all') || '[]'); }catch(err){ all = []; }
+      if(!all.length) all = cells.map(function(c){ var i = c.querySelector('img'); return i ? i.src : ''; });
+      e.preventDefault(); e.stopPropagation();
+      lbImgs = all.map(function(u){ return String(u).replace(/([?&])(w|h)=\d+/g, '$1$2=1200').replace('fit=crop','fit=max'); });
+      lbIdx = Math.max(0, cells.indexOf(cell));
+      document.getElementById('oaLightbox').classList.add('open');
+      lbShow(lbIdx);
+      return;
+    }
     var img = e.target.closest('.post-thumb, .rfq-thumb, .offer-thumb');
     if(!img || img.tagName !== 'IMG') return;
     e.preventDefault(); e.stopPropagation();
@@ -14802,21 +14823,18 @@ body.kx-auth .kx-burger{ display:none !important; }
 
    Card heights ranged 184-227 across the lists, so a row on one page did not line up
    with a row on the next. min-height pins them to one figure; content taller than that
-   still grows rather than being clipped, which no card currently is. */
-#page-feed .post-card,
-#page-rfq-offers .rfq-card,
-#page-my-offers .offer-row,
-#page-my-bids .bid-row,
-#page-my-requests .bid-row{
+   still grows rather than being clipped, which no card currently is.
+
+   The four list cards have since moved to the block at the end of this sheet, where
+   the height is set together with a picture that stretches to fill it — the two have
+   to be decided as one thing, and having them in two places is how the lists ended up
+   228px tall around a 130px photo. */
+#page-feed .post-card{
   min-height:228px;
 }
 @media (max-width: 1024px){
   /* stacked cards are as tall as their content; a floor would only add dead space */
-  #page-feed .post-card,
-  #page-rfq-offers .rfq-card,
-  #page-my-offers .offer-row,
-  #page-my-bids .bid-row,
-  #page-my-requests .bid-row{ min-height:0; }
+  #page-feed .post-card{ min-height:0; }
 }
 
 /* ===== ใบเสนอราคา cards: same treatment as งานของฉัน =====
@@ -15039,38 +15057,37 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 
 /* ===== several pictures at once =====
-   Both scopes are named because every .post-thumb-wrap rule above is written
-   under #page-feed or #page-company-profile .kx-wall, and a bare class would
-   lose to them on specificity. */
-#page-feed .post-card > .post-thumb-wrap.pc-gal,
-#page-company-profile .kx-wall .post-thumb-wrap.pc-gal{
+   Deliberately its own class names. .post-thumb-wrap / .post-thumb carry a
+   stack of id-scoped rules per page — fixed pixel sizes, a flex track, max-
+   widths — and reusing them meant restating this layout, at id weight, in
+   every scope that shows a post. Nothing else in the file targets .kx-gal, so
+   plain class selectors are enough and it looks identical everywhere. */
+.kx-gal{
   display:grid; gap:3px; aspect-ratio:16/10;
+  width:100%; overflow:hidden; position:relative;
 }
-#page-feed .post-card > .post-thumb-wrap.pc-gal[data-n="1"],
-#page-company-profile .kx-wall .post-thumb-wrap.pc-gal[data-n="1"]{
-  grid-template-columns:1fr; aspect-ratio:16/9;
+.kx-gal[data-n="1"]{ grid-template-columns:1fr; aspect-ratio:16/9; }
+.kx-gal[data-n="2"]{ grid-template-columns:1fr 1fr; }
+.kx-gal[data-n="3"]{ grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; }
+.kx-gal[data-n="3"] .kx-gcell:first-child{ grid-row:span 2; }
+.kx-gal[data-n="4"]{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+.kx-gcell{
+  position:relative; display:block; overflow:hidden;
+  min-width:0; min-height:0; background:var(--bg); cursor:zoom-in;
 }
-.post-thumb-wrap.pc-gal[data-n="2"]{ grid-template-columns:1fr 1fr; }
-.post-thumb-wrap.pc-gal[data-n="3"]{ grid-template-columns:2fr 1fr; grid-template-rows:1fr 1fr; }
-.post-thumb-wrap.pc-gal[data-n="3"] .pc-cell:first-child{ grid-row:span 2; }
-.post-thumb-wrap.pc-gal[data-n="4"]{ grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
-.post-thumb-wrap.pc-gal .pc-cell{
-  position:relative; display:block; overflow:hidden; min-width:0; min-height:0; background:var(--bg);
-}
-/* the height:100% the feed's own thumb rule sets is against the flex track it
-   no longer lives in, so the cell restates it against the grid area */
-#page-feed .post-card > .post-thumb-wrap.pc-gal .pc-cell > .post-thumb,
-#page-company-profile .kx-wall .post-thumb-wrap.pc-gal .pc-cell > .post-thumb{
-  width:100% !important; height:100% !important; max-width:none !important;
-  object-fit:cover; display:block; border-radius:0 !important; cursor:zoom-in;
-}
-.post-thumb-wrap.pc-gal .pc-more{
+.kx-gimg{ width:100%; height:100%; object-fit:cover; display:block; }
+.kx-gmore{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
   background:rgba(11,18,33,.55); color:#fff; font-size:22px; font-weight:800;
-  letter-spacing:-.5px; pointer-events:none;
+  letter-spacing:-.5px;
 }
+/* edge to edge inside a card, rounded when it stands on its own */
+#page-rfq-detail .kx-gal,
+#page-offer-detail .kx-gal{ border-radius:16px; margin:18px 0 4px; }
 @media (max-width:600px){
-  .post-thumb-wrap.pc-gal .pc-more{ font-size:18px; }
+  .kx-gmore{ font-size:18px; }
+  #page-rfq-detail .kx-gal,
+  #page-offer-detail .kx-gal{ border-radius:12px; }
 }
 
 /* the numbers */
@@ -15931,6 +15948,99 @@ body.kx-auth .kx-burger{ display:none !important; }
   #page-feed .post-thumb-wrap,
   #page-feed .post-thumb,
   #page-feed .post-thumb-track .post-thumb{ max-width:none; }
+}
+
+/* ===== One card shape for งานของฉัน and ใบเสนอราคา =====
+   The three lists had grown three different proportions, and within each list
+   the cards were different heights: the row sized to whichever card held the
+   most text, while the picture stayed a fixed 200x158 pinned to the top, so a
+   tall card had a band of empty white beside its photo.
+
+   Every card is the same height now and the picture fills it. The height is a
+   floor rather than a fixed value — clipping someone's title to keep a grid
+   tidy is the wrong trade — and the text that varies most is clamped, so in
+   practice the floor is what they all land on. */
+#page-rfq-offers .rfq-card,
+#page-my-offers .offer-row,
+#page-my-bids .bid-row,
+#page-my-requests .bid-row{
+  align-items:stretch !important;
+  /* A fixed height, not a floor. The picture can only fill the card if the card
+     has a definite height to fill — with min-height the <img> was left on
+     height:auto and sized itself from its own aspect ratio, so a portrait photo
+     stretched its whole row to 297px while a landscape one sat at 180. 190 less
+     the 14px padding top and bottom leaves 162, which is exactly 4:3 against
+     the 216px width below. */
+  height:190px;
+  overflow:hidden;
+  padding:14px !important;
+  gap:16px !important;
+}
+#page-rfq-offers .rfq-thumb,
+#page-my-offers .offer-thumb,
+#page-my-bids .bid-thumb,
+#page-my-requests .bid-thumb{
+  flex:0 0 216px;
+  width:216px !important;
+  height:100% !important;
+  min-height:0 !important;
+  align-self:stretch !important;
+  object-fit:cover;
+  border-radius:12px !important;
+  background:var(--bg);
+}
+/* the middle column centres against the picture instead of floating at the top */
+#page-rfq-offers .rfq-body,
+#page-my-offers .offer-body,
+#page-my-bids .bid-body,
+#page-my-requests .bid-body{
+  display:flex; flex-direction:column; justify-content:center; min-width:0;
+}
+#page-rfq-offers .rfq-title,
+#page-my-offers .offer-title,
+#page-my-bids .bid-title,
+#page-my-requests .bid-title{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; word-break:break-word;
+}
+#page-my-bids .bid-note,
+#page-my-requests .bid-note{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+/* file chips stay on one line: three attachments used to wrap to three rows and
+   make that one card 40px taller than its neighbours. The row opens the quote,
+   where all of them are listed. */
+#page-my-bids .bid-files,
+#page-my-requests .bid-files{
+  flex-wrap:nowrap; overflow:hidden; min-width:0;
+}
+#page-my-bids .bid-files > *,
+#page-my-requests .bid-files > *{ flex:0 0 auto; }
+/* and the two right-hand columns hold the card's full height between them */
+#page-rfq-offers .rfq-offers,
+#page-my-offers .offer-price-col,
+#page-my-bids .bid-price-col,
+#page-my-requests .bid-price-col{ align-self:center; flex-shrink:0; }
+#page-rfq-offers .rfq-status-col,
+#page-my-offers .offer-status-col,
+#page-my-bids .bid-status-col,
+#page-my-requests .bid-status-col{
+  display:flex !important; flex-direction:column !important;
+  justify-content:space-between !important; flex-shrink:0;
+}
+
+@media (max-width: 1024px){
+  /* stacked, a card is as tall as its content and the picture goes full width */
+  #page-rfq-offers .rfq-card,
+  #page-my-offers .offer-row,
+  #page-my-bids .bid-row,
+  #page-my-requests .bid-row{ height:auto; min-height:0; overflow:visible; }
+  #page-rfq-offers .rfq-thumb,
+  #page-my-offers .offer-thumb,
+  #page-my-bids .bid-thumb,
+  #page-my-requests .bid-thumb{
+    flex:none; width:100% !important; height:auto !important; aspect-ratio:16/9;
+  }
 }
 </style>
 
@@ -19497,6 +19607,37 @@ body.kx-auth .kx-burger{ display:none !important; }
     return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
   }
 
+  /* ===== รูปในประกาศ =====
+     One gallery, used by the feed card, the profile wall and both detail
+     pages, so a post's pictures look the same wherever you meet it.
+
+     A post with several pictures used to show one and hide the rest behind
+     arrows, so what you saw depended on whether you thought to click. Up to
+     four are laid out together now, and the fourth carries a +N. The whole
+     set — including everything past the fourth — is on data-all, which is
+     what the lightbox reads; without it the pictures that were never rendered
+     would have been unreachable.
+
+     Its own classes rather than .post-thumb-wrap / .post-thumb: those carry a
+     stack of id-scoped rules per page (fixed sizes, flex tracks, max-widths)
+     that this layout would have had to fight in four places. */
+  function galleryHTML(list){
+    var images = (list || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
+    if(!images.length) return '';
+    var shown = images.slice(0, 4);
+    var rest = images.length - shown.length;
+    return '<div class="kx-gal" data-n="' + shown.length + '"' +
+        ' data-all="' + esc(JSON.stringify(images.map(function(im){ return im.url; }))) + '"' +
+        ' onclick="event.stopPropagation()">' +
+      shown.map(function(im, i){
+        var more = (rest > 0 && i === shown.length - 1)
+          ? '<span class="kx-gmore">+' + rest + '</span>' : '';
+        return '<span class="kx-gcell"><img class="kx-gimg" src="' + esc(im.url) + '" alt="" loading="lazy">' + more + '</span>';
+      }).join('') +
+    '</div>';
+  }
+  window.kxGalleryHTML = galleryHTML;
+
   function postCardHTML(post){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
@@ -19521,23 +19662,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       : (post.price_high != null ? money(post.price_high) : 'ยังไม่มี');
     var detailPage = isRfq ? 'page-rfq-detail' : 'page-offer-detail';
 
-    /* A post with several pictures showed one of them and hid the rest behind
-       arrows, so what you saw of a listing depended on whether you thought to
-       click. They are laid out together now — up to four at once, the fourth
-       carrying a +N for anything past it. Every picture still opens the
-       lightbox, which is where the full set has always been browsable, and
-       .post-thumb stays on each <img> because that is what the lightbox and
-       kxToggleSave both look for. */
-    var shown = images.slice(0, 4);
-    var thumbs = images.length
-      ? '<div class="post-thumb-wrap pc-gal" data-n="' + shown.length + '" onclick="event.stopPropagation()">' +
-          shown.map(function(im, i){
-            var extra = (i === shown.length - 1 && images.length > shown.length)
-              ? '<span class="pc-more">+' + (images.length - shown.length) + '</span>' : '';
-            return '<span class="pc-cell"><img class="post-thumb" src="' + esc(im.url) + '" alt="" loading="lazy">' + extra + '</span>';
-          }).join('') +
-        '</div>'
-      : '';
+    var thumbs = galleryHTML(images);
 
     var files = docs.length
       ? '<div class="files-sum" onclick="event.stopPropagation();openFilesList(this)">' +
@@ -19768,8 +19893,12 @@ body.kx-auth .kx-burger{ display:none !important; }
         : '💰 ไม่ระบุงบประมาณ';
       meta.innerHTML = '<span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span>🕗 ' + daysLeftLabel(post.deadline) + '</span><span>' + budget + '</span>';
     }
+    // the single header picture is retired in favour of the shared gallery,
+    // which shows the whole set rather than only whichever one sorted first
     var thumb = root.querySelector('.header-thumb');
-    if(thumb){ if(images.length){ thumb.src = images[0].url; thumb.style.display = ''; } else thumb.style.display = 'none'; }
+    if(thumb) thumb.style.display = 'none';
+    var rfqGal = document.getElementById('rfqGallery');
+    if(rfqGal) rfqGal.innerHTML = galleryHTML(images);
     var desc = root.querySelector('.desc-text'); if(desc) desc.textContent = post.description || '';
     var attach = root.querySelector('.rfq-attach');
     if(attach){
@@ -19809,12 +19938,37 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
 
     renderQa('rfqQaBlock', post, isOwner);
-    var banner = document.getElementById('sealedBanner'); if(banner) banner.style.display = 'none';
-    var offerListEl = root.querySelector('#offerList');
-    if(offerListEl) offerListEl.classList.remove('sealed');
 
+    /* Sealed bidding, honoured. The page has always promised that on a
+       ประมูลแบบปิด every bidder's price is revealed at the same moment when
+       the clock runs out — and then the list showed each price the moment it
+       arrived. The individual numbers are covered until bidding is over; the
+       average, which is what a sealed auction does publish, stays. */
     var prices = quotes.map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avgPrice = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
+    var sealed = post.bid_type !== 'open' && !isClosed && !isExpired;
+
+    var banner = document.getElementById('sealedBanner');
+    if(banner){
+      if(sealed && prices.length){
+        banner.style.display = '';
+        var bTitle = banner.querySelector('.sealed-title');
+        var bSub   = banner.querySelector('.sealed-sub');
+        var bCount = banner.querySelector('.sealed-count');
+        var bBtn   = banner.querySelector('.sealed-reveal');
+        if(bTitle) bTitle.textContent = 'ประมูลแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้';
+        if(bSub) bSub.innerHTML = 'ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย ' + esc(money(avgPrice)) +
+          '</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลารับข้อเสนอ (' + esc(fmtDateBE(post.deadline)) + ')';
+        // the demo's countdown and its "จำลองหมดเวลา" button have nothing real
+        // behind them, and the deadline is now stated in the line above
+        if(bCount) bCount.style.display = 'none';
+        if(bBtn) bBtn.style.display = 'none';
+      } else banner.style.display = 'none';
+    }
+
+    var offerListEl = root.querySelector('#offerList');
+    if(offerListEl) offerListEl.classList.toggle('sealed', sealed);
+
     var sub = document.getElementById('rfqCompareSub');
     if(sub){
       sub.textContent = prices.length
@@ -19884,16 +20038,18 @@ body.kx-auth .kx-burger{ display:none !important; }
     var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var quotes = post.quotes || [];
 
-    var gallery = document.getElementById('offerGallery');
-    var dots = document.getElementById('offerGalleryDots');
-    if(gallery){
-      if(images.length){
-        gallery.innerHTML = images.map(function(im){ return '<img src="' + esc(im.url) + '">'; }).join('');
-        if(dots) dots.innerHTML = images.map(function(_, i){ return '<span class="dot' + (i ? '' : ' active') + '"></span>'; }).join('');
-      }else{
-        gallery.innerHTML = '<img src="assets/img/konnex-mark-3.png" style="object-fit:contain;background:var(--bg);">';
-        if(dots) dots.innerHTML = '';
-      }
+    /* Same gallery as the feed, in place of this page's own carousel — one
+       picture at a time behind arrows made a listing with four photos look
+       like a listing with one. */
+    var slot = document.getElementById('offerGallerySlot');
+    var wrap = root.querySelector('.gallery-wrap');
+    if(slot){
+      slot.innerHTML = images.length
+        ? galleryHTML(images)
+        : '<div class="kx-gal" data-n="1"><span class="kx-gcell" style="cursor:default">' +
+          '<img class="kx-gimg" src="assets/img/konnex-mark-3.png" style="object-fit:contain;">' +
+          '</span></div>';
+      if(wrap) wrap.style.display = 'none';
     }
     var h1 = root.querySelector('.offer-header-card h1'); if(h1) h1.textContent = post.title;
     var meta = root.querySelector('.offer-meta-row');
@@ -19942,28 +20098,25 @@ body.kx-auth .kx-burger{ display:none !important; }
      <div> — reload and the question was gone, and the owner never saw it.
      Both detail pages now render the same real list from post_questions.
 
-     Whether the asker is named depends on which side of the market the post
-     is. On an RFQ the askers are suppliers competing for the same job, and
-     which of them is circling it is not the buyer's to broadcast — those stay
-     "ผู้ให้บริการ (ไม่ระบุชื่อ)". On an Offer there is no such competition:
-     the asker is a prospective customer talking to a seller, the way they
-     would be on any product listing, so they are named and their profile
-     opens. Note this does make it public that they were interested. */
-  function qaItemHTML(q, isOwner, ownerName, named){
+     Askers are named on both kinds of post. RFQ askers used to be hidden as
+     "ผู้ให้บริการ (ไม่ระบุชื่อ)" on the reasoning that competing suppliers
+     shouldn't see who else is circling the job — but asking a question is not
+     bidding, and nothing has been bought at that point. What stays sealed is
+     the price, which is a separate thing (see the sealed handling in
+     renderRfqDetail). A question with a face and a name is also worth more to
+     the person answering it. */
+  function qaItemHTML(q, isOwner, ownerName, ownerProfile){
     var answered = !!(q.answer && q.answer.trim());
     var mine = !!(window.kxSession && q.asker_id === window.kxSession.user.id);
     var asker = q.profiles || null;
     var askerName = (asker && asker.company_name) || 'ผู้ใช้ Konnex';
-    var head = mine
-      ? 'คุณ'
-      : named
-        ? '<a href="#" onclick="kxViewProfile(\'' + q.asker_id + '\');return false;"' +
-          ' style="color:var(--blue-700);text-decoration:none;">' + esc(askerName) + '</a>'
-        : 'ผู้ให้บริการ (ไม่ระบุชื่อ)';
+    var openAsker = q.asker_id ? 'kxViewProfile(\'' + q.asker_id + '\');return false;' : 'return false;';
+    var head = '<a href="#" onclick="' + openAsker + '" style="color:var(--blue-700);text-decoration:none;">' +
+      esc(askerName) + '</a>' + (mine ? ' <span style="font-size:10.5px;font-weight:700;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);padding:1px 8px;border-radius:999px;">คุณ</span>' : '');
     var reply = answered
       ? '<div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">' +
-          '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">' +
-            esc(String(ownerName || '?').charAt(0).toUpperCase()) + '</div>' +
+          '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;">' +
+            avatarInner(ownerProfile, ownerName) + '</div>' +
           '<div style="flex:1;background:var(--blue-50);border:1px solid #dae6ff;border-radius:11px;padding:10px 13px;">' +
             '<div style="font-size:13px;color:var(--ink);"><b>' + esc(ownerName) + '</b> ' +
               '<span style="font-size:10.5px;font-weight:700;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span></div>' +
@@ -19979,7 +20132,8 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     return '<div>' +
       '<div style="display:flex;gap:10px;align-items:flex-start;">' +
-        '<div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">?</div>' +
+        '<div title="ดูโปรไฟล์" onclick="' + openAsker + '" style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;cursor:pointer;">' +
+          avatarInner(asker, askerName) + '</div>' +
         '<div style="flex:1;">' +
           '<div style="font-size:13px;color:var(--ink);"><b>' + head + '</b> ' +
             '<span style="color:var(--ink-faint);font-weight:400;font-size:12.5px;">· ' + relTime(q.created_at) + '</span></div>' +
@@ -20006,7 +20160,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         '💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>' +
       (qs.length
         ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
-            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.kind === 'offer'); }).join('') + '</div>'
+            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.profiles); }).join('') + '</div>'
         : '<div style="font-size:13px;color:var(--ink-faint);padding:6px 0 2px;">ยังไม่มีคำถามสำหรับงานนี้</div>') +
       (canAsk
         ? '<div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
