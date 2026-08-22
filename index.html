@@ -8941,8 +8941,6 @@ html, body{
         <div class="tab" id="pfReviewsTab" onclick="pfTab('reviews',this)">รีวิว (0)</div>
         <div class="tab" id="pfServicesTab" onclick="pfTab('services',this)">บริการของฉัน</div>
         <div class="tab" onclick="pfTab('wins',this)">ผลงานสะสม</div>
-        <div class="tab" id="pfPostsTab"  onclick="pfTab('posts',this)">งานของฉัน</div>
-        <div class="tab" id="pfQuotesTab" onclick="pfTab('quotes',this)">ใบเสนอราคา</div>
       </div>
     </div>
 
@@ -9036,8 +9034,8 @@ html, body{
           <div class="pf-wins-note">แสดงเฉพาะงานที่ปิดดีลในระบบ ผู้ให้บริการแก้ไขหรือเพิ่มเองไม่ได้</div>
         </div>
 
-        <div class="card" id="pfPostsCard" data-pf-sec="posts"></div>
-        <div class="card" id="pfQuotesCard" data-pf-sec="quotes"></div>
+        <!-- the profile's own wall: everything this account has posted -->
+        <div class="card" id="pfWallCard" data-pf-sec="overview"></div>
 
         <div class="card" data-pf-sec="overview" id="pfContactCard">
           <h3>ติดต่อบริษัท</h3>
@@ -14048,6 +14046,60 @@ body.kx-auth .kx-burger{ display:none !important; }
    because the demo content was wide enough; once that came out the whole page
    narrowed to about 400px. */
 #page-company-profile .wrap{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; }
+
+/* ===== the profile's wall of posts =====
+   Its own card rather than the feed's: every .post-card rule is scoped under
+   #page-feed, so that markup would arrive here with no styling at all. */
+#page-company-profile .kx-wall{ display:flex; flex-direction:column; }
+#page-company-profile .kx-wpost{
+  border-top:1px solid var(--line); padding:16px 0; cursor:pointer;
+  transition:background .12s ease;
+  }
+#page-company-profile .kx-wpost:hover{ background:var(--bg); }
+#page-company-profile .kx-wtop{ display:flex; align-items:center; gap:10px; }
+#page-company-profile .kx-wav{
+  width:38px; height:38px; border-radius:50%; background:var(--blue-600); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;
+  flex-shrink:0; overflow:hidden;
+  }
+#page-company-profile .kx-wav img{ width:100%; height:100%; object-fit:cover; display:block; }
+#page-company-profile .kx-wwho{ flex:1; min-width:0; display:flex; flex-direction:column; }
+#page-company-profile .kx-wwho b{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#page-company-profile .kx-wwho span{ font-size:11.5px; color:var(--ink-faint); margin-top:1px; }
+#page-company-profile .kx-wkind{
+  flex-shrink:0; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; white-space:nowrap;
+  }
+#page-company-profile .kx-wkind.buy{ color:var(--blue-700); background:var(--blue-50); }
+#page-company-profile .kx-wkind.sell{ color:var(--orange); background:#fff4ec; }
+
+#page-company-profile .kx-wtitle{ font-size:15px; font-weight:800; color:var(--ink); margin:10px 0 0; line-height:1.45; }
+#page-company-profile .kx-wtext{
+  font-size:13px; color:var(--ink-soft); line-height:1.65; margin-top:5px;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+#page-company-profile .kx-wimgs{ margin-top:11px; border-radius:12px; overflow:hidden; position:relative; }
+#page-company-profile .kx-wimgs img{ width:100%; height:280px; object-fit:cover; display:block; background:var(--bg); }
+#page-company-profile .kx-wimgs.multi{ display:grid; grid-template-columns:2fr 1fr; grid-auto-rows:138px; gap:4px; }
+#page-company-profile .kx-wimgs.multi img{ height:100%; }
+#page-company-profile .kx-wimgs.multi img:first-child{ grid-row:span 2; }
+#page-company-profile .kx-wmore{
+  position:absolute; right:8px; bottom:8px; background:rgba(20,30,55,.72); color:#fff;
+  font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;
+  }
+
+#page-company-profile .kx-wfoot{
+  display:flex; align-items:center; gap:14px; margin-top:11px;
+  font-size:12.5px; color:var(--ink-soft);
+  }
+#page-company-profile .kx-wfoot b{ color:var(--blue-700); font-size:14px; }
+#page-company-profile .kx-wclosed{ color:var(--ink-faint); }
+#page-company-profile .kx-wopen{ margin-left:auto; color:var(--blue-700); font-weight:700; }
+
+@media (max-width:600px){
+  #page-company-profile .kx-wimgs img{ height:200px; }
+  #page-company-profile .kx-wimgs.multi{ grid-auto-rows:98px; }
+}
 
 /* --- header --- */
 #page-company-profile .hero-card{ padding:0 !important; overflow:hidden; }
@@ -19827,17 +19879,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxLoadReviews)       window.kxLoadReviews(pr.id, mine);
     if(window.kxLoadServices)      window.kxLoadServices(pr.id, mine);
     if(window.kxRenderVerify)      window.kxRenderVerify(pr, mine);
-    if(window.kxLoadProfilePosts)  window.kxLoadProfilePosts(pr.id, mine);
-    if(window.kxLoadProfileQuotes) window.kxLoadProfileQuotes(pr.id, mine);
+    if(window.kxLoadProfileWall)   window.kxLoadProfileWall(pr.id, mine, pr);
 
-    // tab labels read from the viewer's side; ใบเสนอราคา is private, so it is
-    // only on your own profile
     var svcTab = document.getElementById('pfServicesTab');
     if(svcTab) svcTab.textContent = mine ? 'บริการของฉัน' : 'บริการ';
-    var postsTab = document.getElementById('pfPostsTab');
-    if(postsTab) postsTab.textContent = mine ? 'งานของฉัน' : 'ประกาศ';
-    var quotesTab = document.getElementById('pfQuotesTab');
-    if(quotesTab) quotesTab.style.display = mine ? '' : 'none';
     /* Headings follow the profile being viewed. applyToProfile does this too,
        but only from kxEntity() — the *viewer's* type — so an individual's page
        read "เกี่ยวกับบริษัท / ติดต่อบริษัท" whenever a company account opened
@@ -20537,78 +20582,93 @@ body.kx-auth .kx-burger{ display:none !important; }
     return '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' + msg + '</div>';
   }
 
-  window.kxLoadProfilePosts = async function(profileId, isOwner){
-    var card = document.getElementById('pfPostsCard');
+  /* ---------- วอลล์โพสต์ ----------
+     Everything this account has posted, on the profile itself, the way a social
+     profile shows a wall — rather than a tab you have to go looking for.
+
+     It does not reuse the feed's card: those styles are all scoped under
+     #page-feed, so the markup would arrive here unstyled. This is a smaller
+     card of its own, sized for the 640px profile column.
+
+     A visitor sees only what is still open. The owner sees everything,
+     including paused and closed listings, with a marker — those are their own
+     records, not a visitor's business. */
+  var TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  function wallWhen(iso){
+    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if(mins < 60) return mins + ' นาทีที่แล้ว';
+    var hrs = Math.round(mins / 60);
+    if(hrs < 24) return hrs + ' ชั่วโมงที่แล้ว';
+    var days = Math.round(hrs / 24);
+    if(days < 8) return days + ' วันที่แล้ว';
+    var d = new Date(iso);
+    return d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+  }
+
+  window.kxLoadProfileWall = async function(profileId, isOwner, pr){
+    var card = document.getElementById('pfWallCard');
     if(!card || !profileId) return;
-    var q = sb.from('posts')
-      .select('id,title,kind,province,status,deadline,created_at,quote_count,request_count,post_images(url,sort)')
-      .eq('owner_id', profileId).order('created_at', { ascending:false }).limit(50);
-    // a visitor has no business seeing someone's paused or closed listings
+    var sel = 'id,title,description,kind,province,status,created_at,quote_count,request_count,post_images(url,sort)';
+    var q = sb.from('posts').select(sel)
+      .eq('owner_id', profileId).order('created_at', { ascending:false }).limit(30);
     if(!isOwner) q = q.eq('status', 'open');
     var res = await q;
-    if(res.error){ console.error('kxLoadProfilePosts failed', res.error); return; }
+    // the counter columns arrive with post_counters.sql
+    if(res.error && /quote_count|request_count/i.test(res.error.message || '')){
+      var sel2 = 'id,title,description,kind,province,status,created_at,post_images(url,sort)';
+      var q2 = sb.from('posts').select(sel2).eq('owner_id', profileId)
+        .order('created_at', { ascending:false }).limit(30);
+      if(!isOwner) q2 = q2.eq('status', 'open');
+      res = await q2;
+    }
+    if(res.error){ console.error('kxLoadProfileWall failed', res.error); return; }
 
-    card.innerHTML = '<div class="card-head"><h3>' + (isOwner ? 'งานของฉัน' : 'ประกาศทั้งหมด') +
-        ' (' + res.data.length + ')</h3>' +
-        (isOwner ? '<a href="#" class="pf-seeall" onclick="navigateTo(\'page-rfq-offers\');return false;">จัดการทั้งหมด ›</a>' : '') +
+    var who = (pr && pr.company_name) || 'ผู้ใช้ Konnex';
+    var av  = (pr && pr.avatar_url)
+      ? '<img src="' + esc(pr.avatar_url) + '" alt="">'
+      : esc(who.charAt(0).toUpperCase());
+
+    card.innerHTML =
+      '<div class="card-head"><h3>โพสต์' + (isOwner ? 'ของฉัน' : '') + ' (' + res.data.length + ')</h3>' +
+        (isOwner ? '<a href="#" class="pf-seeall" onclick="newPost();return false;">＋ โพสต์ใหม่</a>' : '') +
       '</div>' +
-      (res.data.length ? res.data.map(function(p){
+      (res.data.length ? '<div class="kx-wall">' + res.data.map(function(p){
         var isRfq = p.kind !== 'offer';
         var imgs = (p.post_images || []).slice().sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
         var n = isRfq ? (p.quote_count || 0) : (p.request_count || 0);
-        return '<div style="display:flex;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0;cursor:pointer;"' +
-            ' onclick="kxOpenPost(\'' + p.id + '\',\'' + (isRfq ? 'rfq' : 'offer') + '\')">' +
-          '<img src="' + esc(imgs.length ? imgs[0].url : 'assets/img/konnex-mark-3.png') + '"' +
-            ' style="width:64px;height:56px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--bg);">' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(p.title) + '</div>' +
-            '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:3px;">' +
-              (isRfq ? '🛒 ต้องการซื้อ' : '🏷️ ประกาศขาย') + ' · ' + esc(p.province || 'ไม่ระบุ') +
-              ' · ' + dateBE(p.created_at) +
-              (p.status !== 'open' ? ' · ปิดแล้ว' : '') + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;flex-shrink:0;font-size:11.5px;color:var(--ink-soft);">' +
-            '<b style="display:block;font-size:15px;color:var(--blue-700);">' + n + '</b>' +
-            (isRfq ? 'ข้อเสนอ' : 'คำขอราคา') + '</div>' +
-        '</div>';
-      }).join('')
-      : pfEmpty(isOwner ? 'คุณยังไม่ได้โพสต์ประกาศ' : 'ยังไม่มีประกาศที่เปิดรับอยู่'));
-  };
-
-  window.kxLoadProfileQuotes = async function(profileId, isOwner){
-    var card = document.getElementById('pfQuotesCard');
-    if(!card) return;
-    if(!isOwner){ card.innerHTML = ''; return; }   // private; the tab is hidden too
-    var res = await sb.from('quotes')
-      .select('id,price,status,created_at,posts(id,title,province)')
-      .eq('bidder_id', profileId).order('created_at', { ascending:false }).limit(50);
-    if(res.error){ console.error('kxLoadProfileQuotes failed', res.error); return; }
-
-    var PILL = { won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'], pending:['pending','รอผล'] };
-    card.innerHTML = '<div class="card-head"><h3>ใบเสนอราคาที่ส่ง (' + res.data.length + ')</h3>' +
-        '<a href="#" class="pf-seeall" onclick="navigateTo(\'page-my-bids\');return false;">ดูทั้งหมด ›</a></div>' +
-      (res.data.length ? res.data.map(function(q){
-        var p = q.posts || {};
-        var pill = PILL[q.status] || PILL.pending;
-        return '<div style="display:flex;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0;"' +
-            (p.id ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')"' : '') + '>' +
-          '<div style="flex:1;min-width:0;">' +
-            '<div style="font-size:13.5px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
-              esc(p.title || 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
-            '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:3px;">' +
-              esc(p.province || 'ไม่ระบุ') + ' · ส่งเมื่อ ' + dateBE(q.created_at) + '</div>' +
-          '</div>' +
-          '<div style="text-align:right;flex-shrink:0;">' +
-            '<div style="font-size:15px;font-weight:800;color:var(--blue-700);">' +
-              Math.round(q.price).toLocaleString('en-US') + ' ฿</div>' +
-            '<span class="status-pill ' + pill[0] + '" style="margin-top:4px;"><span class="dot"></span>' + pill[1] + '</span>' +
-          '</div>' +
-        '</div>';
-      }).join('')
-      : pfEmpty('คุณยังไม่ได้ส่งใบเสนอราคา'));
+        var closed = p.status !== 'open';
+        return '<article class="kx-wpost" onclick="kxOpenPost(\'' + p.id + '\',\'' + (isRfq?'rfq':'offer') + '\')">' +
+          '<header class="kx-wtop">' +
+            '<span class="kx-wav">' + av + '</span>' +
+            '<span class="kx-wwho"><b>' + esc(who) + '</b>' +
+              '<span>' + wallWhen(p.created_at) + ' · ' + esc(p.province || 'ไม่ระบุ') + '</span></span>' +
+            '<span class="kx-wkind ' + (isRfq ? 'buy' : 'sell') + '">' +
+              (isRfq ? '🛒 ต้องการซื้อ' : '🏷️ ประกาศขาย') + '</span>' +
+          '</header>' +
+          '<div class="kx-wtitle">' + esc(p.title) + '</div>' +
+          (p.description ? '<div class="kx-wtext">' + esc(p.description) + '</div>' : '') +
+          (imgs.length
+            ? '<div class="kx-wimgs' + (imgs.length > 1 ? ' multi' : '') + '">' +
+              imgs.slice(0,3).map(function(im){ return '<img src="' + esc(im.url) + '" alt="" loading="lazy">'; }).join('') +
+              (imgs.length > 3 ? '<span class="kx-wmore">+' + (imgs.length - 3) + '</span>' : '') +
+              '</div>'
+            : '') +
+          '<footer class="kx-wfoot">' +
+            '<span><b>' + n + '</b> ' + (isRfq ? 'ข้อเสนอ' : 'คำขอราคา') + '</span>' +
+            (closed ? '<span class="kx-wclosed">🔒 ' +
+              (p.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว') + '</span>' : '') +
+            '<span class="kx-wopen">ดูประกาศ ›</span>' +
+          '</footer>' +
+        '</article>';
+      }).join('') + '</div>'
+      : '<div style="padding:26px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
+        (isOwner
+          ? 'คุณยังไม่ได้โพสต์ประกาศ<br><span style="font-size:12px;">กด “＋ โพสต์ใหม่” เพื่อเริ่ม</span>'
+          : 'ยังไม่มีประกาศที่เปิดรับอยู่') + '</div>');
   };
 
   // ---------- การยืนยันตัวตน ----------
+
   window.kxRenderVerify = function(pr, isOwner){
     var card = document.getElementById('pfVerifyCard');
     if(!card) return;
