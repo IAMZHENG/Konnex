@@ -9089,33 +9089,12 @@ html, body{
         </div>
 
         <!-- REVIEWS — the page that used to hold these now lives here as a tab -->
-        <div class="card" id="pfReviewsCard" data-pf-sec="reviews">
-          <div class="card-head">
-            <h3>รีวิวจากลูกค้า (128)</h3>
-            <button class="rv-write" onclick="openReviewGate()">
-              <svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>เขียนรีวิว
-            </button>
-          </div>
-
-<div class="rv-panel">
-  <div class="rv-gate">
-    <svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"></path><path d="M9 12.5l2 2 4-4.5"></path></svg>
-    <span>รีวิวได้เฉพาะคู่ค้าที่เคยปิดดีลกับบริษัทนี้ผ่าน Konnex ทุกรายการจึงผูกกับงานจริง และผู้ให้บริการลบรีวิวของตัวเองไม่ได้</span>
-  </div>
-  <div class="rv-sum">
-    <div class="rv-score">
-      <div class="num">4.8</div>
-      <div class="stars">★★★★★</div>
-      <div class="sub">จาก 128 รีวิว</div>
-    </div>
-    <div class="rv-cols" id="rvBars"></div>
-  </div>
-</div>
-
-<div class="rv-tabs" id="rvTabs"></div>
-<div class="rv-list" id="rvList"></div>
-<button class="rv-more" id="rvMore" onclick="rvShowMore()">ดูรีวิวเพิ่มเติม</button>
-        </div>
+        <!-- kxLoadReviews paints this card from the `reviews` table. It used to
+             ship with a worked example inside it — 4.8 from 128 reviews, a
+             hand-written REVIEWS array, per-criterion bars — and a second
+             script that wrote into the same slots, so two sources raced for one
+             card and a real profile briefly wore someone else's reputation. -->
+        <div class="card" id="pfReviewsCard" data-pf-sec="reviews"></div>
 
         <!-- TRACK RECORD — filled by the system, not typed in -->
         <div class="card" id="pfWinsCard" data-pf-sec="wins">
@@ -9231,6 +9210,9 @@ html, body{
     <button class="pf-x" onclick="closeReqQuote()">✕</button>
     <h3>ขอใบเสนอราคา</h3>
     <div class="pf-sub">ส่งความต้องการของคุณให้ <b style="color:var(--ink)" id="rqjSellerName">ผู้ขาย</b> เพื่อรับใบเสนอราคาที่ตรงกับงานของคุณ</div>
+    <!-- a request belongs to a listing: that is how the seller finds it, in
+         คำขอใบเสนอราคา on that listing, and how you find the reply later -->
+    <div class="pf-field" id="rqjPostField"><label>ประกาศที่ต้องการขอราคา <span style="color:var(--red)">*</span></label><select id="rqjPost"></select></div>
     <div class="pf-field"><label>จำนวน/ปริมาณที่ต้องการ <span style="color:var(--red)">*</span></label><input type="text" id="rqjQty" placeholder="เช่น 500 ชิ้น"></div>
     <div class="pf-field" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><label>งบประมาณโดยประมาณ (บาท)</label><input type="text" id="rqjBudget" placeholder="ไม่ระบุก็ได้"></div><div><label>ต้องการภายในวันที่</label><input type="date" id="rqjDue"></div></div>
     <div class="pf-field"><label>รายละเอียดเพิ่มเติม <span style="color:var(--red)">*</span></label><textarea id="rqjDesc" placeholder="อธิบายสเปคงาน วัสดุ ขนาด หรือความต้องการพิเศษอื่นๆ"></textarea></div>
@@ -9241,29 +9223,87 @@ html, body{
 </div>
 
 <script>
-  function openReqQuote(){
+  /* This modal reported success and wrote nothing. It writes a real
+     quote_requests row now — the same table the ขอใบเสนอราคา button on a
+     listing uses, so the seller sees it in that listing's คำขอใบเสนอราคา and
+     the reply comes back to ใบเสนอราคา → ที่ขอ like any other.
+
+     A request has to name a listing, which a profile page does not give it, so
+     the seller's open Offers are offered as a choice. With none, there is
+     nothing honest to attach the request to and the modal says so rather than
+     inventing one. */
+  window.openReqQuote = async function(){
     var box = document.getElementById('reqQuoteBox');
     if(box.dataset.orig) box.innerHTML = box.dataset.orig;
-    // whoever's profile is on screen, not the demo company this was written for
     var n = document.getElementById('rqjSellerName');
     if(n) n.textContent = window.kxProfileViewingName || 'ผู้ขาย';
     document.getElementById('reqQuoteModal').classList.add('open');
-  }
+
+    var sel = document.getElementById('rqjPost');
+    var sellerId = window.kxProfileViewingId || null;
+    if(!sel) return;
+    sel.innerHTML = '<option value="">กำลังโหลด...</option>';
+    var res = await sb.from('posts').select('id,title')
+      .eq('owner_id', sellerId).eq('kind', 'offer').eq('status', 'open')
+      .order('created_at', { ascending:false });
+    if(res.error || !res.data || !res.data.length){
+      var who = String(window.kxProfileViewingName || 'ผู้ขายรายนี้').replace(/[&<>"]/g, '');
+      box.innerHTML =
+        '<button class="pf-x" onclick="closeReqQuote()">✕</button>' +
+        '<h3>ขอใบเสนอราคา</h3>' +
+        '<div class="pf-sub" style="line-height:1.8">' + who + ' ยังไม่มีประกาศขายที่เปิดรับอยู่ตอนนี้ ' +
+          'คำขอใบเสนอราคาจะผูกกับประกาศเสมอ เพื่อให้ผู้ขายเห็นว่าคุณถามถึงงานไหน<br>' +
+          'ระหว่างนี้ทักไปคุยกันโดยตรงได้เลย</div>' +
+        '<div class="pf-actions"><button class="pf-btn ghost" onclick="closeReqQuote()">ปิด</button>' +
+        '<button class="pf-btn primary" onclick="closeReqQuote();kxStartChat(\'' + (sellerId || '') + '\',null)">💬 ส่งข้อความ</button></div>';
+      return;
+    }
+    sel.innerHTML = res.data.map(function(p){
+      return '<option value="' + p.id + '">' + String(p.title).replace(/[&<>"]/g, '') + '</option>';
+    }).join('');
+  };
   function closeReqQuote(){ document.getElementById('reqQuoteModal').classList.remove('open'); }
-  function submitReqQuote(){
+
+  window.submitReqQuote = async function(){
     var box = document.getElementById('reqQuoteBox');
     if(!box.dataset.orig) box.dataset.orig = box.innerHTML;
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+    var postId = (document.getElementById('rqjPost') || {}).value;
+    var qty    = ((document.getElementById('rqjQty') || {}).value || '').trim();
+    var desc   = ((document.getElementById('rqjDesc') || {}).value || '').trim();
+    var budget = ((document.getElementById('rqjBudget') || {}).value || '').replace(/[, ]/g, '');
+    var due    = (document.getElementById('rqjDue') || {}).value || null;
+    if(!postId){ kxToast('กรุณาเลือกประกาศ'); return; }
+    if(!qty){ kxToast('กรุณากรอกจำนวนที่ต้องการ'); document.getElementById('rqjQty').focus(); return; }
+    if(!desc){ kxToast('กรุณากรอกรายละเอียด'); document.getElementById('rqjDesc').focus(); return; }
+
+    var btn = box.querySelector('.pf-btn.primary');
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+    var res = await sb.from('quote_requests').insert({
+      post_id: postId, requester_id: window.kxSession.user.id,
+      quantity: parseFloat(qty) || 1, budget: budget ? parseFloat(budget) : null,
+      needed_by: due, detail: desc
+    });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(res.error){
+      console.error('submitReqQuote failed', res.error);
+      kxToast('ส่งคำขอไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+
     box.innerHTML =
       '<button class="pf-x" onclick="closeReqQuote()">✕</button>' +
       '<div style="text-align:center;padding:14px 6px 6px">' +
         '<div style="width:56px;height:56px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><svg viewBox="0 0 24 24" style="width:30px;height:30px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M20 6 9 17l-5-5"/></svg></div>' +
-        '<div style="font-size:17px;font-weight:800;margin-bottom:8px">ส่งคำขอใบเสนอราคาสำเร็จ!</div>' +
+        '<div style="font-size:17px;font-weight:800;margin-bottom:8px">ส่งคำขอใบเสนอราคาแล้ว</div>' +
         '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">' +
           String(window.kxProfileViewingName || 'ผู้ขาย').replace(/[&<>"]/g, '') +
-          ' ได้รับคำขอของคุณแล้ว และจะตอบกลับด้วยใบเสนอราคาผ่านหน้าข้อความเร็ว ๆ นี้</div>' +
-        '<button class="pf-btn primary" style="width:100%;justify-content:center;display:flex" onclick="closeReqQuote();navigateTo(\'page-messages\')">💬 ไปที่ข้อความ</button>' +
+          ' จะเห็นคำขอนี้ในประกาศของเขา เมื่อตอบกลับมา ราคาจะแสดงที่ <b>ใบเสนอราคา → ที่ขอ</b> ของคุณ</div>' +
+        '<button class="pf-btn primary" style="width:100%;justify-content:center;display:flex" onclick="closeReqQuote();navigateTo(\'page-my-requests\')">📩 ดูคำขอของฉัน</button>' +
       '</div>';
-  }
+  };
   document.getElementById('reqQuoteModal').addEventListener('click', function(e){ if(e.target.id==='reqQuoteModal') closeReqQuote(); });
   document.getElementById('reqQuoteBox').dataset.orig = document.getElementById('reqQuoteBox').innerHTML;
 </script>
@@ -9309,23 +9349,23 @@ html, body{
       var own = c.getAttribute('data-pf-sec') || 'overview';
       c.style.display = (own === sec) ? '' : 'none';
     });
-    if(sec === 'reviews' && typeof window.renderReviewsPage === 'function'){
-      try{ window.renderReviewsPage(); }catch(e){}
-    }
+    // kxRenderProfileShell already loaded this card from the reviews table; the
+    // demo painter that used to be called here has gone
     // ภาพรวม carries a wins preview, so it needs the same data the wins tab does
     if((sec === 'overview' || sec === 'wins') && typeof window.renderProfileWins === 'function'){
       try{ window.renderProfileWins(); }catch(e){}
     }
   }
   window.pfTab = pfTab;
+  /* The gate held `var hasQuoteRelationship = true` with a comment saying
+     "เดโม", so it opened the review form for anyone on anyone. kxOpenReview
+     asks the database which deals the two of you actually closed, and offers
+     those — the same condition the insert policy enforces. Kept as an alias so
+     any remaining caller lands on the real one. */
   function openReviewGate(){
-    // อนุญาตเฉพาะคู่ค้าที่เคยเสนอ/รับใบเสนอราคากันจริง
-    var hasQuoteRelationship = true; // เดโม: ผู้ใช้นี้เคยทำธุรกรรมกับบริษัทนี้
-    if(!hasQuoteRelationship){
-      alert('คุณสามารถรีวิวได้เฉพาะบริษัทที่คุณเคยเสนอหรือรับใบเสนอราคาผ่าน Konnex เท่านั้น');
-      return;
-    }
-    pfOpen('rev');
+    var id = window.kxProfileViewingId;
+    if(!id || !window.kxOpenReview){ kxToast('เขียนรีวิวได้เมื่อทำงานร่วมกันจบแล้ว'); return; }
+    window.kxOpenReview(id);
   }
   function pfOpen(mode){
     pfMode=mode; pfImg=''; pfRating=5;
@@ -11909,16 +11949,17 @@ html, body{
             <div class="set-card">
               <h3>การแจ้งเตือนในแอป</h3>
               <p class="card-desc">เลือกกิจกรรมที่คุณต้องการรับการแจ้งเตือน</p>
-              <div class="toggle-row"><div><div class="tr-title">ข้อเสนอราคาใหม่</div><div class="tr-sub">เมื่อมีผู้เสนอราคาในงาน RFQ ของคุณ</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">คำขอใบเสนอราคา</div><div class="tr-sub">เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">ข้อความใหม่</div><div class="tr-sub">เมื่อมีข้อความเข้ามาในกล่องข้อความ</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">อัปเดตสถานะงาน</div><div class="tr-sub">เมื่อสถานะ RFQ/ใบเสนอราคาเปลี่ยนแปลง</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">ข้อเสนอราคาใหม่</div><div class="tr-sub">เมื่อมีผู้เสนอราคาในงาน RFQ ของคุณ</div></div><div class="switch on" data-pref="notif_quote" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">คำขอใบเสนอราคา</div><div class="tr-sub">เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ</div></div><div class="switch on" data-pref="notif_request" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">ข้อความใหม่</div><div class="tr-sub">เมื่อมีข้อความเข้ามาในกล่องข้อความ</div></div><div class="switch on" data-pref="notif_message" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">อัปเดตสถานะงาน</div><div class="tr-sub">เมื่อสถานะ RFQ/ใบเสนอราคาเปลี่ยนแปลง</div></div><div class="switch on" data-pref="notif_status" onclick="kxTogglePref(this)"></div></div>
             </div>
             <div class="set-card">
               <h3>อีเมลและ SMS</h3>
-              <div class="toggle-row"><div><div class="tr-title">สรุปกิจกรรมรายสัปดาห์ทางอีเมล</div><div class="tr-sub">รายงานงานใหม่และข้อเสนอที่น่าสนใจ</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">แจ้งเตือนทาง SMS</div><div class="tr-sub">สำหรับเหตุการณ์สำคัญ เช่น ได้รับเลือกงาน</div></div><div class="switch" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">ข่าวสารและโปรโมชัน</div><div class="tr-sub">อัปเดตฟีเจอร์ใหม่และข้อเสนอพิเศษจาก Konnex</div></div><div class="switch" onclick="this.classList.toggle('on')"></div></div>
+              <p class="card-desc">บันทึกความต้องการของคุณไว้แล้ว — ระบบส่งอีเมลและ SMS ยังไม่เปิดใช้งาน จะเริ่มส่งตามที่ตั้งไว้เมื่อเปิด</p>
+              <div class="toggle-row"><div><div class="tr-title">สรุปกิจกรรมรายสัปดาห์ทางอีเมล</div><div class="tr-sub">รายงานงานใหม่และข้อเสนอที่น่าสนใจ</div></div><div class="switch on" data-pref="email_weekly" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">แจ้งเตือนทาง SMS</div><div class="tr-sub">สำหรับเหตุการณ์สำคัญ เช่น ได้รับเลือกงาน</div></div><div class="switch" data-pref="sms_important" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">ข่าวสารและโปรโมชัน</div><div class="tr-sub">อัปเดตฟีเจอร์ใหม่และข้อเสนอพิเศษจาก Konnex</div></div><div class="switch" data-pref="email_promo" onclick="kxTogglePref(this)"></div></div>
             </div>
           </div>
 
@@ -11926,18 +11967,24 @@ html, body{
           <div class="set-sec" id="set-security">
             <div class="set-card">
               <h3>ความปลอดภัยของบัญชี</h3>
-              <div class="toggle-row"><div><div class="tr-title">ยืนยันตัวตนสองชั้น (2FA)</div><div class="tr-sub">เพิ่มความปลอดภัยด้วยรหัส OTP ทุกครั้งที่เข้าสู่ระบบ</div></div><div class="switch" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">แจ้งเตือนการเข้าสู่ระบบใหม่</div><div class="tr-sub">ส่งอีเมลเมื่อมีการเข้าสู่ระบบจากอุปกรณ์ใหม่</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              <!-- 2FA came out: the switch cannot enrol anyone, and a security
+                   control that says it is on while it is off is worse than no
+                   switch at all. The one below is a real preference. -->
+              <div class="toggle-row"><div><div class="tr-title">แจ้งเตือนการเข้าสู่ระบบใหม่</div><div class="tr-sub">ส่งอีเมลเมื่อมีการเข้าสู่ระบบจากอุปกรณ์ใหม่</div></div><div class="switch on" data-pref="login_alert" onclick="kxTogglePref(this)"></div></div>
             </div>
             <div class="set-card">
               <h3>ความเป็นส่วนตัว</h3>
-              <div class="toggle-row"><div><div class="tr-title">แสดงโปรไฟล์ต่อสาธารณะ</div><div class="tr-sub">อนุญาตให้ผู้ใช้ทั่วไปค้นหาและดูโปรไฟล์บริษัทของคุณ</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">แสดงสถิติ (ยอดวิว/งานสำเร็จ)</div><div class="tr-sub">แสดงตัวเลขผลงานบนหน้าโปรไฟล์</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">แสดงสถิติ (ยอดวิว/งานสำเร็จ)</div><div class="tr-sub">แสดงตัวเลขผลงานบนหน้าโปรไฟล์</div></div><div class="switch on" data-pref="show_stats" onclick="kxTogglePref(this)"></div></div>
             </div>
+            <!-- The two rows here were invented — a Chrome in กรุงเทพฯ and an
+                 iPhone in ชลบุรี, on every account. Listing real sessions needs
+                 the admin API, which the browser does not have; ending them all
+                 does not, and that is the part worth having anyway. -->
             <div class="set-card">
               <h3>อุปกรณ์ที่เข้าสู่ระบบ</h3>
-              <div class="device-row"><div class="dev-ic"><svg class="li-svg" viewBox="0 0 24 24" style="width:19px;height:19px"><rect x="2" y="4" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg></div><div class="dev-meta"><div class="dev-name">Chrome · Windows</div><div class="dev-sub">กรุงเทพฯ · ใช้งานอยู่</div></div><span class="dev-current">อุปกรณ์นี้</span></div>
-              <div class="device-row"><div class="dev-ic"><svg class="li-svg" viewBox="0 0 24 24" style="width:19px;height:19px"><rect x="6" y="2" width="12" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></div><div class="dev-meta"><div class="dev-name">Safari · iPhone</div><div class="dev-sub">ชลบุรี · 2 วันที่แล้ว</div></div><button class="set-btn ghost" style="padding:6px 13px;font-size:12.5px">ออกจากระบบ</button></div>
+              <div class="device-row"><div class="dev-ic"><svg class="li-svg" viewBox="0 0 24 24" style="width:19px;height:19px"><rect x="2" y="4" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 18v3"></path></svg></div><div class="dev-meta"><div class="dev-name">อุปกรณ์นี้</div><div class="dev-sub" id="setThisDevice">กำลังใช้งานอยู่</div></div><span class="dev-current">ใช้งานอยู่</span></div>
+              <p class="card-desc" style="margin-top:12px;">หากคุณเคยเข้าสู่ระบบจากเครื่องอื่นและไม่แน่ใจ ให้ออกจากระบบทุกอุปกรณ์แล้วเข้าใหม่</p>
+              <div class="set-actions"><button type="button" class="set-btn ghost" onclick="kxSignOutEverywhere()">ออกจากระบบทุกอุปกรณ์</button></div>
             </div>
           </div>
 
@@ -11946,12 +11993,12 @@ html, body{
             <div class="set-card">
               <h3>ภาษาและภูมิภาค</h3>
               <div class="set-row2">
-                <div class="set-field"><label>ภาษา</label><select><option>ไทย</option><option>English</option></select></div>
-                <div class="set-field"><label>สกุลเงิน</label><select><option>บาท (฿)</option><option>USD ($)</option></select></div>
+                <div class="set-field"><label>ภาษา</label><select id="setLang"><option>ไทย</option><option>English</option></select></div>
+                <div class="set-field"><label>สกุลเงิน</label><select id="setCurrency"><option>บาท (฿)</option><option>USD ($)</option></select></div>
               </div>
               <div class="set-row2">
-                <div class="set-field"><label>เขตเวลา</label><select><option>(GMT+7) กรุงเทพฯ</option><option>(GMT+8) สิงคโปร์</option></select></div>
-                <div class="set-field"><label>รูปแบบวันที่</label><select><option>วว/ดด/ปปปป</option><option>ปปปป-ดด-วว</option></select></div>
+                <div class="set-field"><label>เขตเวลา</label><select id="setTz"><option>(GMT+7) กรุงเทพฯ</option><option>(GMT+8) สิงคโปร์</option></select></div>
+                <div class="set-field"><label>รูปแบบวันที่</label><select id="setDateFmt"><option>วว/ดด/ปปปป</option><option>ปปปป-ดด-วว</option></select></div>
               </div>
               <div class="set-actions"><button type="button" class="set-btn primary" onclick="setSaveRegion(this)">บันทึก</button></div>
             </div>
@@ -11967,7 +12014,7 @@ html, body{
             <div class="set-card" style="border-color:#f3c0c0">
               <h3 style="color:var(--red)">ลบบัญชี</h3>
               <p class="card-desc">การลบบัญชีเป็นการถาวร ข้อมูลงาน ใบเสนอราคา และประวัติทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้</p>
-              <button class="set-btn danger" onclick="if(confirm('ยืนยันลบบัญชีถาวร? การกระทำนี้ย้อนกลับไม่ได้') &amp;&amp; confirm('ยืนยันอีกครั้ง — ข้อมูลทั้งหมดจะถูกลบถาวร') ) navigateTo('page-auth')">ลบบัญชีถาวร</button>
+              <button class="set-btn danger" onclick="kxDeleteAccount()">ลบบัญชีถาวร</button>
             </div>
           </div>
         </div>
@@ -12436,10 +12483,19 @@ html, body{
 
 <script>
   var vfCount = 0;
-  function openVerify(){ vfSetType('person'); document.getElementById('verifyModal').classList.add('open'); }
+  var vfFiles = [];      // {label, file} — the documents actually picked
+  var vfType  = 'person';
+  function openVerify(){
+    vfFiles = [];
+    var pr = window.kxCurrentUser;
+    vfSetType(pr && pr.business_type === 'person' ? 'person' : 'company');
+    document.getElementById('verifyModal').classList.add('open');
+    if(window.kxShowVerifyStatus) window.kxShowVerifyStatus();
+  }
   function closeVerify(){ document.getElementById('verifyModal').classList.remove('open'); }
   function vfSetType(t){
     var person = t === 'person';
+    vfType = person ? 'person' : 'company';
     document.getElementById('vfTypePerson').classList.toggle('active', person);
     document.getElementById('vfTypeCompany').classList.toggle('active', !person);
     document.getElementById('vfStepsPerson').style.display = person ? 'flex' : 'none';
@@ -12449,18 +12505,82 @@ html, body{
     var doc = input.closest('.vf-doc');
     var up = input.closest('.vf-up');
     if(input.files && input.files[0] && doc){
+      // the file itself was never kept, only the ✓ — so nothing could be sent
+      var label = ((doc.querySelector('.vf-doc-title') || doc).textContent || 'เอกสาร')
+        .replace(/\s+/g, ' ').trim().slice(0, 60);
+      vfFiles = vfFiles.filter(function(f){ return f.label !== label; });
+      vfFiles.push({ label: label, file: input.files[0] });
       doc.classList.add('done');
       if(up) up.innerHTML = '✓ แนบแล้ว';
     }
   }
-  function submitVerify(){
+  /* The documents used to go nowhere: the modal collected ✓ marks, printed
+     "รออนุมัติ", and forgot everything on close. They upload to Storage and the
+     request becomes a row in verification_requests, which is what an
+     administrator approves — profiles.is_verified stays the badge's single
+     source of truth, and only the service role may flip it. */
+  window.kxShowVerifyStatus = async function(){
+    if(!window.kxSession) return;
+    var res = await sb.from('verification_requests')
+      .select('id,status,created_at').eq('profile_id', window.kxSession.user.id)
+      .order('created_at', { ascending:false }).limit(1);
+    if(res.error || !res.data.length) return;
+    var r = res.data[0];
+    if(r.status !== 'pending') return;
+    var box = document.getElementById('verifyBox');
+    var bar = box.querySelector('.kx-vf-pending');
+    if(bar) return;
+    box.insertAdjacentHTML('afterbegin',
+      '<div class="kx-vf-pending" style="display:flex;align-items:center;gap:9px;margin:0 0 14px;padding:10px 13px;' +
+      'background:var(--card);border:1px solid #f2dcae;border-left:3px solid var(--amber);border-radius:10px;' +
+      'font-size:12.5px;color:var(--ink);">⏳ คุณส่งเอกสารไปแล้ว — อยู่ระหว่างตรวจสอบ</div>');
+  };
+
+  async function submitVerify(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!vfFiles.length){ kxToast('กรุณาแนบเอกสารอย่างน้อย 1 รายการ'); return; }
+    var btn = document.querySelector('#verifyBox .pf-btn.primary');
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+    var stored = [];
+    try{
+      for(var i = 0; i < vfFiles.length; i++){
+        var f = vfFiles[i];
+        var isImg = /^image\//.test(f.file.type);
+        // pictures of a document go through the canvas like every other photo,
+        // so a HEIC from a phone does not arrive unreadable
+        var up = isImg
+          ? await window.kxImageFile(URL.createObjectURL(f.file), 'verify')
+          : f.file;
+        stored.push({ label: f.label, name: f.file.name, url: await window.kxUploadFile('attachments', up) });
+      }
+    }catch(err){
+      console.error('verify upload failed', err);
+      kxToast('อัปโหลดเอกสารไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
+      if(btn){ btn.disabled = false; btn.textContent = was; }
+      return;
+    }
+
+    var res = await sb.from('verification_requests').insert({
+      profile_id: window.kxSession.user.id, kind: vfType, files: stored
+    });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(res.error){
+      console.error('submitVerify failed', res.error);
+      kxToast(window.kxTableMissing(res.error)
+        ? 'ระบบยืนยันตัวตนยังไม่ได้ติดตั้ง (ยังไม่ได้รัน settings_and_account.sql)'
+        : 'ส่งเอกสารไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+
     var box = document.getElementById('verifyBox');
     box.innerHTML =
       '<button class="pf-x" onclick="closeVerify()">✕</button>' +
       '<div style="text-align:center;padding:16px 6px 6px">' +
-        '<div style="width:58px;height:58px;border-radius:50%;background:#fff7e6;color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px">⏳</div>' +
+        '<div style="width:58px;height:58px;border-radius:50%;background:#fff4dd;color:#92610a;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 14px">⏳</div>' +
         '<div style="font-size:18px;font-weight:800;margin-bottom:8px">ส่งเอกสารเรียบร้อย — รออนุมัติ</div>' +
-        '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">ทีมงาน Konnex กำลังตรวจสอบเอกสารของคุณ โดยปกติใช้เวลา 1–2 วันทำการ เราจะแจ้งผลผ่านการแจ้งเตือนและอีเมล</div>' +
+        '<div style="font-size:13px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">ส่งเอกสาร ' + stored.length + ' รายการแล้ว ทีมงาน Konnex จะตรวจสอบและแจ้งผลให้ทราบ</div>' +
         '<button class="pf-btn primary" style="width:100%;justify-content:center;display:flex" onclick="closeVerify();setVerifyPending()">รับทราบ</button>' +
       '</div>';
   }
@@ -12605,15 +12725,45 @@ html, body{
     var more = document.getElementById('feedLoadMore');
     if(more) more.style.display = shown === 0 ? 'none' : 'block';
   }
-  function saveSearchAlert(){
-    var kw = (document.getElementById('advKw').value||'').trim();
+  /* Was a confirmation bar and nothing else — neither a saved search nor an
+     alert existed afterwards. It writes to saved_searches now
+     (database/settings_and_account.sql). The bar still confirms, but it is
+     confirming something that happened. */
+  window.saveSearchAlert = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนบันทึกการค้นหา'); return; }
+    var kw   = (document.getElementById('advKw').value||'').trim();
     var prov = document.getElementById('advProv').value;
+    var kind = document.getElementById('advKind').value;
+    if(!kw && prov === 'ทุกจังหวัด' && kind === 'ทั้งหมด'){
+      kxToast('ใส่คำค้น จังหวัด หรือประเภท อย่างน้อยหนึ่งอย่างก่อนบันทึก');
+      return;
+    }
     var parts = [];
     if(kw) parts.push('"'+kw+'"');
     if(prov !== 'ทุกจังหวัด') parts.push(prov);
-    document.getElementById('advSavedTitle').textContent = 'บันทึกการค้นหาแล้ว' + (parts.length ? ' — ' + parts.join(' · ') : '');
+    if(kind !== 'ทั้งหมด') parts.push(kind);
+    var label = parts.join(' · ');
+
+    var res = await sb.from('saved_searches').insert({
+      profile_id: window.kxSession.user.id,
+      label: label,
+      keyword: kw || null,
+      province: prov === 'ทุกจังหวัด' ? null : prov,
+      kind: kind === 'ทั้งหมด' ? null : (/RFQ/.test(kind) ? 'rfq' : 'offer')
+    });
+    if(res.error){
+      console.error('saveSearchAlert failed', res.error);
+      // PostgREST answers a missing table with PGRST205, not the SQL text
+      kxToast(window.kxTableMissing(res.error)
+        ? 'ยังบันทึกการค้นหาไม่ได้ (ยังไม่ได้รัน settings_and_account.sql)'
+        : 'บันทึกการค้นหาไม่สำเร็จ');
+      return;
+    }
+    // searching for something is a statement of interest, and a saved one more so
+    if(kw && window.kxNoteInterestText) window.kxNoteInterestText(kw, 'search');
+    document.getElementById('advSavedTitle').textContent = 'บันทึกการค้นหาแล้ว — ' + label;
     document.getElementById('advSaved').style.display = 'flex';
-  }
+  };
 
   // ===== PDF quote buttons + empty states on load =====
   document.addEventListener('DOMContentLoaded', function(){
@@ -17927,124 +18077,10 @@ body.kx-auth .kx-burger{ display:none !important; }
   else document.addEventListener('DOMContentLoaded', window.renderProfileWins);
 })();
 </script>
-<script>
-(function(){
-  var CRIT = [['คุณภาพงาน',4.8],['ตรงต่อเวลา',4.7],['การสื่อสาร',4.9],['ความคุ้มค่า',4.6]];
-  var DIST = [[5,90],[4,7],[3,2],[2,1],[1,0]];
-
-  var REVIEWS = [
-    { name:'A.T. Manufacturing', av:'#0846c7', date:'15 พ.ค. 2567', score:5.0,
-      crit:[5,5,5,4], job:'งาน CNC Milling',
-      text:'งานคุณภาพดีมาก ส่งตรงเวลา ทีมงานตอบกลับไว แนะนำเลยครับ',
-      reply:'ขอบคุณมากครับ ยินดีให้บริการอีกเสมอ' },
-    { name:'Thai Solar Energy', av:'#15803d', date:'8 พ.ค. 2567', score:5.0,
-      crit:[5,5,5,5], job:'ระบบไฟฟ้าโรงงาน',
-      text:'ทีมเข้าหน้างานตรงเวลา เก็บงานเรียบร้อย มีเอกสารส่งมอบครบถ้วน ประสานงานง่ายมาก' },
-    { name:'คุณกิตติ ขนส่ง', av:'#c2410c', date:'2 พ.ค. 2567', score:4.0,
-      crit:[4,4,5,4], job:'งานขนส่ง',
-      text:'โดยรวมดีครับ ราคาสมเหตุสมผล มีติดขัดเรื่องคิวรถช่วงต้นเดือนบ้าง แต่แจ้งล่วงหน้าตลอด',
-      reply:'ขอบคุณสำหรับคำแนะนำครับ ช่วงต้นเดือนเราเพิ่มรอบรถแล้ว' },
-    { name:'Veera Industrial Co., Ltd.', av:'#7c3aed', date:'24 เม.ย. 2567', score:5.0,
-      crit:[5,5,5,5], job:'ซ่อมบำรุงเครื่องจักร',
-      text:'ใช้บริการต่อเนื่องเป็นปีที่สาม คุณภาพคงที่ ไม่เคยมีปัญหาเรื่องความเที่ยงตรงของชิ้นงาน' },
-    { name:'Global Parts Co., Ltd.', av:'#0e7490', date:'19 เม.ย. 2567', score:5.0,
-      crit:[5,4,5,5], job:'งานโลหะแผ่น',
-      text:'ราคาชัดเจนตั้งแต่ใบเสนอราคา ไม่มีบวกเพิ่มทีหลัง ชิ้นงานตรงตามแบบทุกจุด' },
-    { name:'Apex Manufacturing', av:'#db2777', date:'11 เม.ย. 2567', score:4.0,
-      crit:[5,3,4,4], job:'งานกลึง CNC',
-      text:'ชิ้นงานดีมากครับ แต่รอบส่งช้ากว่าที่ตกลงไว้ 3 วัน เข้าใจว่าช่วงนั้นงานเยอะ' },
-    { name:'บจก. ไทยพรีซิชั่น', av:'#0846c7', date:'2 เม.ย. 2567', score:5.0,
-      crit:[5,5,5,4], job:'ชิ้นส่วนเครื่องจักร',
-      text:'สื่อสารดีมาก มีรูปความคืบหน้าส่งให้ดูเป็นระยะ ทำให้วางแผนสายการผลิตต่อได้' },
-    { name:'กรีนโปรเจกต์ จำกัด', av:'#15803d', date:'21 มี.ค. 2567', score:5.0,
-      crit:[5,5,5,5], job:'งานติดตั้ง',
-      text:'ทีมช่างมืออาชีพ เก็บพื้นที่หน้างานสะอาด ส่งมอบก่อนกำหนดหนึ่งสัปดาห์' }
-  ];
-
-  var rvFilter = 'all', rvShown = 4;
-
-  function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
-  function stars(n){ return '★★★★★'.slice(0, Math.round(n)) + '☆☆☆☆☆'.slice(0, 5-Math.round(n)); }
-
-  function drawBars(){
-    var w = document.getElementById('rvBars');
-    if(!w) return;
-    w.innerHTML =
-      CRIT.map(function(c){
-        return '<div class="rv-row"><span>'+esc(c[0])+'</span><div class="rv-track"><div class="rv-fill" style="width:'+(c[1]/5*100)+'%"></div></div><b>'+c[1].toFixed(1)+'</b></div>';
-      }).join('') +
-      DIST.map(function(d){
-        return '<div class="rv-row"><span>'+d[0]+' ดาว</span><div class="rv-track"><div class="rv-fill" style="width:'+d[1]+'%"></div></div><b>'+d[1]+'%</b></div>';
-      }).join('');
-  }
-
-  function drawTabs(){
-    var w = document.getElementById('rvTabs');
-    if(!w) return;
-    var counts = { all: REVIEWS.length };
-    [5,4,3,2,1].forEach(function(s){ counts[s] = REVIEWS.filter(function(r){ return Math.round(r.score)===s; }).length; });
-    var tabs = [['all','ทั้งหมด']].concat([5,4,3,2,1].map(function(s){ return [String(s), s+' ดาว']; }));
-    w.innerHTML = tabs.map(function(t){
-      var n = counts[t[0]==='all' ? 'all' : +t[0]] || 0;
-      return '<button class="rv-tab'+(rvFilter===t[0]?' active':'')+'" onclick="rvFilterBy(\''+t[0]+'\')">'+t[1]+' ('+n+')</button>';
-    }).join('');
-  }
-
-  function rows(){
-    return rvFilter==='all' ? REVIEWS : REVIEWS.filter(function(r){ return Math.round(r.score)===+rvFilter; });
-  }
-
-  function draw(){
-    var w = document.getElementById('rvList');
-    var more = document.getElementById('rvMore');
-    if(!w) return;
-    var all = rows();
-    if(!all.length){
-      w.innerHTML = '<div class="rv-empty">ยังไม่มีรีวิวในระดับคะแนนนี้</div>';
-      if(more) more.style.display = 'none';
-      return;
-    }
-    w.innerHTML = all.slice(0, rvShown).map(function(r){
-      var chips = ['คุณภาพงาน','ตรงต่อเวลา','การสื่อสาร','ความคุ้มค่า'].map(function(k,i){
-        return '<span class="rv-chip">'+k+' '+r.crit[i].toFixed(1)+'</span>';
-      }).join('');
-      return '<div class="rv-card">' +
-        '<div class="rv-top">' +
-          '<span class="rv-av" style="background:'+esc(r.av)+'">'+esc(r.name.charAt(0))+'</span>' +
-          '<span class="rv-who"><span class="rv-name">'+esc(r.name)+'</span><span class="rv-when">'+esc(r.date)+'</span></span>' +
-          '<span class="rv-stars">'+stars(r.score)+'<b>'+r.score.toFixed(1)+'</b></span>' +
-        '</div>' +
-        '<div class="rv-chips">'+chips+'</div>' +
-        '<div class="rv-text">'+esc(r.text)+'</div>' +
-        '<div class="rv-foot"><span class="rv-ok">✓ ยืนยันการทำธุรกรรมจริง</span><span class="rv-job">'+esc(r.job)+'</span></div>' +
-        (r.reply ? '<div class="rv-reply"><div class="rv-reply-who">ตอบกลับจากผู้ให้บริการ</div><div class="rv-reply-txt">'+esc(r.reply)+'</div></div>' : '') +
-      '</div>';
-    }).join('');
-    if(more) more.style.display = (rvShown < all.length) ? 'block' : 'none';
-    if(window.kxApplyIcons) window.kxApplyIcons(w);
-  }
-
-  window.rvAddReview = function(r){
-    REVIEWS.unshift(r);
-    rvFilter = 'all'; rvShown = Math.max(rvShown, 4);
-    drawTabs(); draw();
-  };
-  window.rvFilterBy = function(f){ rvFilter = f; rvShown = 4; drawTabs(); draw(); };
-  window.rvShowMore = function(){ rvShown += 4; draw(); };
-  window.renderReviewsPage = function(){ drawBars(); drawTabs(); draw(); };
-
-  var base = window.navigateTo;
-  if(typeof base === 'function'){
-    window.navigateTo = function(pageId){
-      var r = base.apply(this, arguments);
-      if(pageId === 'page-company-profile'){ try{ window.renderReviewsPage(); }catch(e){} }
-      return r;
-    };
-  }
-  if(document.readyState !== 'loading') window.renderReviewsPage();
-  else document.addEventListener('DOMContentLoaded', window.renderReviewsPage);
-})();
-</script>
+<!-- The demo reviews script lived here: a REVIEWS array, per-criterion
+     bars and a star-tab filter, all writing into #rvBars / #rvTabs / #rvList.
+     kxLoadReviews paints that card from the reviews table, so the two raced
+     for one card and the loser was whichever ran last. Removed. -->
 
 <script>
 /* The deadline was a three-option dropdown of durations (7 / 14 / 30 วัน), so the poster
@@ -18311,6 +18347,17 @@ body.kx-auth .kx-burger{ display:none !important; }
      Returns a File. If the picture cannot be decoded at all it throws, which
      is the point — the caller has to say so rather than saving a row with no
      picture and letting the placeholder stand in for it. */
+  /* "this table isn't there yet" as PostgREST reports it. It answers a missing
+     table with PGRST205 and a schema-cache message, not the SQL error text, so
+     matching on "relation ... does not exist" never fired and every not-yet-run
+     migration looked like an ordinary failure. */
+  window.kxTableMissing = function(err){
+    if(!err) return false;
+    return err.code === 'PGRST205' || err.code === 'PGRST202' ||
+           /does not exist|schema cache/i.test(err.message || '');
+  };
+  var kxTableMissing = window.kxTableMissing;
+
   window.kxImageFile = async function(src, name){
     var img = await new Promise(function(resolve, reject){
       var i = new Image();
@@ -18757,7 +18804,78 @@ body.kx-auth .kx-burger{ display:none !important; }
     cur.value = ''; nw.value = ''; nw2.value = '';
     kxToast('เปลี่ยนรหัสผ่านเรียบร้อย');
   };
-  window.setSaveRegion = function(){ kxToast('บันทึกภาษาและภูมิภาคแล้ว'); };
+  /* ---- ตั้งค่า: ความต้องการของผู้ใช้ ----
+     Eleven switches and four selects that flipped a CSS class or raised a
+     toast and were forgotten on reload. They live in profiles.prefs now
+     (database/settings_and_account.sql), so they survive a refresh and follow
+     the account to another device.
+
+     A switch writes as soon as it is flipped rather than waiting for a save
+     button, because there was no save button next to it and adding one for
+     something this small is worse than the write. */
+  window.kxPrefs = {};
+
+  window.kxLoadPrefs = async function(){
+    if(!window.kxSession) return;
+    var res = await sb.from('profiles').select('prefs').eq('id', window.kxSession.user.id).maybeSingle();
+    if(res.error){
+      // the column arrives with settings_and_account.sql; until then the
+      // switches simply show their defaults rather than breaking the page
+      if(!/prefs/i.test(res.error.message || '')) console.error('kxLoadPrefs failed', res.error);
+      return;
+    }
+    window.kxPrefs = (res.data && res.data.prefs) || {};
+    kxApplyPrefs();
+  };
+
+  function kxApplyPrefs(){
+    document.querySelectorAll('#page-settings .switch[data-pref]').forEach(function(sw){
+      var k = sw.dataset.pref;
+      if(window.kxPrefs[k] === undefined) return;   // leave the markup default
+      sw.classList.toggle('on', !!window.kxPrefs[k]);
+    });
+    [['setLang','lang'], ['setCurrency','currency'], ['setTz','tz'], ['setDateFmt','date_fmt']]
+      .forEach(function(p){
+        var el = document.getElementById(p[0]);
+        if(el && window.kxPrefs[p[1]]) el.value = window.kxPrefs[p[1]];
+      });
+  }
+
+  async function kxWritePrefs(patch){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return false; }
+    var next = Object.assign({}, window.kxPrefs, patch);
+    var res = await sb.from('profiles').update({ prefs: next }).eq('id', window.kxSession.user.id);
+    if(res.error){
+      console.error('kxWritePrefs failed', res.error);
+      kxToast(/prefs/i.test(res.error.message || '')
+        ? 'บันทึกการตั้งค่าไม่ได้ (ยังไม่ได้รัน settings_and_account.sql)'
+        : 'บันทึกการตั้งค่าไม่สำเร็จ');
+      return false;
+    }
+    window.kxPrefs = next;
+    return true;
+  }
+
+  window.kxTogglePref = async function(sw){
+    var k = sw.dataset.pref;
+    var want = !sw.classList.contains('on');
+    sw.classList.toggle('on', want);            // respond now, undo if it fails
+    var ok = await kxWritePrefs((function(o){ o[k] = want; return o; })({}));
+    if(!ok) sw.classList.toggle('on', !want);
+  };
+
+  window.setSaveRegion = async function(btn){
+    var was = btn && btn.textContent;
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก...'; }
+    var ok = await kxWritePrefs({
+      lang:      (document.getElementById('setLang') || {}).value,
+      currency:  (document.getElementById('setCurrency') || {}).value,
+      tz:        (document.getElementById('setTz') || {}).value,
+      date_fmt:  (document.getElementById('setDateFmt') || {}).value
+    });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(ok) kxToast('บันทึกภาษาและภูมิภาคแล้ว');
+  };
 
   /* ---- ประวัติการเข้าชม ----
      Was seven hand-written rows and a ล้างประวัติ that replaced them with an
@@ -18955,6 +19073,44 @@ body.kx-auth .kx-burger{ display:none !important; }
     // onAuthStateChange's SIGNED_OUT branch below does the actual navigateTo
   };
 
+  // "ออกจากระบบทุกอุปกรณ์" — the one thing about other sessions the client can
+  // honestly do. Listing them needs the admin API; ending them does not.
+  window.kxSignOutEverywhere = async function(){
+    if(!confirm('ออกจากระบบทุกอุปกรณ์ใช่หรือไม่?\n\nคุณจะต้องเข้าสู่ระบบใหม่ในทุกเครื่อง รวมถึงเครื่องนี้')) return;
+    var res = await sb.auth.signOut({ scope:'global' });
+    if(res && res.error){ console.error('global signOut failed', res.error); kxToast('ออกจากระบบไม่สำเร็จ'); }
+  };
+
+  /* ลบบัญชีถาวร. The button used to ask twice and then navigate to the login
+     page — nothing was deleted, and the person had every reason to believe
+     otherwise, which is the worst way for this particular control to be wrong.
+
+     Ending an account means deleting the auth user, and the anon key cannot do
+     that. kx_delete_my_account() (database/settings_and_account.sql) is a
+     SECURITY DEFINER function that deletes auth.uid() and nothing else — the id
+     is never an argument, so there is no account but your own to point it at.
+     Everything cascades from profiles, so the posts, quotes, messages and files
+     go with it. */
+  window.kxDeleteAccount = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!confirm('ยืนยันลบบัญชีถาวร?\n\nประกาศ ใบเสนอราคา ข้อความ และประวัติทั้งหมดจะถูกลบและกู้คืนไม่ได้')) return;
+    // typing it out, rather than a second yes/no, because a second yes/no is
+    // just the first one again
+    var typed = prompt('พิมพ์คำว่า  ลบบัญชี  เพื่อยืนยันขั้นสุดท้าย');
+    if((typed || '').trim() !== 'ลบบัญชี'){ kxToast('ยกเลิกการลบบัญชี'); return; }
+
+    var res = await sb.rpc('kx_delete_my_account');
+    if(res.error){
+      console.error('kxDeleteAccount failed', res.error);
+      kxToast(/could not find the function/i.test(res.error.message || '')
+        ? 'ยังลบบัญชีไม่ได้ (ยังไม่ได้รัน settings_and_account.sql)'
+        : 'ลบบัญชีไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    await sb.auth.signOut();
+    alert('ลบบัญชีเรียบร้อยแล้ว');
+  };
+
   sb.auth.onAuthStateChange(function(event, session){
     window.kxSession = session;
     if(event === 'SIGNED_OUT'){
@@ -18997,8 +19153,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     if(window.kxSession){
       await kxEnsureProfile(window.kxSession.user);
-      // not awaited: the rail's ยังไม่ได้ตอบ count should never hold up the app
+      // not awaited: neither of these should hold up the app
       if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
+      if(window.kxWarmInterest) window.kxWarmInterest();
       if(activeId === 'page-auth') navigateTo('page-feed');
     }else if(activeId && activeId !== 'page-auth'){
       navigateTo('page-auth');
@@ -19769,8 +19926,48 @@ body.kx-auth .kx-burger{ display:none !important; }
     e.t = now;
     raw[cat] = e;
     save(raw);
+    /* The interest_events table has been in schema.sql since the start and
+       nothing ever wrote to it, so the ranking only knew this browser — clear
+       the cache or open the app on a phone and the feed forgot everything.
+
+       localStorage stays as the read path: ranking runs on every repaint and
+       must not wait on the network. The row is the durable copy, written and
+       not awaited, so a failure costs nothing more than that one event. */
+    if(window.kxSession){
+      sb.from('interest_events').insert({
+        profile_id: window.kxSession.user.id,
+        category_id: cat, action: action, weight: ACTIONS[action]
+      }).then(function(r){
+        if(r && r.error) console.error('interest_events insert failed', r.error);
+      });
+    }
     if(typeof window.kxRankFeed === 'function') window.kxRankFeed();
   }
+
+  /* And the read path warms from the server on sign-in, so a new device starts
+     from what this account has actually shown interest in rather than blank.
+     Only merged where the server knows more, so the local copy — which is
+     up to the second — always wins a tie. */
+  window.kxWarmInterest = async function(){
+    if(!window.kxSession) return;
+    var since = new Date(Date.now() - 90 * 86400000).toISOString();
+    var res = await sb.from('interest_events')
+      .select('category_id,action,weight,created_at')
+      .eq('profile_id', window.kxSession.user.id)
+      .gte('created_at', since);
+    if(res.error){ console.error('kxWarmInterest failed', res.error); return; }
+    var raw = load(), now = Date.now(), acc = {};
+    res.data.forEach(function(ev){
+      var days = (now - new Date(ev.created_at).getTime()) / 86400000;
+      acc[ev.category_id] = (acc[ev.category_id] || 0) + (+ev.weight) * Math.pow(0.5, days / HALFLIFE_DAYS);
+    });
+    var changed = false;
+    for(var k in acc){
+      var cur = raw[k] ? (raw[k].w || 0) * Math.pow(0.5, ((now - (raw[k].t || now)) / 86400000) / HALFLIFE_DAYS) : 0;
+      if(acc[k] > cur){ raw[k] = { w: acc[k], t: now }; changed = true; }
+    }
+    if(changed){ save(raw); if(typeof window.kxRankFeed === 'function') window.kxRankFeed(); }
+  };
   window.kxNoteInterest = note;
   window.kxNoteInterestText = function(text, action){ note(catFromText(text), action); };
 
@@ -21203,6 +21400,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
     if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
+    if(id === 'page-settings' && window.kxLoadPrefs) window.kxLoadPrefs();
     /* page-company-profile keeps whoever was last painted onto it, so reaching
        it any other way — the ดูโปรไฟล์ row in the rail, the avatar menu, a back
        button — used to show the last person you looked at instead of you. */
