@@ -8212,7 +8212,8 @@ html, body{
       }
       // these two carry live counts, so the span is always emitted (hidden at
       // zero) for kxApplyNotifBadges / kxApplyChatBadges to fill
-      var live = (it[0] === 'page-messages' || it[0] === 'page-notifications');
+      var live = (it[0] === 'page-messages' || it[0] === 'page-notifications' ||
+                  it[0] === 'page-rfq-offers');
       var cnt = live ? '<span class="side-count" style="display:none">0</span>'
                      : (it[3] ? '<span class="side-count">'+it[3]+'</span>' : '');
       var on = it[0]===navActive ? ' active' : '';
@@ -8233,6 +8234,7 @@ html, body{
     // count already written into it — put them back
     if(window.kxApplyNotifBadges) window.kxApplyNotifBadges();
     if(window.kxApplyChatBadges)  window.kxApplyChatBadges();
+    if(window.kxApplyWaitingBadge) window.kxApplyWaitingBadge();
     if(window.kxApplyAvatars)     window.kxApplyAvatars();
   }
   window.renderSidebars = renderSidebars;
@@ -8437,6 +8439,7 @@ html, body{
     var e = document.getElementById(emptyId);
     if(e) e.style.display = vis ? 'none' : 'block';
   }
+  window.kxToggleEmpty = kxToggleEmpty;
   document.querySelectorAll('.side-link').forEach((link,i)=>{
     if(i===2) link.classList.add('active'); // highlight RFQ by default context
     link.addEventListener('click', ()=>{
@@ -10621,7 +10624,7 @@ html, body{
 
       <div class="offer-list" id="offerList">
 
-        <div class="kx-empty" style="display:none;">
+        <div class="kx-empty" id="offerEmpty" style="display:none;">
           <div class="kx-empty-ic">📦</div>
           <div class="kx-empty-title">ยังไม่มีประกาศขายในสถานะนี้</div>
           <div class="kx-empty-sub">เมื่อคุณโพสต์ประกาศขาย รายการจะแสดงที่นี่</div>
@@ -10754,8 +10757,15 @@ html, body{
     #quoteRequestsModal .qr-chip:hover{ background:var(--bg); }
     #quoteRequestsModal .qr-chip.active{ background:var(--blue-50); border-color:#c2d6ff; color:var(--blue-700); }
 
-    #quoteRequestsModal .qr-card{ border:1px solid var(--line); border-radius:12px; padding:14px; }
-    #quoteRequestsModal .qr-card.pending{ background:#fffdf7; border-color:#f3e2b8; }
+    /* Tone. This card had grown a palette of its own — a cream fill on a yellow
+       border for waiting, green text on a green panel for the reply, and the
+       price rendered as a green status pill. The app is blue on white with
+       neutral greys; amber appears only as a marker, never as a surface. So:
+       the card stays white and takes an amber rule down its edge while it is
+       waiting, and the price reads as a price, in the same blue and weight the
+       feed card and the comparison card use for one. */
+    #quoteRequestsModal .qr-card{ border:1px solid var(--line); border-radius:12px; padding:14px; background:var(--card); }
+    #quoteRequestsModal .qr-card.pending{ border-left:3px solid var(--amber); padding-left:12px; }
     #quoteRequestsModal .qr-top{ display:flex; gap:12px; align-items:flex-start; }
     #quoteRequestsModal .qr-av{ width:38px; height:38px; border-radius:10px; background:var(--blue-600);
       color:#fff; font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center;
@@ -10766,16 +10776,21 @@ html, body{
     #quoteRequestsModal .qr-when{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
     #quoteRequestsModal .qr-badge{ flex-shrink:0; font-size:11.5px; font-weight:700; border-radius:999px;
       padding:4px 11px; white-space:nowrap; }
-    #quoteRequestsModal .qr-badge.pending{ color:var(--amber); background:#fff7e6; }
-    #quoteRequestsModal .qr-badge.done{ color:var(--green); background:var(--green-bg); }
+    #quoteRequestsModal .qr-badge.pending{ color:#92610a; background:#fff4dd; border:1px solid #f2dcae; }
+    /* the answered case is a number, not a status — same treatment as any
+       other price in the app, right-aligned with its label above it */
+    #quoteRequestsModal .qr-sent{ flex-shrink:0; text-align:right; line-height:1.2; }
+    #quoteRequestsModal .qr-sent-lbl{ font-size:11px; font-weight:600; color:var(--ink-faint); }
+    #quoteRequestsModal .qr-sent-num{ font-size:16px; font-weight:800; color:var(--blue-700); letter-spacing:-.2px; }
 
     #quoteRequestsModal .qr-meta{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 0; }
     #quoteRequestsModal .qr-meta span{ font-size:12px; color:var(--ink-soft); background:var(--bg);
-      border:1px solid var(--line); border-radius:8px; padding:4px 10px; }
+      border-radius:8px; padding:4px 10px; }
     #quoteRequestsModal .qr-detail{ font-size:12.5px; color:var(--ink); margin-top:8px; line-height:1.6;
       white-space:pre-wrap; word-break:break-word; }
-    #quoteRequestsModal .qr-note{ font-size:12.5px; color:var(--green); margin-top:8px;
-      background:var(--green-bg); border-radius:8px; padding:7px 11px; line-height:1.6; }
+    #quoteRequestsModal .qr-note{ font-size:12.5px; color:var(--ink); margin-top:8px;
+      background:var(--bg); border-left:3px solid var(--blue-600); border-radius:0 8px 8px 0;
+      padding:7px 11px; line-height:1.6; }
     #quoteRequestsModal .qr-files{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     #quoteRequestsModal .qr-files .file-chip{ max-width:200px; }
 
@@ -10868,11 +10883,14 @@ html, body{
     if(!e.target.closest('.offer-status-drop')) document.querySelectorAll('#page-my-offers .offer-status-menu.open').forEach(function(m){ m.classList.remove('open'); });
   });
   function switchOfferTab(el, mode){
-    document.querySelectorAll('.status-tab').forEach(t=>t.classList.remove('active'));
+    // scoped to this page: the unscoped version also cleared the active tab on
+    // ต้องการซื้อ, so coming back to it found nothing selected
+    document.querySelectorAll('#page-my-offers .status-tab').forEach(t=>t.classList.remove('active'));
     el.classList.add('active');
-    document.querySelectorAll('.offer-row').forEach(row=>{
+    document.querySelectorAll('#page-my-offers .offer-row').forEach(row=>{
       row.style.display = (mode === 'all' || row.dataset.status === mode) ? 'flex' : 'none';
     });
+    if(window.kxToggleEmpty) kxToggleEmpty('#page-my-offers .offer-row', 'offerEmpty');
   }
 
   // QUOTE_REQUESTS (hand-written demo requests) removed — openQuoteRequestsModal
@@ -10933,9 +10951,10 @@ html, body{
           '<div class="qr-name">' + qrEsc(who) + '</div>' +
           '<div class="qr-when">ขอเมื่อ ' + qrDate(r.created_at) + '</div>' +
         '</div>' +
-        '<span class="qr-badge ' + (done ? 'done' : 'pending') + '">' +
-          (done ? '✓ ' + Math.round(r.quoted_price).toLocaleString('en-US') + ' ฿' : '● ยังไม่ได้ตอบ') +
-        '</span>' +
+        (done
+          ? '<span class="qr-sent"><span class="qr-sent-lbl">ราคาที่ส่ง</span><br>' +
+            '<b class="qr-sent-num">' + Math.round(r.quoted_price).toLocaleString('en-US') + ' ฿</b></span>'
+          : '<span class="qr-badge pending">● ยังไม่ได้ตอบ</span>') +
       '</div>' +
       '<div class="qr-meta">' + meta + '</div>' +
       '<div class="qr-detail">' + qrEsc(r.detail) + '</div>' +
@@ -11068,6 +11087,14 @@ html, body{
 
   window.openRespondQuoteModal = function(requestId){
     currentRequestId = requestId;
+    /* Same trap the requests modal already escapes: this is markup inside
+       #page-my-offers, which is display:none on every other page. The seller
+       usually reaches the list from the Offer's own page or the feed, so
+       ตอบกลับด้วยใบเสนอราคา opened a modal that was 0x0 and nothing happened.
+       It moves to the body too, and sits above the list it was opened from. */
+    var ov = document.getElementById('respondQuoteModal');
+    if(ov.parentElement !== document.body) document.body.appendChild(ov);
+    ov.style.zIndex = '1100';
     var box = document.getElementById('respondQuoteModalBox');
     // submitRespondQuote replaces the body with a success panel, so it has to
     // be put back or the next reply is typed into the previous confirmation
@@ -11175,6 +11202,9 @@ html, body{
       if(btn){ btn.disabled = false; btn.textContent = was; }
       return;
     }
+
+    // one fewer request is waiting on you — the rail and the card should agree
+    if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
 
     var box = document.getElementById('respondQuoteModalBox');
     box.innerHTML = '<div style="text-align:center;padding:10px 0 4px;">' +
@@ -15979,6 +16009,29 @@ body.kx-auth .kx-burger{ display:none !important; }
   #page-feed .post-thumb-track .post-thumb{ max-width:none; }
 }
 
+/* ===== ยังไม่ได้ตอบ =====
+   A notification fires once, when the request lands, and then scrolls away —
+   it says a request arrived, not that it is still sitting there unanswered.
+   These two say the second thing, and keep saying it until it stops being
+   true: a count above the list, and a marker on each listing that is waiting
+   on you. Amber as a marker on white, which is how the rest of the app uses
+   it — never as a surface. */
+.kx-waiting-banner{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px;
+  margin:0 0 14px; padding:11px 15px;
+  background:var(--card); border:1px solid #f2dcae; border-left:3px solid var(--amber);
+  border-radius:10px; font-size:13px; color:var(--ink);
+}
+.kx-waiting-banner b{ color:#92610a; }
+.kx-waiting-banner span{ font-size:12px; color:var(--ink-faint); }
+#page-my-offers .offer-stats-row .kx-waiting{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:999px;
+  background:#fff4dd; border:1px solid #f2dcae;
+  color:#92610a; font-weight:700; white-space:nowrap;
+}
+#page-my-offers .offer-stats-row .kx-waiting:hover{ background:#ffecc4; }
+
 /* ===== One card shape for งานของฉัน and ใบเสนอราคา =====
    The three lists had grown three different proportions, and within each list
    the cards were different heights: the row sized to whichever card held the
@@ -18827,6 +18880,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     if(window.kxSession){
       await kxEnsureProfile(window.kxSession.user);
+      // not awaited: the rail's ยังไม่ได้ตอบ count should never hold up the app
+      if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
       if(activeId === 'page-auth') navigateTo('page-feed');
     }else if(activeId && activeId !== 'page-auth'){
       navigateTo('page-auth');
@@ -20673,7 +20728,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     var statusVal = post.status === 'open' ? 'active' : post.status;
     var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['paused', 'พักไว้'], closed: ['closed', 'ปิดแล้ว'] };
     var pill = pillMap[statusVal] || pillMap.active;
-    return '<div class="offer-row" data-status="' + statusVal + '" onclick="kxOpenPost(\'' + post.id + '\',\'offer\')">' +
+    return '<div class="offer-row" data-status="' + statusVal + '" data-post-id="' + post.id + '"' +
+        ' onclick="kxOpenPost(\'' + post.id + '\',\'offer\')">' +
       '<img class="offer-thumb" src="' + esc(thumb) + '">' +
       '<div class="offer-body">' +
         '<div class="offer-title">' + esc(post.title) + '</div>' +
@@ -20822,8 +20878,107 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var loadMore = document.querySelector(pageSel + ' .load-more');
     if(loadMore) loadMore.style.display = 'none';
-    if(kind !== 'offer') kxPaintRfqTabs(res.data);
+    if(kind === 'offer'){ kxPaintOfferTabs(res.data); kxMarkUnanswered(res.data); }
+    else kxPaintRfqTabs(res.data);
   };
+
+  // the ประกาศขาย tabs carried 36 / 24 / 7 / 5 from the markup, the same way
+  // ต้องการซื้อ carried 5 / 3 / 8. switchOfferTab already filtered by
+  // data-status; only the numbers were invented.
+  function kxPaintOfferTabs(rows){
+    var tabs = document.querySelectorAll('#page-my-offers .status-tabs .status-tab');
+    if(!tabs.length) return;
+    var c = { all:(rows||[]).length, open:0, paused:0, closed:0 };
+    (rows || []).forEach(function(p){ if(c[p.status] != null) c[p.status]++; });
+    var spec = [['ทั้งหมด', c.all], ['เปิดอยู่', c.open], ['พักไว้', c.paused], ['ปิดแล้ว', c.closed]];
+    Array.prototype.forEach.call(tabs, function(tab, i){
+      if(!spec[i]) return;
+      var ic = tab.querySelector('.tab-ic');
+      tab.innerHTML = (ic ? ic.outerHTML : '') + spec[i][0] + ' (' + spec[i][1] + ')';
+    });
+  }
+
+  /* "ยังไม่ได้ตอบ" has to be visible without opening anything. A notification
+     fires once, when the request arrives, and then scrolls away — it says a
+     request came, not that it is still sitting there. This marks the listing
+     itself: the card carries how many requests are still waiting on you, for
+     as long as they are.
+
+     Counted from quote_requests directly rather than a counter column, because
+     the seller is allowed to read their own listings' requests, so the number
+     is already reachable — and unlike request_count it has to change back down
+     again when they answer one. */
+  /* The same number on the rail, so it reaches you from anywhere in the app
+     rather than only once you happen to open ประกาศขาย. The rail is rebuilt on
+     every navigation, so the count is cached and re-applied rather than
+     re-queried — kxRefreshWaitingCount is what goes back to the database, and
+     it runs at sign-in and again whenever a reply is sent. */
+  window.kxUnansweredTotal = 0;
+  window.kxApplyWaitingBadge = function(){
+    var n = window.kxUnansweredTotal || 0;
+    document.querySelectorAll('.side-nav .side-link').forEach(function(a){
+      if(!/งานของฉัน/.test(a.textContent)) return;
+      var c = a.querySelector('.side-count');
+      if(!c) return;
+      c.textContent = n;
+      c.style.display = n ? '' : 'none';
+      a.title = n ? 'มีคำขอใบเสนอราคา ' + n + ' รายการที่ยังไม่ได้ตอบ' : '';
+    });
+  };
+  window.kxRefreshWaitingCount = async function(){
+    if(!window.kxSession) return;
+    var res = await sb.from('quote_requests')
+      .select('id,status,posts!inner(owner_id)')
+      .eq('posts.owner_id', window.kxSession.user.id)
+      .neq('status', 'received');
+    if(res.error){ console.error('kxRefreshWaitingCount failed', res.error); return; }
+    window.kxUnansweredTotal = res.data.length;
+    window.kxApplyWaitingBadge();
+  };
+
+  async function kxMarkUnanswered(rows){
+    var ids = (rows || []).map(function(p){ return p.id; });
+    if(!ids.length){ kxPaintUnansweredBanner(0); return; }
+    var res = await sb.from('quote_requests').select('id,post_id,status').in('post_id', ids);
+    if(res.error){ console.error('kxMarkUnanswered failed', res.error); return; }
+    var pending = {};
+    res.data.forEach(function(r){
+      if(r.status !== 'received') pending[r.post_id] = (pending[r.post_id] || 0) + 1;
+    });
+    var total = 0;
+    ids.forEach(function(id){
+      var n = pending[id] || 0;
+      total += n;
+      var row = document.querySelector('#page-my-offers .offer-row[data-post-id="' + id + '"]');
+      if(!row) return;
+      var slot = row.querySelector('.offer-stats-row');
+      if(!slot) return;
+      var old = slot.querySelector('.kx-waiting');
+      if(old) old.remove();
+      if(!n) return;
+      slot.insertAdjacentHTML('beforeend',
+        '<span class="kx-waiting" title="ยังไม่ได้ตอบกลับ" style="cursor:pointer;"' +
+        ' onclick="event.stopPropagation();openQuoteRequestsModal(\'' + id + '\')">● ' + n + ' รอตอบ</span>');
+    });
+    window.kxUnansweredTotal = total;
+    kxPaintUnansweredBanner(total);
+    if(window.kxApplyWaitingBadge) window.kxApplyWaitingBadge();
+  }
+
+  function kxPaintUnansweredBanner(total){
+    var host = document.querySelector('#page-my-offers .status-tabs');
+    if(!host) return;
+    var el = document.getElementById('kxWaitingBanner');
+    if(!total){ if(el) el.remove(); return; }
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'kxWaitingBanner';
+      el.className = 'kx-waiting-banner';
+      host.insertAdjacentElement('afterend', el);
+    }
+    el.innerHTML = '● มีคำขอใบเสนอราคา <b>' + total + '</b> รายการที่คุณยังไม่ได้ตอบ' +
+      '<span>ดูรายการที่มีเครื่องหมาย “รอตอบ” ด้านล่าง</span>';
+  }
 
   /* The three tabs on งานของฉัน were เปิดรับ (5) · พิจารณา (3) · เสร็จสิ้น (8)
      written into the markup, and switchTab only moved the highlight — so an
