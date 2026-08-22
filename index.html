@@ -9034,9 +9034,6 @@ html, body{
           <div class="pf-wins-note">แสดงเฉพาะงานที่ปิดดีลในระบบ ผู้ให้บริการแก้ไขหรือเพิ่มเองไม่ได้</div>
         </div>
 
-        <!-- the profile's own wall: everything this account has posted -->
-        <div class="card" id="pfWallCard" data-pf-sec="overview"></div>
-
         <div class="card" data-pf-sec="overview" id="pfContactCard">
           <h3>ติดต่อบริษัท</h3>
           <div class="contact-list">
@@ -9085,7 +9082,13 @@ html, body{
             <span class="tag">พลาสติกวิศวกรรม</span>
           </div>
         </div>
-      
+
+        <!-- the profile's own wall: everything this account has posted.
+             Last on the page on purpose — who they are (ติดต่อ, การยืนยันตัวตน,
+             ใบรับรอง, ความเชี่ยวชาญ) is what a visitor needs to settle first;
+             the posts are the long scroll they settle into afterwards. -->
+        <div class="card" id="pfWallCard" data-pf-sec="overview"></div>
+
       </div>
 
     </div>
@@ -14048,57 +14051,149 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .wrap{ width:100%; max-width:640px; margin-left:auto; margin-right:auto; }
 
 /* ===== the profile's wall of posts =====
-   Its own card rather than the feed's: every .post-card rule is scoped under
-   #page-feed, so that markup would arrive here with no styling at all. */
-#page-company-profile .kx-wall{ display:flex; flex-direction:column; }
-#page-company-profile .kx-wpost{
-  border-top:1px solid var(--line); padding:16px 0; cursor:pointer;
-  transition:background .12s ease;
-  }
-#page-company-profile .kx-wpost:hover{ background:var(--bg); }
-#page-company-profile .kx-wtop{ display:flex; align-items:center; gap:10px; }
-#page-company-profile .kx-wav{
-  width:38px; height:38px; border-radius:50%; background:var(--blue-600); color:#fff;
-  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px;
-  flex-shrink:0; overflow:hidden;
-  }
-#page-company-profile .kx-wav img{ width:100%; height:100%; object-fit:cover; display:block; }
-#page-company-profile .kx-wwho{ flex:1; min-width:0; display:flex; flex-direction:column; }
-#page-company-profile .kx-wwho b{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#page-company-profile .kx-wwho span{ font-size:11.5px; color:var(--ink-faint); margin-top:1px; }
-#page-company-profile .kx-wkind{
-  flex-shrink:0; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; white-space:nowrap;
-  }
-#page-company-profile .kx-wkind.buy{ color:var(--blue-700); background:var(--blue-50); }
-#page-company-profile .kx-wkind.sell{ color:var(--orange); background:#fff4ec; }
+   The same card as the feed, down to the ข้อเสนอ / ราคาเฉลี่ย row and the
+   บันทึก · ถาม · เสนอราคา bar — one post should not look like two different
+   things depending on which page you found it on. The markup comes from the
+   feed's own builder (kxPostCardHTML); this mirrors the feed's styling, which
+   is all written under #page-feed and so does not reach here on its own.
 
-#page-company-profile .kx-wtitle{ font-size:15px; font-weight:800; color:var(--ink); margin:10px 0 0; line-height:1.45; }
-#page-company-profile .kx-wtext{
-  font-size:13px; color:var(--ink-soft); line-height:1.65; margin-top:5px;
-  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
-  }
+   The wall itself is not a card: each post is, exactly as in the feed. The
+   container keeps only the heading. */
+#page-company-profile #pfWallCard{
+  background:transparent !important; border:none !important;
+  box-shadow:none !important; padding:0 !important;
+}
+#page-company-profile #pfWallCard > .card-head{ padding:2px 2px 12px; margin:0; }
+#page-company-profile .kx-wall{ display:flex; flex-direction:column; gap:16px; }
 
-#page-company-profile .kx-wimgs{ margin-top:11px; border-radius:12px; overflow:hidden; position:relative; }
-#page-company-profile .kx-wimgs img{ width:100%; height:280px; object-fit:cover; display:block; background:var(--bg); }
-#page-company-profile .kx-wimgs.multi{ display:grid; grid-template-columns:2fr 1fr; grid-auto-rows:138px; gap:4px; }
-#page-company-profile .kx-wimgs.multi img{ height:100%; }
-#page-company-profile .kx-wimgs.multi img:first-child{ grid-row:span 2; }
-#page-company-profile .kx-wmore{
-  position:absolute; right:8px; bottom:8px; background:rgba(20,30,55,.72); color:#fff;
-  font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px;
-  }
+/* padding !important because a global mobile rule forces a 14px gutter on
+   every .post-card; the feed overrides it the same way. transform:none keeps
+   the hover from lifting, which the feed also switched off. */
+#page-company-profile .kx-wall .post-card{
+  display:block; background:var(--card); border:1px solid #eef0f4;
+  border-radius:16px; padding:0 !important; min-height:0; overflow:hidden; cursor:pointer;
+  box-shadow:none;
+  transition:box-shadow .18s ease, border-color .18s ease;
+}
+#page-company-profile .kx-wall .post-card:hover{
+  box-shadow:0 6px 18px rgba(12,63,115,.07); border-color:#d8dde6;
+  transform:none !important;
+}
 
-#page-company-profile .kx-wfoot{
-  display:flex; align-items:center; gap:14px; margin-top:11px;
-  font-size:12.5px; color:var(--ink-soft);
-  }
-#page-company-profile .kx-wfoot b{ color:var(--blue-700); font-size:14px; }
-#page-company-profile .kx-wclosed{ color:var(--ink-faint); }
-#page-company-profile .kx-wopen{ margin-left:auto; color:var(--blue-700); font-weight:700; }
+/* who posted */
+#page-company-profile .kx-wall .pc-head{
+  display:flex; align-items:flex-start; gap:11px; padding:14px 16px 10px;
+}
+#page-company-profile .kx-wall .pc-head .pp-av{
+  width:42px; height:42px; border-radius:50%; flex:none; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:700; font-size:17px; cursor:pointer;
+}
+#page-company-profile .kx-wall .pc-who{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+#page-company-profile .kx-wall .pc-nameline{ display:flex; align-items:center; gap:5px; min-width:0; }
+#page-company-profile .kx-wall .pc-head .pp-name{
+  font-size:14px; font-weight:700; color:var(--ink); cursor:pointer;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#page-company-profile .kx-wall .pc-head .pp-name:hover{ color:var(--blue-700); }
+#page-company-profile .kx-wall .pc-sub{ font-size:12.5px; color:#565b6e; }
+#page-company-profile .kx-wall .pc-kind{
+  flex:none; align-self:flex-start;
+  font-size:11.5px; font-weight:700; border-radius:999px; padding:5px 11px;
+  background:var(--blue-50); color:var(--blue-700); white-space:nowrap;
+}
 
-@media (max-width:600px){
-  #page-company-profile .kx-wimgs img{ height:200px; }
-  #page-company-profile .kx-wimgs.multi{ grid-auto-rows:98px; }
+/* what they said */
+#page-company-profile .kx-wall .pc-text{ padding:0 16px 12px; }
+#page-company-profile .kx-wall .pc-text .post-title{
+  font-size:17px; font-weight:800; line-height:1.45; color:var(--ink); margin:0 0 6px;
+}
+#page-company-profile .kx-wall .pc-text .post-desc{
+  font-size:13px; line-height:1.7; color:#565b6e; margin:0 0 10px;
+}
+#page-company-profile .kx-wall .pc-text .files-sum{ margin:0; }
+
+/* the picture, edge to edge */
+#page-company-profile .kx-wall .post-thumb-wrap{
+  position:relative; width:100%; height:auto; aspect-ratio:16/9;
+  border-radius:0; margin:0; display:block; overflow:hidden; cursor:default;
+}
+#page-company-profile .kx-wall .post-thumb-track{
+  display:flex; height:100%; transform:translateX(0%); transition:transform .3s ease;
+}
+#page-company-profile .kx-wall .post-thumb-track .post-thumb{
+  width:100%; height:100%; flex:0 0 100%; object-fit:cover; border-radius:0;
+}
+#page-company-profile .kx-wall .thumb-nav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:24px; height:24px; border-radius:50%; border:none;
+  background:rgba(20,30,55,.55); color:#fff; font-size:14px; line-height:1;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .15s; padding:0; z-index:2;
+}
+#page-company-profile .kx-wall .post-thumb-wrap:hover .thumb-nav{ opacity:1; }
+#page-company-profile .kx-wall .thumb-nav.prev{ left:6px; }
+#page-company-profile .kx-wall .thumb-nav.next{ right:6px; }
+#page-company-profile .kx-wall .thumb-dots{
+  position:absolute; bottom:7px; left:0; right:0;
+  display:flex; justify-content:center; gap:4px; z-index:2;
+}
+#page-company-profile .kx-wall .thumb-dot{
+  width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.55);
+}
+#page-company-profile .kx-wall .thumb-dot.active{ background:#fff; }
+
+/* the numbers */
+#page-company-profile .kx-wall .pc-stats{
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  padding:11px 16px; font-size:12.5px; color:#565b6e;
+  border-bottom:1px solid var(--line);
+}
+#page-company-profile .kx-wall .pc-center{
+  grid-column:2; display:flex; align-items:center; gap:14px; min-width:0;
+}
+#page-company-profile .kx-wall .pc-offers{
+  display:inline-flex; align-items:baseline; gap:5px; flex:none;
+  padding:5px 12px; border-radius:999px;
+  background:#eaf1ff; border:1px solid #c2d6ff;
+  font-size:12.5px; font-weight:700; color:#052a7a;
+}
+#page-company-profile .kx-wall .pc-offers .offer-num{ font-size:14px; font-weight:800; color:#0a5bff; }
+#page-company-profile .kx-wall .pc-price{ display:flex; flex-direction:column; line-height:1.18; min-width:0; }
+#page-company-profile .kx-wall .pc-price-lbl{ font-size:11.5px; font-weight:600; color:#565b6e; }
+#page-company-profile .kx-wall .pc-price-num{ font-size:19px; font-weight:800; color:#0a5bff; letter-spacing:-.2px; }
+
+/* what you can do */
+#page-company-profile .kx-wall .pc-actions{ display:flex; align-items:center; gap:8px; padding:10px 12px; }
+#page-company-profile .kx-wall .pc-actions .pc-act{
+  flex:1 1 0; text-align:center;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px;
+  padding:10px 12px; border-radius:10px;
+  font-size:13px; font-weight:700; color:#565b6e;
+  background:transparent; border:none; cursor:pointer; font-family:inherit;
+  transition:background-color .15s ease, color .15s ease;
+}
+#page-company-profile .kx-wall .pc-actions .pc-act:hover{ background:var(--bg); color:var(--blue-700); }
+#page-company-profile .kx-wall .pc-actions .pc-act.primary{ flex:1.4 1 0; background:var(--blue-600); color:#fff; }
+#page-company-profile .kx-wall .pc-actions .pc-act.primary:hover{ background:var(--blue-700); color:#fff; }
+#page-company-profile .kx-wall .pc-actions .bookmark-ic[data-saved="1"]{ color:var(--blue-600) !important; }
+
+/* the owner's own closed and paused listings, which a visitor never sees */
+#page-company-profile .kx-wall .kx-wclosed{
+  display:inline-block; margin:0 16px 12px;
+  padding:4px 11px; border-radius:999px;
+  background:var(--bg); color:#565b6e; font-size:11.5px; font-weight:700;
+}
+
+@media (max-width:1024px){
+  #page-company-profile .kx-wall .pc-stats{
+    grid-template-columns:1fr; justify-items:center; gap:6px; padding:11px 12px;
+  }
+  #page-company-profile .kx-wall .pc-center{ grid-column:1; gap:10px; }
+  #page-company-profile .kx-wall .pc-offers{ padding:4px 10px; }
+  #page-company-profile .kx-wall .pc-price-num{ font-size:17px; }
+  #page-company-profile .kx-wall .pc-actions{ padding:8px; gap:6px; }
+  #page-company-profile .kx-wall .pc-actions .pc-act{ padding:10px 8px; font-size:12.5px; }
 }
 
 /* --- header --- */
@@ -19292,7 +19387,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
   }
 
-  function postCardHTML(post){
+  /* gidNs namespaces the image carousel's element id. The profile wall renders
+     the same card for the same post, so both copies live in the document at
+     once and cycleThumb()'s getElementById would always drive the feed's. */
+  function postCardHTML(post, gidNs){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
     var ownerName = owner.company_name || 'ผู้ใช้ Konnex';
@@ -19315,7 +19413,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       ? (avg != null ? money(avg) : 'ยังไม่มี')
       : (post.price_high != null ? money(post.price_high) : 'ยังไม่มี');
     var detailPage = isRfq ? 'page-rfq-detail' : 'page-offer-detail';
-    var gid = 'gal-db-' + post.id.slice(0, 8);
+    var gid = 'gal-' + (gidNs || 'db') + '-' + post.id.slice(0, 8);
 
     var thumbs = images.length
       ? '<div class="post-thumb-wrap" onclick="event.stopPropagation()">' +
@@ -19398,6 +19496,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</div>' +
     '</div>';
   }
+  // the profile wall shows the same card, so it shares the same builder
+  window.kxPostCardHTML = postCardHTML;
 
   /* ===== Post detail pages (page-rfq-detail / page-offer-detail) =====
      Every card everywhere in the app (feed, งานของฉัน, notifications, search)
@@ -20315,7 +20415,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         .eq('status', 'open').order('created_at', { ascending:false }).limit(60);
     }
     if(res.error){ console.error('kxLoadFeed failed', res.error); return; }
-    list.innerHTML = res.data.map(postCardHTML).join('');
+    list.innerHTML = res.data.map(function(p){ return postCardHTML(p); }).join('');
     if(window.kxApplyIcons) window.kxApplyIcons(list);
     // reflect what is already saved on the cards that were just built
     if(window.kxApplySavedMarks) window.kxApplySavedMarks(list);
@@ -20586,85 +20686,58 @@ body.kx-auth .kx-burger{ display:none !important; }
      Everything this account has posted, on the profile itself, the way a social
      profile shows a wall — rather than a tab you have to go looking for.
 
-     It does not reuse the feed's card: those styles are all scoped under
-     #page-feed, so the markup would arrive here unstyled. This is a smaller
-     card of its own, sized for the 640px profile column.
+     The card is the feed's card, built by the feed's own kxPostCardHTML, so a
+     post looks and behaves the same wherever you meet it: the same ข้อเสนอ /
+     ราคาเฉลี่ย row, the same บันทึก · ถาม · เสนอราคา bar, the same image
+     carousel. Only the styling had to be restated, because every .post-card
+     rule is written under #page-feed.
 
      A visitor sees only what is still open. The owner sees everything,
      including paused and closed listings, with a marker — those are their own
      records, not a visitor's business. */
-  var TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  function wallWhen(iso){
-    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-    if(mins < 60) return mins + ' นาทีที่แล้ว';
-    var hrs = Math.round(mins / 60);
-    if(hrs < 24) return hrs + ' ชั่วโมงที่แล้ว';
-    var days = Math.round(hrs / 24);
-    if(days < 8) return days + ' วันที่แล้ว';
-    var d = new Date(iso);
-    return d.getDate() + ' ' + TH_M[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-  }
+  var wallQaMissing = false;
 
   window.kxLoadProfileWall = async function(profileId, isOwner, pr){
     var card = document.getElementById('pfWallCard');
-    if(!card || !profileId) return;
-    var sel = 'id,title,description,kind,province,status,created_at,quote_count,request_count,post_images(url,sort)';
-    var q = sb.from('posts').select(sel)
-      .eq('owner_id', profileId).order('created_at', { ascending:false }).limit(30);
-    if(!isOwner) q = q.eq('status', 'open');
-    var res = await q;
-    // the counter columns arrive with post_counters.sql
-    if(res.error && /quote_count|request_count/i.test(res.error.message || '')){
-      var sel2 = 'id,title,description,kind,province,status,created_at,post_images(url,sort)';
-      var q2 = sb.from('posts').select(sel2).eq('owner_id', profileId)
+    if(!card || !profileId || !window.kxPostCardHTML) return;
+
+    // the same field set the feed asks for — the card reads all of it
+    var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort),' +
+               ' post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
+    async function run(sel){
+      var q = sb.from('posts').select(sel).eq('owner_id', profileId)
         .order('created_at', { ascending:false }).limit(30);
-      if(!isOwner) q2 = q2.eq('status', 'open');
-      res = await q2;
+      if(!isOwner) q = q.eq('status', 'open');
+      return await q;
+    }
+    var res = await run(base + (wallQaMissing ? '' : ', post_questions(id)'));
+    if(res.error && /post_questions/i.test(res.error.message || '')){
+      wallQaMissing = true;
+      res = await run(base);
     }
     if(res.error){ console.error('kxLoadProfileWall failed', res.error); return; }
-
-    var who = (pr && pr.company_name) || 'ผู้ใช้ Konnex';
-    var av  = (pr && pr.avatar_url)
-      ? '<img src="' + esc(pr.avatar_url) + '" alt="">'
-      : esc(who.charAt(0).toUpperCase());
 
     card.innerHTML =
       '<div class="card-head"><h3>โพสต์' + (isOwner ? 'ของฉัน' : '') + ' (' + res.data.length + ')</h3>' +
         (isOwner ? '<a href="#" class="pf-seeall" onclick="newPost();return false;">＋ โพสต์ใหม่</a>' : '') +
       '</div>' +
       (res.data.length ? '<div class="kx-wall">' + res.data.map(function(p){
-        var isRfq = p.kind !== 'offer';
-        var imgs = (p.post_images || []).slice().sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
-        var n = isRfq ? (p.quote_count || 0) : (p.request_count || 0);
-        var closed = p.status !== 'open';
-        return '<article class="kx-wpost" onclick="kxOpenPost(\'' + p.id + '\',\'' + (isRfq?'rfq':'offer') + '\')">' +
-          '<header class="kx-wtop">' +
-            '<span class="kx-wav">' + av + '</span>' +
-            '<span class="kx-wwho"><b>' + esc(who) + '</b>' +
-              '<span>' + wallWhen(p.created_at) + ' · ' + esc(p.province || 'ไม่ระบุ') + '</span></span>' +
-            '<span class="kx-wkind ' + (isRfq ? 'buy' : 'sell') + '">' +
-              (isRfq ? '🛒 ต้องการซื้อ' : '🏷️ ประกาศขาย') + '</span>' +
-          '</header>' +
-          '<div class="kx-wtitle">' + esc(p.title) + '</div>' +
-          (p.description ? '<div class="kx-wtext">' + esc(p.description) + '</div>' : '') +
-          (imgs.length
-            ? '<div class="kx-wimgs' + (imgs.length > 1 ? ' multi' : '') + '">' +
-              imgs.slice(0,3).map(function(im){ return '<img src="' + esc(im.url) + '" alt="" loading="lazy">'; }).join('') +
-              (imgs.length > 3 ? '<span class="kx-wmore">+' + (imgs.length - 3) + '</span>' : '') +
-              '</div>'
-            : '') +
-          '<footer class="kx-wfoot">' +
-            '<span><b>' + n + '</b> ' + (isRfq ? 'ข้อเสนอ' : 'คำขอราคา') + '</span>' +
-            (closed ? '<span class="kx-wclosed">🔒 ' +
-              (p.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว') + '</span>' : '') +
-            '<span class="kx-wopen">ดูประกาศ ›</span>' +
-          '</footer>' +
-        '</article>';
+        var html = window.kxPostCardHTML(p, 'pf');
+        if(p.status !== 'open'){
+          // the owner's own view of a listing that is no longer taking offers
+          html = html.replace('<div class="pc-actions">',
+            '<div class="kx-wclosed">🔒 ' + (p.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว') +
+            '</div><div class="pc-actions">');
+        }
+        return html;
       }).join('') + '</div>'
-      : '<div style="padding:26px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
+      : '<div class="card" style="padding:26px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
         (isOwner
           ? 'คุณยังไม่ได้โพสต์ประกาศ<br><span style="font-size:12px;">กด “＋ โพสต์ใหม่” เพื่อเริ่ม</span>'
           : 'ยังไม่มีประกาศที่เปิดรับอยู่') + '</div>');
+
+    if(window.kxApplyIcons) window.kxApplyIcons(card);
+    if(window.kxApplySavedMarks) window.kxApplySavedMarks(card);
   };
 
   // ---------- การยืนยันตัวตน ----------
