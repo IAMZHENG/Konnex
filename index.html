@@ -11925,6 +11925,23 @@ html, body{
               </div>
               <div class="set-actions"><button type="button" class="set-btn ghost" onclick="setRevert()">ยกเลิก</button><button type="button" class="set-btn primary" onclick="setSaveAccount(this)">บันทึกการเปลี่ยนแปลง</button></div>
             </div>
+            <!-- The sign-in address is not the same field as อีเมลสำหรับติดต่อ
+                 above: that one is profiles.email, which buyers see. This is the
+                 one you log in with, and changing it needs the password and a
+                 confirmation link. -->
+            <div class="set-card">
+              <h3>อีเมลสำหรับเข้าสู่ระบบ</h3>
+              <p class="card-desc">อีเมลที่ใช้เข้าสู่ระบบและรับลิงก์รีเซ็ตรหัสผ่าน — คนละช่องกับ “อีเมลสำหรับติดต่อ” ด้านบน</p>
+              <div class="set-row2">
+                <div class="set-field"><label>อีเมลปัจจุบัน</label><input id="setAuthEmailCur" type="text" disabled></div>
+              </div>
+              <div id="setAuthPending" style="display:none;margin:0 0 14px;padding:10px 13px;background:var(--card);border:1px solid #f2dcae;border-left:3px solid var(--amber);border-radius:10px;font-size:12.5px;color:var(--ink);line-height:1.7;"></div>
+              <div class="set-row2">
+                <div class="set-field"><label for="setAuthEmailNew">อีเมลใหม่</label><input id="setAuthEmailNew" type="email" placeholder="you@newdomain.com" autocomplete="email"></div>
+                <div class="set-field"><label for="setAuthEmailPw">รหัสผ่านปัจจุบัน</label><input id="setAuthEmailPw" type="password" placeholder="เพื่อยืนยันว่าเป็นคุณ" autocomplete="current-password"></div>
+              </div>
+              <div class="set-actions"><button type="button" class="set-btn primary" onclick="setChangeAuthEmail(this)">เปลี่ยนอีเมลเข้าสู่ระบบ</button></div>
+            </div>
             <div class="set-card">
               <h3>ข้อมูลโปรไฟล์</h3>
               <p class="card-desc">แก้ไขโปรไฟล์ที่ผู้ใช้รายอื่นจะเห็น</p>
@@ -18738,6 +18755,82 @@ body.kx-auth .kx-burger{ display:none !important; }
     var lbl = document.getElementById('setNameLabel');
     if(lbl) lbl.textContent = (u.business_type === 'person')
       ? 'ชื่อผู้ติดต่อ (ถ้าต่างจากชื่อคุณ)' : 'ชื่อผู้ติดต่อ';
+
+    // the sign-in address comes from the session, not the profile row
+    var au = window.kxSession && window.kxSession.user;
+    var cur = document.getElementById('setAuthEmailCur');
+    if(cur) cur.value = (au && au.email) || '—';
+    var pend = document.getElementById('setAuthPending');
+    if(pend){
+      if(au && au.new_email){
+        pend.style.display = '';
+        pend.innerHTML = '⏳ รอยืนยันการเปลี่ยนเป็น <b>' + String(au.new_email).replace(/[&<>"]/g, '') +
+          '</b> — เปิดลิงก์ในอีเมลฉบับนั้นเพื่อยืนยัน จนกว่าจะยืนยัน ให้เข้าสู่ระบบด้วยอีเมลเดิมไปก่อน';
+      } else pend.style.display = 'none';
+    }
+  };
+
+  /* Changing the address you sign in with. The card above it edits
+     profiles.email, which is the contact address buyers see — a different
+     field, and changing it never touched the account.
+
+     The password is checked by signing in with it, for the same reason
+     setSavePassword does: updateUser will change the email of whoever is
+     already signed in without asking, and on an unlocked machine that is the
+     only protection this form implies it has. */
+  window.setChangeAuthEmail = async function(btn){
+    var mail = document.getElementById('setAuthEmailNew');
+    var pw   = document.getElementById('setAuthEmailPw');
+    [mail, pw].forEach(function(e){ e.classList.remove('bad'); });
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    var next = (mail.value || '').trim().toLowerCase();
+    var curEmail = (window.kxSession.user.email || '').toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)){
+      mail.classList.add('bad'); mail.focus(); kxToast('รูปแบบอีเมลไม่ถูกต้อง'); return;
+    }
+    if(next === curEmail){
+      mail.classList.add('bad'); mail.focus(); kxToast('เป็นอีเมลเดิมอยู่แล้ว'); return;
+    }
+    if(!pw.value){ pw.classList.add('bad'); pw.focus(); kxToast('กรุณากรอกรหัสผ่านปัจจุบัน'); return; }
+
+    var was = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...'; }
+
+    var check = await sb.auth.signInWithPassword({ email: curEmail, password: pw.value });
+    if(check.error){
+      if(btn){ btn.disabled = false; btn.textContent = was; }
+      pw.classList.add('bad'); pw.focus(); kxToast('รหัสผ่านไม่ถูกต้อง');
+      return;
+    }
+
+    if(btn) btn.textContent = 'กำลังเปลี่ยน...';
+    var res = await sb.auth.updateUser({ email: next });
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+    if(res.error){
+      console.error('setChangeAuthEmail failed', res.error);
+      mail.classList.add('bad');
+      kxToast(/already|registered|exists/i.test(res.error.message || '')
+        ? 'อีเมลนี้ถูกใช้กับบัญชีอื่นแล้ว'
+        : 'เปลี่ยนอีเมลไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+
+    pw.value = ''; mail.value = '';
+    var u = res.data && res.data.user;
+    /* Two outcomes, depending on whether the project requires confirmation:
+       either it is pending on a link sent to the new address, or it already
+       changed. Saying "check your email" when nothing was sent would leave
+       someone waiting for a message that never arrives. */
+    if(u && u.new_email){
+      kxToast('ส่งลิงก์ยืนยันไปที่ ' + u.new_email + ' แล้ว');
+      alert('เราส่งลิงก์ยืนยันไปที่ ' + u.new_email + '\n\n' +
+            'เปิดลิงก์ในอีเมลฉบับนั้นเพื่อยืนยันการเปลี่ยน จนกว่าจะยืนยัน ให้เข้าสู่ระบบด้วยอีเมลเดิมไปก่อน');
+    }else{
+      kxToast('เปลี่ยนอีเมลเข้าสู่ระบบเป็น ' + next + ' แล้ว');
+    }
+    var fresh = await sb.auth.getSession();
+    window.kxSession = fresh.data.session || window.kxSession;
+    window.kxLoadSettings();
   };
 
   window.setSaveAccount = async function(){
@@ -20319,6 +20412,29 @@ body.kx-auth .kx-burger{ display:none !important; }
      and the post itself closes so no further bids can arrive. If any of them
      fails the page reloads from the database rather than keeping whatever
      half-applied state the DOM is showing. */
+  /* ปิดรับข้อเสนอก่อนกำหนด. Closing the post is what unlocks เลือก — canPick is
+     `isClosed || isExpired` — so this is the deliberate version of what an
+     owner used to have to do by editing the deadline.
+
+     It ends the auction early for everyone who had not bid yet, which is the
+     one thing วันสิ้นสุดการรับข้อเสนอ promises them, so the confirmation says
+     that plainly rather than asking a bare "are you sure". */
+  window.kxCloseBidding = async function(postId){
+    if(!postId || !window.kxSession) return;
+    if(!confirm('ปิดรับข้อเสนอตอนนี้ใช่หรือไม่?\n\n' +
+                '• ผู้ขายรายอื่นจะเสนอราคาเข้ามาไม่ได้อีก แม้ยังไม่ถึงวันสิ้นสุด\n' +
+                '• ข้อเสนอที่ได้รับแล้วยังอยู่ครบ และคุณจะเลือกผู้ชนะได้ทันที\n' +
+                '• เปิดรับใหม่ได้โดยแก้ไขประกาศ')) return;
+    var res = await sb.from('posts').update({ status:'closed' }).eq('id', postId);
+    if(res.error){
+      console.error('kxCloseBidding failed', res.error);
+      kxToast('ปิดรับข้อเสนอไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    kxToast('ปิดรับข้อเสนอแล้ว — เลือกผู้ชนะได้เลย');
+    await kxLoadPostDetail(postId, 'rfq');
+  };
+
   window.kxPickWinner = async function(quoteId, name, price){
     var postId = window.kxCurrentDetailPostId;
     if(!postId) return;
@@ -20443,8 +20559,18 @@ body.kx-auth .kx-burger{ display:none !important; }
       // tell the owner why the เลือก button is greyed out, rather than leaving
       // them to guess whether it is broken
       var pickHint = 'เลือกผู้ชนะได้เมื่อหมดเวลารับข้อเสนอ (' + fmtDateBE(post.deadline) + ')';
+      /* And a way out of waiting. An owner who has the offers they need had no
+         way to choose before the deadline except editing the post's date, which
+         is a strange thing to have to work out. Closing early is offered here,
+         where the waiting is explained, and only with offers already in — there
+         is nothing to pick from otherwise. */
       var waitNote = (isOwner && !decided && !canPick && quotes.length)
-        ? '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--blue-50);border:1px solid #dae6ff;border-radius:9px;padding:10px 13px;margin-bottom:12px;">⏳ ' + esc(pickHint) + '</div>'
+        ? '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;font-size:12.5px;color:var(--ink-soft);' +
+          'background:var(--blue-50);border:1px solid #dae6ff;border-radius:9px;padding:10px 13px;margin-bottom:12px;">' +
+            '<span style="flex:1;min-width:200px;">⏳ ' + esc(pickHint) + '</span>' +
+            '<button type="button" class="btn-view" style="white-space:nowrap;" ' +
+              'onclick="kxCloseBidding(\'' + post.id + '\')">🔒 ปิดรับข้อเสนอตอนนี้</button>' +
+          '</div>'
         : '';
       offerListEl.innerHTML = waitNote + (quotes.length
         ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
