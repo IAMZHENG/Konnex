@@ -3299,11 +3299,36 @@ input[type="number"]:focus, textarea:focus, select:focus{
     grid-template-columns: repeat(4, 1fr);
     gap: 14px
     }
+/* the markup says svc-grid; the rule above says services-grid, so the services
+   never had a grid at all and each one rendered a column-wide picture */
+#page-company-profile .svc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px
+    }
 #page-company-profile .svc {
+    position: relative;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--line)
     }
+/* ลบ, as the icon it always was. It sits on the picture rather than under the
+   text, so removing a service cannot be mistaken for part of reading it. */
+#page-company-profile .svc-del{
+  position:absolute; top:8px; right:8px; z-index:2;
+  width:30px; height:30px; padding:0; border:0; border-radius:50%;
+  background:rgba(11,18,33,.6); color:#fff; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .15s ease, background-color .15s ease;
+}
+#page-company-profile .svc:hover .svc-del,
+#page-company-profile .svc-del:focus-visible{ opacity:1; }
+#page-company-profile .svc-del:hover{ background:#d92d20; }
+#page-company-profile .svc-del .kx-ico svg{ width:16px; height:16px; }
+/* a touch screen has no hover, so the button would never appear */
+@media (hover: none){
+  #page-company-profile .svc-del{ opacity:1; }
+}
 #page-company-profile .svc img {
     height: 96px;
     width: 100%;
@@ -14396,6 +14421,15 @@ body.kx-auth .kx-burger{ display:none !important; }
    "what have they actually done", which is what was asked for. */
 #page-company-profile .pf-seeall{ margin-left:auto; margin-right:10px; font-size:12.5px; font-weight:700; color:var(--blue-700); text-decoration:none; white-space:nowrap; }
 #page-company-profile .pf-seeall:hover{ text-decoration:underline; }
+/* ＋ เพิ่มบริการ and ✎ เขียนรีวิว are <button>, ดูทั้งหมด › and ＋ โพสต์ใหม่ are
+   <a>. They are the same action in the same corner of the same card, so they
+   should read the same — the buttons were picking up the app's button chrome
+   and coming out as bordered grey pills. */
+#page-company-profile button.pf-seeall{
+  background:none; border:0; box-shadow:none; padding:0;
+  height:auto; min-height:0; min-width:0; border-radius:0;
+  font-family:inherit; line-height:inherit; cursor:pointer;
+}
 #page-company-profile .pf-wins-src{
   display:inline-flex; align-items:center; gap:6px;
   font-size:11.5px; font-weight:600; color:#0846c7;
@@ -20524,14 +20558,15 @@ body.kx-auth .kx-burger{ display:none !important; }
       ? '<div class="svc-grid" id="pfServices">' + res.data.map(function(s){
           return '<div class="svc" data-id="' + s.id + '">' +
             '<img src="' + esc(s.image_url || 'assets/img/konnex-mark-3.png') + '">' +
+            (isOwner ? '<button type="button" class="svc-del" title="ลบบริการนี้" aria-label="ลบบริการนี้" ' +
+                       'onclick="kxDeleteService(\'' + s.id + '\')">🗑</button>' : '') +
             '<div class="svc-body"><div class="svc-title">' + esc(s.title) + '</div>' +
             '<div class="svc-sub">' + esc(s.description || '') + '</div></div>' +
-            (isOwner ? '<button type="button" class="pf-seeall" style="margin:0 12px 12px;" ' +
-                       'onclick="kxDeleteService(\'' + s.id + '\')">ลบ</button>' : '') +
           '</div>';
         }).join('') + '</div>'
       : '<div style="padding:24px 8px;text-align:center;font-size:13px;color:var(--ink-faint);line-height:1.7;">' +
         (isOwner ? 'ยังไม่มีบริการ — กด “＋ เพิ่มบริการ” เพื่อเพิ่มรายการแรก' : 'ยังไม่มีบริการที่เพิ่มไว้') + '</div>');
+    if(window.kxApplyIcons) window.kxApplyIcons(card);
     card.style.display = '';
   };
 
