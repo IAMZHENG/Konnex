@@ -7800,7 +7800,7 @@ html, body{
             <div class="loc-list" id="locList"></div>
           </div>
         </div>
-        <div class="fdd" id="fddSort"><button class="select-chip" id="fddSortBtn" onclick="toggleFdd('fddSort')">ล่าสุด ⌄</button><div class="fdd-menu"><div class="fdd-opt active" onclick="setFeedSort('recent',this,'ล่าสุด')">ล่าสุด</div><div class="fdd-opt" onclick="setFeedSort('oldest',this,'เก่าสุด')">เก่าสุด</div><div class="fdd-opt" onclick="setFeedSort('offers',this,'ข้อเสนอมากสุด')">ข้อเสนอมากสุด</div></div></div>
+        <div class="fdd" id="fddSort"><button class="select-chip" id="fddSortBtn" onclick="toggleFdd('fddSort')">ล่าสุด ⌄</button><div class="fdd-menu"><div class="fdd-opt active" onclick="setFeedSort('recent',this,'ล่าสุด')">ล่าสุด</div><div class="fdd-opt" onclick="setFeedSort('oldest',this,'เก่าสุด')">เก่าสุด</div><div class="fdd-opt" onclick="setFeedSort('offers',this,'ข้อเสนอมากสุด')">ข้อเสนอมากสุด</div><div class="fdd-opt" onclick="setFeedSort('match',this,'แนะนำสำหรับคุณ')">แนะนำสำหรับคุณ</div></div></div>
         <div class="select-chip adv-toggle" onclick="toggleAdvSearch()" id="advToggleChip">⚙️ ค้นหาขั้นสูง</div>
       </div>
 
@@ -7943,22 +7943,15 @@ html, body{
     document.getElementById('fddCatBtn').textContent = label + ' \u2304';
     applyFeedFilters();
   }
+  /* Ordering lives in one place \u2014 kxRankFeed, which reads currentFeedSort. This
+     used to sort here off a data-origIdx stamped on first use, which meant
+     "\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14" restored whatever order the cards were in the first time someone
+     touched the menu rather than the order they were posted in. */
   function setFeedSort(mode, el, label){
     currentFeedSort = mode;
     fddPick(el.parentNode, el);
     document.getElementById('fddSortBtn').textContent = label + ' \u2304';
-    var cards = Array.prototype.slice.call(document.querySelectorAll('#page-feed .post-card'));
-    if(!cards.length) return;
-    var parent = cards[0].parentNode;
-    if(!parent.dataset.origOrder){ cards.forEach(function(c,i){ c.dataset.origIdx = i; }); parent.dataset.origOrder = '1'; }
-    var sorted = cards.slice();
-    if(mode === 'recent'){ sorted.sort(function(a,b){ return (+a.dataset.origIdx) - (+b.dataset.origIdx); }); }
-    else if(mode === 'oldest'){ sorted.sort(function(a,b){ return (+b.dataset.origIdx) - (+a.dataset.origIdx); }); }
-    else if(mode === 'offers'){
-      var n = function(c){ var el = c.querySelector('.offer-num'); return el ? parseInt(el.textContent.replace(/[^0-9]/g,''),10)||0 : 0; };
-      sorted.sort(function(a,b){ return n(b) - n(a); });
-    }
-    sorted.forEach(function(c){ parent.appendChild(c); });
+    if(window.kxRankFeed) window.kxRankFeed();
   }
   var FEED_CATS = [['mfg','งานผลิต & เครื่องจักร'],['const','ก่อสร้าง & รับเหมา'],['logi','ขนส่ง & โลจิสติกส์'],['it','ไอที & ซอฟต์แวร์'],['design','ออกแบบ & สื่อสาร'],['other','บริการอื่นๆ']];
   function buildFeedCatMenu(){
@@ -9648,7 +9641,10 @@ html, body{
                 <div class="ep-field"><label for="pfWebsite">เว็บไซต์</label><input type="text" id="pfWebsite" placeholder="www.company.co.th"></div>
                 <div class="ep-field"><label for="pfHours">เวลาทำการ</label><input type="text" id="pfHours" placeholder="จันทร์ - เสาร์ 08:00 - 17:00"></div>
               </div>
-              <div class="ep-field"><label for="pfAddress">ที่อยู่ <span class="au-req">*</span></label><input type="text" id="pfAddress" placeholder="ชลบุรี, ประเทศไทย"></div>
+              <div class="ep-row2">
+                <div class="ep-field"><label for="pfAddress">ที่อยู่ <span class="au-req">*</span></label><input type="text" id="pfAddress" placeholder="ชลบุรี, ประเทศไทย"></div>
+                <div class="ep-field"><label for="pfProvince">จังหวัด</label><select id="pfProvince"></select></div>
+              </div>
             </section>
 
             <section class="ep-card">
@@ -9804,6 +9800,12 @@ html, body{
             <div style="font-size:14px;color:var(--ink-soft);line-height:1.55;padding-left:2px;">ผู้ให้บริการเห็นราคาแบบเรียลไทม์ เหมาะกับงานทั่วไป</div>
           </label>
         </div>
+        </div>
+
+        <div id="cpProvCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
+          <label for="cpProv" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">จังหวัดของงานนี้</label>
+          <select id="cpProv" style="width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);background:#fff;"></select>
+          <div id="cpProvHint" style="font-size:13px;color:#565b6e;margin-top:6px;"></div>
         </div>
 
         <div id="cpDeadlineCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
@@ -14499,7 +14501,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   min-height:var(--nav-row) !important;
   padding:0 14px 0 var(--nav-pad) !important;
   border-radius:14px !important;
-  font-size:16px !important; font-weight:500 !important;
+  font-size:16px !important; font-weight:600 !important;
   color:var(--nav-ink) !important;
   text-decoration:none; cursor:pointer; position:relative;
   transition:background-color .15s ease, color .15s ease;
@@ -17191,7 +17193,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     bizType: '', founded: '', employees: '',
     capital: '', taxId: '',
     occupation: '', experience: '',
-    phone: '', email: '', website: '', hours: '', address: '',
+    phone: '', email: '', website: '', hours: '', address: '', province: '',
     skills: [], certs: [], areas: [],
     cover: '', avatar: ''
   };
@@ -17220,7 +17222,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     name:'company_name', tagline:'tagline', about:'about', bizType:'industry',
     founded:'founded_year', employees:'employees', capital:'capital', taxId:'tax_id',
     occupation:'occupation', experience:'experience', phone:'phone', email:'email',
-    website:'website', hours:'hours', address:'address', avatar:'avatar_url', cover:'cover_url'
+    website:'website', hours:'hours', address:'address', province:'province',
+    avatar:'avatar_url', cover:'cover_url'
   };
   var profileExtrasMissing = false;   // profile_fields.sql not run yet
 
@@ -17307,6 +17310,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     data.occupation = val('pfOccupation'); data.experience = val('pfExperience');
     data.phone = val('pfPhone'); data.email = val('pfEmail');
     data.website = val('pfWebsite'); data.hours = val('pfHours'); data.address = val('pfAddress');
+    data.province = val('pfProvince');
     // taxId is captured at signup and used by the Verified flow — it has no field here
     // and must not be blanked by a collect() pass
     var cover = $('epCoverImg'), av = $('epAvatarImg');
@@ -17329,6 +17333,20 @@ body.kx-auth .kx-burger{ display:none !important; }
     set('pfOccupation', data.occupation); set('pfExperience', data.experience);
     set('pfPhone', data.phone); set('pfEmail', data.email);
     set('pfWebsite', data.website); set('pfHours', data.hours); set('pfAddress', data.address);
+    // the จังหวัด menu has to exist before a value can be set into it
+    (function(){
+      var sel = $('pfProvince');
+      if(!sel) return;
+      if(!sel.options.length){
+        var opts = [''].concat(
+          (typeof TH_PROVINCES !== 'undefined' ? TH_PROVINCES : []).filter(function(p){ return p !== 'ทั้งหมด'; }));
+        sel.innerHTML = opts.map(function(p){
+          return '<option value="' + p + '">' + (p || 'เลือกจังหวัด') + '</option>';
+        }).join('');
+      }
+      sel.value = data.province || '';
+      if(sel.selectedIndex < 0) sel.value = '';
+    })();
     renderTags(); renderCerts(); renderAreas();
     if(data.cover){ var c = $('epCoverImg'); if(c){ c.src = data.cover; c.hidden = false;
       $('epCoverBox').classList.add('has-img'); } }
@@ -17701,7 +17719,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     data = load();
 
     ['epName','pfTagline','pfAbout','pfBizType','pfFounded','pfEmployees','pfCapital',
-     'pfTaxId','pfPhone','pfEmail','pfWebsite','pfHours','pfAddress'].forEach(function(id){
+     'pfTaxId','pfPhone','pfEmail','pfWebsite','pfHours','pfAddress','pfProvince'].forEach(function(id){
       var el = $(id);
       if(el) el.addEventListener('input', refresh);
       if(el && el.tagName === 'SELECT') el.addEventListener('change', refresh);
@@ -17999,9 +18017,38 @@ body.kx-auth .kx-burger{ display:none !important; }
      existing picture actually stick. */
   var EDIT_ID = null, EDIT_KIND = null;
 
+  /* Where a post is was never asked for anywhere — it was copied off the
+     poster's profile, and a profile with no จังหวัด filled in produced
+     "ไม่ระบุ" on every card that account posted. It is also the wrong source
+     even when the profile does have one: a company in กรุงเทพ can need the
+     work done in ระยอง. So the composer asks, and only uses the profile's
+     province as the pre-filled answer. */
+  function cpFillProvinces(selected){
+    var sel = document.getElementById('cpProv');
+    if(!sel) return;
+    if(!sel.options.length){
+      var opts = ['ไม่ระบุ'].concat(
+        (typeof TH_PROVINCES !== 'undefined' ? TH_PROVINCES : []).filter(function(p){ return p !== 'ทั้งหมด'; }));
+      sel.innerHTML = opts.map(function(p){
+        return '<option value="' + p + '">' + p + '</option>';
+      }).join('');
+    }
+    var mine = (window.kxCurrentUser && window.kxCurrentUser.province) || '';
+    var want = selected || mine || 'ไม่ระบุ';
+    sel.value = want;
+    if(sel.selectedIndex < 0) sel.value = 'ไม่ระบุ';
+    var hint = document.getElementById('cpProvHint');
+    if(hint){
+      hint.textContent = (!selected && mine)
+        ? 'ใส่ให้จากจังหวัดในโปรไฟล์ของคุณ เปลี่ยนได้ถ้างานนี้อยู่คนละที่'
+        : 'ช่วยให้คนที่อยู่ใกล้เห็นประกาศนี้ก่อน';
+    }
+  }
+
   function resetForm(){
     IMGS.forEach(function(im){ if(im.file) URL.revokeObjectURL(im.url); });
     IMGS = []; DOCS = [];
+    cpFillProvinces(null);
     var t = document.getElementById('cpTitle'); if(t) t.value = '';
     var d = document.querySelector('#page-create-post textarea'); if(d) d.value = '';
     var p = document.getElementById('cpPrice'); if(p){ p.value = ''; p.classList.remove('bad'); }
@@ -18050,6 +18097,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxFormatMoneyFields) window.kxFormatMoneyFields(document.getElementById('page-create-post'));
     var dlEl = document.getElementById('cpDeadline');
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
+    cpFillProvinces(post.province || 'ไม่ระบุ');
 
     // radio group has no ids — index 0 is สealed, index 1 is open
     var bidRadios = document.querySelectorAll('#cpBidStep input[name="cpBid"]');
@@ -18352,7 +18400,12 @@ body.kx-auth .kx-burger{ display:none !important; }
         title: title,
         description: desc || 'ไม่มีรายละเอียดเพิ่มเติม',
         category_id: 'other',
-        province: (window.kxCurrentUser && window.kxCurrentUser.province) || 'ไม่ระบุ',
+        province: (function(){
+          var sel = document.getElementById('cpProv');
+          var v = sel && sel.value;
+          return (v && v !== 'ไม่ระบุ') ? v
+               : ((window.kxCurrentUser && window.kxCurrentUser.province) || 'ไม่ระบุ');
+        })(),
         price_low:  isRfq ? budLow : null,
         price_high: isRfq ? budHigh : num,
         bid_type: isRfq ? bidType : null,
@@ -19785,8 +19838,30 @@ body.kx-auth .kx-burger{ display:none !important; }
     live.forEach(function(c){ c.__s = score(c); });
     live.sort(function(a,b){ return b.__s - a.__s; });
 
+    /* The sort chip decides the order, and its default is ล่าสุด — so the
+       default feed is the posts in the order they were actually posted.
+       The personalisation below is a choice on that menu (แนะนำสำหรับคุณ),
+       not something applied underneath a chip that says ล่าสุด: mixing the
+       match/near/fresh buckets reorders the page, and reading a feed labelled
+       "ล่าสุด" that isn't in time order is just wrong. score() still runs
+       either way, because paint() and the rail's tooltips are written from it. */
+    var when = function(c){ return +(c.getAttribute('data-created') || 0); };
+    var sortMode = (typeof currentFeedSort === 'string') ? currentFeedSort : 'recent';
+
     var cards;
-    if(lane === 'recent'){
+    if(sortMode === 'recent'){
+      cards = live.slice().sort(function(a,b){ return when(b) - when(a); });
+    }else if(sortMode === 'oldest'){
+      cards = live.slice().sort(function(a,b){ return when(a) - when(b); });
+    }else if(sortMode === 'offers'){
+      var offersOf = function(c){
+        var el = c.querySelector('.offer-num');
+        return el ? (parseInt(el.textContent.replace(/[^0-9]/g,''), 10) || 0) : 0;
+      };
+      // same count, newer first — otherwise the tie falls to whatever order the
+      // rows arrived in, which changes between loads for no reason the reader sees
+      cards = live.slice().sort(function(a,b){ return offersOf(b) - offersOf(a) || when(b) - when(a); });
+    }else if(lane === 'recent'){
       cards = live;                       // no personalisation to balance
     }else{
       var bins = { match:[], near:[], fresh:[] };
@@ -20202,7 +20277,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     var askCount = (post.post_questions || []).length;
     return '<div class="post-card" data-type="' + (isRfq ? 'buy' : 'sell') + '"' +
       ' data-cat="' + esc(post.category_id || 'other') + '" data-deadline="' + daysLeft(post.deadline) + '"' +
-      ' data-location="' + esc(loc) + '" style="cursor:pointer;" onclick="' + openCall + '">' +
+      ' data-location="' + esc(loc) + '"' +
+      // the real posting time, so ordering never has to read "10 ชั่วโมงที่แล้ว"
+      // back out of the card or trust the order the DOM happens to be in
+      ' data-created="' + (post.created_at ? +new Date(post.created_at) : 0) + '"' +
+      ' style="cursor:pointer;" onclick="' + openCall + '">' +
       '<div class="pc-head">' +
         // the poster's name and picture open their profile — a card tells you
         // who posted it, and that was not clickable anywhere
