@@ -14314,6 +14314,20 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .rv-panel{ border:none !important; padding:0 !important; margin-bottom:14px !important; }
 #page-company-profile .rv-card{ background:var(--bg) !important; }
 
+/* the score, at the head of the รีวิว card */
+#page-company-profile .rv-score{
+  display:flex; align-items:center; gap:14px;
+  padding:14px 16px; margin-bottom:2px;
+  background:var(--bg); border:1px solid var(--line); border-radius:12px;
+}
+#page-company-profile .rv-score-num{
+  font-size:32px; font-weight:700; line-height:1; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+#page-company-profile .rv-score-side{ min-width:0; }
+#page-company-profile .rv-score-stars{ color:#f59e0b; font-size:16px; letter-spacing:2px; }
+#page-company-profile .rv-score-sub{ font-size:14px; color:var(--ink-soft); margin-top:3px; }
+
     }
     #page-company-profile .rv-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
     #page-company-profile .rv-write{ display:inline-flex; align-items:center; gap:7px; background: var(--blue-600); border:1px solid var(--blue-900); color:#fff; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
@@ -21077,7 +21091,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(pr.capital)      facts.push(['ทุนจดทะเบียน', pr.capital + ' บาท']);
     }
     if(pr.province)      facts.push(['จังหวัด', pr.province]);
-    if(pr.rating_count)  facts.push(['คะแนน', pr.rating_avg + '/5.0 (' + pr.rating_count + ' รีวิว)']);
+    // คะแนน has moved to the head of the รีวิว card, where the reviews it
+    // summarises are — kxLoadReviews works it out from the rows themselves
     info.innerHTML = facts.map(function(f){
       return '<div class="info-item"><div class="label">' + esc(f[0]) + '</div>' +
              '<div class="value">' + esc(f[1]) + '</div></div>';
@@ -21838,7 +21853,24 @@ body.kx-auth .kx-burger{ display:none !important; }
     var head = '<div class="card-head"><h3>รีวิวจากลูกค้า (' + res.data.length + ')</h3>' +
       (canReview ? '<button type="button" class="pf-seeall" onclick="kxOpenReview(\'' + profileId + '\')">✎ เขียนรีวิว</button>' : '') +
       '</div>';
-    card.innerHTML = head + (res.data.length
+
+    /* The score belongs above the reviews it is the average of, not in the facts
+       list on เกี่ยวกับ. Worked out from the rows just fetched rather than read
+       from profiles.rating_avg, so the number and the list under it can never
+       disagree. */
+    var nRev = res.data.length;
+    var avg = nRev ? res.data.reduce(function(a, r){ return a + (r.rating || 0); }, 0) / nRev : 0;
+    var score = nRev
+      ? '<div class="rv-score">' +
+          '<div class="rv-score-num">' + avg.toFixed(1) + '</div>' +
+          '<div class="rv-score-side">' +
+            '<div class="rv-score-stars">' + stars(Math.round(avg)) + '</div>' +
+            '<div class="rv-score-sub">จาก ' + nRev + ' รีวิว</div>' +
+          '</div>' +
+        '</div>'
+      : '';
+
+    card.innerHTML = head + score + (res.data.length
       ? res.data.map(function(r){
           var who = (r.profiles && r.profiles.company_name) || 'ผู้ใช้ Konnex';
           return '<div style="border-top:1px solid var(--line);padding:14px 0;">' +
