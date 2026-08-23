@@ -5123,27 +5123,28 @@ input[type="number"]:focus, textarea:focus, select:focus{
     text-overflow: ellipsis
     }
 #page-messages .kx-topic-sep:hover span { background: #dae6ff }
+/* a picture sent in a chat is the message — it used to arrive as a paperclip
+   and a filename you had to open to find out what it was */
+/* A fixed frame rather than shrink-to-fit: the bubble is laid out before the
+   picture has loaded, and a width that depends on the image's own size makes
+   the thread jump as each one arrives. */
+#page-messages .bubble-img {
+    display: block; width: 260px; max-width: 100%;
+    aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden;
+    cursor: zoom-in; background: var(--bg); line-height: 0
+    }
+#page-messages .bubble-img img {
+    width: 100%; height: 100%; object-fit: cover; display: block
+    }
+#page-messages .bubble-row.out .bubble-img { margin-left: auto }
+/* dragging a file over the thread */
+#page-messages .chat-thread.kx-dropping { outline: 2px dashed var(--blue-600); outline-offset: -6px }
 /* the general-chat marker is not a link to anywhere */
 #page-messages .kx-topic-sep.plain { cursor: default }
 #page-messages .kx-topic-sep.plain span {
     color: var(--ink-faint); background: var(--bg); border-color: var(--line)
     }
 #page-messages .kx-topic-sep.plain:hover span { background: var(--bg) }
-/* the composer's topic picker */
-#page-messages .chat-topic-bar {
-    display: flex; align-items: center; gap: 9px;
-    padding: 9px 16px 0; min-width: 0
-    }
-#page-messages .chat-topic-bar .ctb-lbl {
-    font-size: 11.5px; font-weight: 700; color: var(--ink-faint); white-space: nowrap
-    }
-#page-messages .chat-topic-bar select {
-    flex: 1; min-width: 0;
-    border: 1px solid var(--line); border-radius: 9px;
-    padding: 6px 10px; font-size: 12.5px; font-family: inherit;
-    color: var(--ink); background: var(--bg); cursor: pointer
-    }
-#page-messages .chat-topic-bar select:focus { outline: none; border-color: var(--blue-600) }
 #page-messages .bubble-row {
     display: flex;
     gap: 10px;
@@ -9504,15 +9505,11 @@ html, body{
 
         <div class="chat-body"></div>
 
-        <!-- One thread per person covers several announcements, so a reply has
-             to say which one it is about. It inherited the last message's topic
-             silently, which is right until you want to talk about something
-             else — and then there was no way to say so. -->
-        <div class="chat-topic-bar" id="chatTopicBar" style="display:none;">
-          <span class="ctb-lbl">ตอบกลับเรื่อง</span>
-          <select id="chatTopic" onchange="kxSetChatTopic(this.value)"></select>
-        </div>
-
+        <!-- The topic picker was here for one round. Between the header line
+             and the divider in the thread, the same fact was already on screen
+             twice; a third control saying it was noise. A reply still carries
+             whichever listing the conversation was last on, and the divider
+             still marks it when that changes. -->
         <div class="chat-input-row">
           <input type="file" id="chatFile" multiple hidden>
           <span class="chat-attach" role="button" tabindex="0" aria-label="แนบไฟล์">📎</span>
@@ -9700,14 +9697,25 @@ html, body{
   }
 
   // ---------- thread ----------
+  // a picture sent in a chat is the message, not an attachment to one — it
+  // was arriving as "📎 S__506593282.jpg 290 KB", which you had to open to see
+  function isImageMsg(m){
+    return /\.(jpe?g|png|gif|webp|bmp|heic|avif)$/i.test(m.file_name || '');
+  }
   function bubbleHTML(m, other, me){
     var out = m.sender_id === me;
     var inner =
       (m.body ? '<div class="bubble">' + esc(m.body) + '</div>' : '') +
       (m.file_name
-        ? '<a class="bubble-file" href="' + esc(m.file_url || '#') + '" target="_blank" rel="noopener">📎 ' +
-          '<span class="bf-name">' + esc(m.file_name) + '</span>' +
-          (m.file_size ? '<span class="bf-size">' + fsize(m.file_size) + '</span>' : '') + '</a>'
+        ? (isImageMsg(m)
+            // .kx-gcell is all the lightbox needs: with no gallery around it,
+            // the handler falls back to this one image
+            ? '<span class="bubble-img kx-gcell" title="' + esc(m.file_name) + '">' +
+                '<img class="kx-gimg" src="' + esc(m.file_url || '') + '" alt="' + esc(m.file_name) + '" loading="lazy">' +
+              '</span>'
+            : '<a class="bubble-file" href="' + esc(m.file_url || '#') + '" target="_blank" rel="noopener">📎 ' +
+              '<span class="bf-name">' + esc(m.file_name) + '</span>' +
+              (m.file_size ? '<span class="bf-size">' + fsize(m.file_size) + '</span>' : '') + '</a>')
         : '') +
       '<div class="bubble-time">' + hhmm(new Date(m.created_at)) + '</div>';
     return '<div class="bubble-row ' + (out ? 'out' : 'in') + '">' +
@@ -9716,33 +9724,6 @@ html, body{
       '<div>' + inner + '</div>' +
     '</div>';
   }
-
-  /* The composer's topic. Every listing already spoken about in this thread is
-     offered, plus "คุยเรื่องทั่วไป" for a message that belongs to none of them.
-     Switching draws a divider in the thread as soon as the next message lands,
-     which is what makes a change of subject visible instead of implied. */
-  function kxPaintTopicBar(seen){
-    var bar = document.getElementById('chatTopicBar');
-    var sel = document.getElementById('chatTopic');
-    if(!bar || !sel) return;
-    var ids = Object.keys(seen || {});
-    // with nothing but general chat there is no topic to choose between
-    if(!ids.length){ bar.style.display = 'none'; return; }
-    bar.style.display = '';
-    sel.innerHTML = ids.map(function(id){
-      return '<option value="' + id + '">' + esc(seen[id]) + '</option>';
-    }).join('') + '<option value="">— คุยเรื่องทั่วไป —</option>';
-    sel.value = postContext || '';
-  }
-  window.kxSetChatTopic = function(v){
-    postContext = v || null;
-    var sel = document.getElementById('chatTopic');
-    // the select is only already on this value when the change came from it
-    if(sel && sel.value !== (v || '')) sel.value = v || '';
-    var st = document.querySelector('#page-messages .chat-status');
-    var label = sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
-    if(st) st.textContent = v ? ('ตอบกลับเรื่อง: ' + label) : '';
-  };
 
   window.kxOpenConversation = async function(id){
     if(!window.kxSession) return;
@@ -9764,7 +9745,7 @@ html, body{
     if(res.error){ console.error('kxOpenConversation failed', res.error); return; }
 
     var me = window.kxSession.user.id;
-    var html = '', lastDay = '', lastPost = 'init', topicSeen = {};
+    var html = '', lastDay = '', lastPost = 'init';
     res.data.forEach(function(m){
       var d = dayLabel(m.created_at);
       if(d !== lastDay){ html += '<div class="chat-date-sep">' + esc(d) + '</div>'; lastDay = d; }
@@ -9783,7 +9764,6 @@ html, body{
         }
         lastPost = pid;
       }
-      if(pid && m.posts && !topicSeen[pid]) topicSeen[pid] = m.posts.title;
       html += bubbleHTML(m, other, me);
     });
     // replying continues whatever the last message was about
@@ -9796,8 +9776,7 @@ html, body{
         ? 'ตอบกลับเรื่อง: ' + lastMsg.posts.title
         : '';
     }
-    kxPaintTopicBar(topicSeen);
-    body.innerHTML = html || '<div style="padding:24px;text-align:center;font-size:13px;color:var(--ink-faint);">ยังไม่มีข้อความ — ทักทายกันก่อนได้เลย</div>';
+    body.innerHTML = html ||'<div style="padding:24px;text-align:center;font-size:13px;color:var(--ink-faint);">ยังไม่มีข้อความ — ทักทายกันก่อนได้เลย</div>';
     if(window.kxApplyIcons){ window.kxApplyIcons(head); window.kxApplyIcons(body); }
     body.scrollTop = body.scrollHeight;
 
@@ -9863,19 +9842,70 @@ html, body{
   clip.addEventListener('keydown', function(e){
     if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); file.click(); }
   });
-  file.addEventListener('change', async function(){
-    var files = Array.prototype.slice.call(file.files || []);
-    file.value = '';   // so picking the same file twice still fires change
+  /* One path for anything that arrives as a file, whether it was picked, pasted
+     or dropped. Pictures go through the canvas first — a phone screenshot
+     pasted straight in is several megabytes and may be HEIC, which nothing but
+     Safari will display. */
+  async function sendFiles(files){
+    files = Array.prototype.slice.call(files || []);
     if(!files.length || !current || !window.kxSession) return;
     for(var i = 0; i < files.length; i++){
+      var f = files[i];
       try{
-        var url = await window.kxUploadFile('attachments', files[i]);
-        await sendMessage({ file_name: files[i].name, file_url: url, file_size: files[i].size });
+        var up = f;
+        if(/^image\//.test(f.type)){
+          // a pasted screenshot has no name of its own
+          var base = (f.name || '').replace(/\.[^.]+$/, '') || ('รูป-' + Date.now());
+          up = await window.kxImageFile(URL.createObjectURL(f), base);
+        }
+        var url = await window.kxUploadFile('attachments', up);
+        await sendMessage({ file_name: up.name, file_url: url, file_size: up.size });
       }catch(err){
         console.error('chat upload failed', err);
         kxToast('แนบไฟล์ไม่สำเร็จ: ' + ((err && err.message) || 'กรุณาลองใหม่'));
       }
     }
+  }
+
+  file.addEventListener('change', function(){
+    var picked = file.files;
+    file.value = '';   // so picking the same file twice still fires change
+    sendFiles(picked);
+  });
+
+  /* Paste. A screenshot on the clipboard is the fastest way anyone shares one,
+     and the box only took text — Ctrl+V did nothing at all. Text pasting is
+     left to the browser; only image items are intercepted. */
+  input.addEventListener('paste', function(e){
+    var items = (e.clipboardData && e.clipboardData.items) || [];
+    var imgs = [];
+    for(var i = 0; i < items.length; i++){
+      if(items[i].kind !== 'file' || !/^image\//.test(items[i].type)) continue;
+      var f = items[i].getAsFile();
+      if(f) imgs.push(f);
+    }
+    if(!imgs.length) return;
+    e.preventDefault();
+    sendFiles(imgs);
+  });
+
+  // and dropping one onto the thread, which is the other thing people try
+  var dropZone = thread;
+  ['dragenter', 'dragover'].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){
+      if(!e.dataTransfer || !Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') > -1) return;
+      e.preventDefault();
+      dropZone.classList.add('kx-dropping');
+    });
+  });
+  ['dragleave', 'drop'].forEach(function(ev){
+    dropZone.addEventListener(ev, function(){ dropZone.classList.remove('kx-dropping'); });
+  });
+  dropZone.addEventListener('drop', function(e){
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if(!files || !files.length) return;
+    e.preventDefault();
+    sendFiles(files);
   });
 
   // ---------- keep it fresh while the page is open ----------
@@ -15485,8 +15515,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 
 /* what they said */
 #page-feed .pc-text{ padding:0 16px 12px; }
+/* 15, below the 15.5 of the poster's name. The card is a person posting a
+   thing, so the person leads and the thing follows — the title keeps the
+   heavier weight, which is what still makes it the line you read. */
 #page-feed .pc-text .post-title{
-  font-size:17px; font-weight:800; line-height:1.45; color:var(--ink); margin:0 0 6px;
+  font-size:15px; font-weight:800; line-height:1.5; color:var(--ink); margin:0 0 6px;
 }
 #page-feed .pc-text .post-desc{
   font-size:13px; line-height:1.7; color:#565b6e; margin:0 0 10px;
@@ -16417,9 +16450,9 @@ body.kx-auth .kx-burger{ display:none !important; }
   #page-feed .pc-kind,
   #page-company-profile .kx-wall .pc-kind{ font-size:12.5px; }
 
-  /* what it is */
+  /* what it is — kept under the name, which is 15px here */
   #page-feed .pc-text .post-title,
-  #page-company-profile .kx-wall .pc-text .post-title{ font-size:18px; }
+  #page-company-profile .kx-wall .pc-text .post-title{ font-size:14.5px; }
   #page-feed .pc-text .post-desc,
   #page-company-profile .kx-wall .pc-text .post-desc{ font-size:14px; }
 
@@ -16572,6 +16605,15 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-body > .files-sum{
   align-self:flex-start; margin:8px 0 0; max-width:100%;
 }
+/* ที่ส่ง now holds both kinds — a bid on someone's RFQ and a reply to a request
+   on your own listing — so each row says which it is, matching the ประเภท
+   filter above the list. */
+#page-my-bids .bid-meta .kx-origin{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:2px 9px; border-radius:999px; font-weight:700; white-space:nowrap;
+}
+#page-my-bids .bid-meta .kx-origin.bid{ color:var(--blue-700); background:var(--blue-50); }
+#page-my-bids .bid-meta .kx-origin.reply{ color:#92610a; background:#fff4dd; }
 
 /* ===== รูปบนการ์ดในลิสต์: เลื่อนดูได้ =====
    The sizing class is on this frame, so #page-my-offers .offer-thumb and its
@@ -21605,22 +21647,28 @@ body.kx-auth .kx-burger{ display:none !important; }
   function bidRowHTML(q){
     var post = q.posts || null;
     var owner = (post && post.profiles) || {};
-    var buyer = owner.company_name || 'เจ้าของประกาศ';
     var images = (post && post.post_images) || [];
-    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
-    var pillMap = { pending:['pending','รอผล'], won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'] };
+    // a reply to a request is the other direction: the listing is yours, and
+    // the person on the card is the one who asked
+    var isReply = q.origin === 'offer';
+    var who = owner.company_name || (isReply ? 'ผู้ขอราคา' : 'เจ้าของประกาศ');
+    var pillMap = { pending:['pending','รอผล'], won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'],
+                    answered:['won','ตอบแล้ว'] };
     var pill = pillMap[q.status] || pillMap.pending;
     // the same summary pill the feed card uses, instead of a chip per file
     var files = filesSummaryHTML(q.quote_attachments);
-    return '<div class="bid-row" data-status="' + esc(q.status) + '" data-origin="rfq"' +
-        (post ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')"' : '') + '>' +
+    return '<div class="bid-row" data-status="' + esc(q.status) + '" data-origin="' + (isReply ? 'offer' : 'rfq') + '"' +
+        (post ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + post.id + '\',\'' + (isReply ? 'offer' : 'rfq') + '\')"' : '') + '>' +
       cardThumbHTML(images, 'bid-thumb') +
       '<div class="bid-body">' +
         '<div class="bid-title">' + esc(post ? post.title : 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
         '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);overflow:hidden;">' +
-          avatarInner(owner, buyer) + '</span>ผู้ซื้อ: ' + esc(buyer) + '</div>' +
-        '<div class="bid-meta">' + (post && post.province ? '<span>📍 ' + esc(post.province) + '</span><span class="sep">|</span>' : '') +
-          '<span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
+          avatarInner(owner, who) + '</span>' + (isReply ? 'ผู้ขอราคา: ' : 'ผู้ซื้อ: ') + esc(who) + '</div>' +
+        '<div class="bid-meta">' +
+          '<span class="kx-origin ' + (isReply ? 'reply' : 'bid') + '">' +
+            (isReply ? '🏷️ ตอบคำขอ' : '🛒 เสนอราคา') + '</span>' +
+          (post && post.province ? '<span class="sep">|</span><span>📍 ' + esc(post.province) + '</span>' : '') +
+          '<span class="sep">|</span><span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
         files +
         (q.note ? '<div class="bid-note">' + esc(q.note) + '</div>' : '') +
       '</div>' +
@@ -21630,7 +21678,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</div>' +
       '<div class="bid-status-col">' +
         '<span class="status-pill ' + pill[0] + '"><span class="dot"></span>' + pill[1] + '</span>' +
-        '<div class="bid-sub-label">ปิดรับข้อเสนอ</div>' +
+        '<div class="bid-sub-label">' + (isReply ? 'ประกาศของคุณ' : 'ปิดรับข้อเสนอ') + '</div>' +
         '<div class="bid-sub-value">' + (post && post.deadline ? fmtDateBE(post.deadline) : '-') + '</div>' +
       '</div>' +
     '</div>';
@@ -21664,16 +21712,63 @@ body.kx-auth .kx-burger{ display:none !important; }
       .eq('bidder_id', window.kxSession.user.id)
       .order('created_at', { ascending:false });
     if(res.error){ console.error('kxLoadMyBids failed', res.error); return; }
-    list.innerHTML = res.data.length
-      ? res.data.map(bidRowHTML).join('')
+
+    /* The page has always had a ประเภท filter with เสนอราคา and ตอบคำขอ in it,
+       and only ever loaded the first kind. A quotation you sent back from your
+       own ประกาศขาย is a quotation you sent — it lives in quote_requests
+       because it answers a request rather than bidding on an RFQ, but from
+       this page it is the same thing and ตอบคำขอ was permanently empty.
+
+       Rendered through the same bidRowHTML by shaping the request into the
+       columns that builder reads: their money is quoted_price, their status is
+       ตอบแล้ว or ยังไม่ได้ตอบ rather than won/lost, and the "buyer" is the
+       person who asked. */
+    var replies = [];
+    var rq = await sb.from('quote_requests')
+      .select('id,quantity,detail,quoted_price,seller_note,status,created_at,' +
+              'profiles(id,company_name,avatar_url),' +
+              'quote_request_files(file_name,file_url,file_kind,file_size,side),' +
+              'posts!inner(id,title,province,deadline,owner_id,post_images(url,sort))')
+      .eq('posts.owner_id', window.kxSession.user.id)
+      .not('quoted_price', 'is', null)
+      .order('created_at', { ascending:false });
+    if(rq.error && /\bside\b/i.test(rq.error.message || '')){
+      rq = await sb.from('quote_requests')
+        .select('id,quantity,detail,quoted_price,seller_note,status,created_at,' +
+                'profiles(id,company_name,avatar_url),' +
+                'quote_request_files(file_name,file_url,file_kind,file_size),' +
+                'posts!inner(id,title,province,deadline,owner_id,post_images(url,sort))')
+        .eq('posts.owner_id', window.kxSession.user.id)
+        .not('quoted_price', 'is', null)
+        .order('created_at', { ascending:false });
+    }
+    if(rq.error) console.error('kxLoadMyBids (replies) failed', rq.error);
+    else replies = (rq.data || []).map(function(r){
+      var mine = (r.quote_request_files || []).filter(function(f){ return f.side !== 'request'; });
+      return {
+        id: r.id, price: r.quoted_price, note: r.seller_note, created_at: r.created_at,
+        status: 'answered', origin: 'offer',
+        quote_attachments: mine,
+        posts: { id:(r.posts && r.posts.id), title:(r.posts && r.posts.title),
+                 province:(r.posts && r.posts.province), deadline:(r.posts && r.posts.deadline),
+                 post_images:(r.posts && r.posts.post_images) || [],
+                 profiles: r.profiles || null }
+      };
+    });
+
+    var rows = res.data.concat(replies)
+      .sort(function(a, b){ return new Date(b.created_at) - new Date(a.created_at); });
+
+    list.innerHTML = rows.length
+      ? rows.map(bidRowHTML).join('')
       : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่ได้ส่งใบเสนอราคา</div>' +
-        '<div class="kx-empty-sub">เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น รายการจะแสดงที่นี่</div>' +
+        '<div class="kx-empty-sub">เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น หรือตอบคำขอจากประกาศขายของคุณ รายการจะแสดงที่นี่</div>' +
         '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ค้นหางาน</button></div>';
     if(window.kxApplyIcons) window.kxApplyIcons(list);
 
     // the status tabs count real rows now instead of the demo totals
-    var counts = { all:res.data.length, pending:0, won:0, lost:0 };
-    res.data.forEach(function(q){ if(counts[q.status] != null) counts[q.status]++; });
+    var counts = { all:rows.length, pending:0, won:0, lost:0, answered:0 };
+    rows.forEach(function(q){ if(counts[q.status] != null) counts[q.status]++; });
     var tabs = document.querySelectorAll('#page-my-bids .status-tab');
     var labels = [['ทั้งหมด','all'],['รอผล','pending'],['ชนะ','won'],['ไม่ผ่าน','lost']];
     Array.prototype.forEach.call(tabs, function(tab, i){
