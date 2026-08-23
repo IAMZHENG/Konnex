@@ -16907,12 +16907,48 @@ body.kx-auth .kx-burger{ display:none !important; }
      because it asks kxEntity() and kxEntity() was still reading the stale row.
      The row is updated by the save; this keeps the in-memory copy in step so
      the save has the new value to write. */
-  window.authEntity = function(type){
+  /* Choosing the type has to reach the answer read() gives, and it has to be
+     written down. read() prefers kxCurrentUser.business_type — correct, the
+     account decides — but this only wrote localStorage and repainted the
+     labels, so the choice lived in one browser and was gone on reload.
+
+     There is no save button beside these chips: ประเภทบัญชี is a single choice
+     on its own card, so clicking one is the whole gesture and it saves itself.
+
+     The other kind's fields are cleared with it, the same way saveProfileToDb
+     does — an individual carrying a registered capital, or a company carrying
+     years of ประสบการณ์, is data nobody entered on purpose. */
+  window.authEntity = async function(type){
     if(type !== 'person' && type !== 'company') return;
+    var was = read();
     save(type);
     if(window.kxCurrentUser) window.kxCurrentUser.business_type = type;
     apply(type);
     if(typeof window.kxApplyEntity === 'function') window.kxApplyEntity(type);
+
+    // no account yet: the signup form is the other caller, and it carries the
+    // choice into kx.pendingProfile when it submits
+    if(!window.kxSession || was === type) return;
+
+    var patch = { business_type: type };
+    if(type === 'person'){ patch.founded_year = null; patch.employees = null; patch.capital = null; }
+    else { patch.occupation = null; patch.experience = null; }
+
+    var res = await sb.from('profiles').update(patch).eq('id', window.kxSession.user.id);
+    if(res.error){
+      console.error('authEntity save failed', res.error);
+      // put it back rather than leave the page claiming something untrue
+      save(was);
+      if(window.kxCurrentUser) window.kxCurrentUser.business_type = was;
+      apply(was);
+      if(typeof window.kxApplyEntity === 'function') window.kxApplyEntity(was);
+      kxToast('เปลี่ยนประเภทบัญชีไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    for(var k in patch) if(window.kxCurrentUser) window.kxCurrentUser[k] = patch[k];
+    kxToast('เปลี่ยนเป็น “' + (type === 'person' ? 'บุคคลธรรมดา' : 'นิติบุคคล') + '” แล้ว');
+    // the edit form and the profile page both key off it
+    if(window.kxLoadProfile) window.kxLoadProfile();
   };
   window.kxEntity = read;
 
@@ -22081,6 +22117,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
     if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
     if(id === 'page-settings' && window.kxLoadPrefs) window.kxLoadPrefs();
+    // ประเภทบัญชี lives here, so the chips have to show the account's real type
+    if(id === 'page-settings' && window.kxSyncEntity && window.kxEntity) window.kxSyncEntity(window.kxEntity());
     /* kxLoadProfile was written and never called, so แก้ไขโปรไฟล์ only ever
        filled from the browser cache — which is why the form could show one
        name while the preview beside it showed the account's real one. */
