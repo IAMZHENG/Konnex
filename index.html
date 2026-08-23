@@ -5268,18 +5268,44 @@ input[type="number"]:focus, textarea:focus, select:focus{
     #page-messages .layout {
         grid-template-columns: 1fr
         }
+    /* ===== ข้อความบนมือถือ: ทีละหน้า =====
+       Both panes were stacked, the list capped at 320px with the thread under
+       it — so you scrolled a short list, and the empty thread's header sat
+       below it looking like a second conversation called "เลือกการสนทนา".
+
+       One pane at a time instead, the way every phone messenger does it: the
+       list fills the screen, tapping a conversation replaces it with the
+       thread, and the thread carries a back arrow. */
     #page-messages .msg-shell {
         grid-template-columns: 1fr;
-        height: auto
+        height: calc(100vh - 150px);
+        min-height: 0
         }
     #page-messages .conv-list {
         border-right: none;
-        border-bottom: 1px solid var(--line);
-        max-height: 320px
+        max-height: none;
+        min-height: 0
         }
+    #page-messages .chat-thread { display: none }
+    #page-messages .msg-shell.kx-thread-open .conv-list { display: none }
+    #page-messages .msg-shell.kx-thread-open .chat-thread { display: flex }
     #page-messages .search {
         display: none
         }
+    }
+/* The back arrow belongs to the phone layout only. Stated after the media
+   query above, so the `display:flex` that turns it on has to come after this
+   one too — at equal specificity the later rule wins, and putting the switch
+   inside the earlier block left it permanently off. */
+#page-messages .chat-back {
+    display: none; align-items: center; justify-content: center;
+    width: 34px; height: 34px; flex: none; margin-right: 2px;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 26px; line-height: 1; color: var(--ink); font-family: inherit;
+    }
+#page-messages .chat-back:hover { color: var(--blue-700) }
+@media (max-width: 1024px){
+    #page-messages .chat-back { display: flex }
     }
 /* ===== notifications.html ===== */
 #page-notifications {
@@ -7804,235 +7830,7 @@ html, body{
         <button class="btn-create" onclick="clearAdvSearch();applyAdvSearch()">ล้างตัวกรองทั้งหมด</button>
       </div>
 
-      <div class="feed-list">
-
-        <div class="post-card" data-type="buy" data-deadline="4" data-cat="mfg" data-location="ชลบุรี" style="cursor:pointer;" onclick="navigateTo('page-rfq-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#0846c7" onclick="event.stopPropagation();navigateTo('page-company-profile')">ท</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">บจก. ไทยพรีซิชั่น</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ซื้อ · ชลบุรี · 15 นาทีที่แล้ว</span>
-            </span>
-            <span class="pc-kind buy">🛒 ต้องการซื้อ</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">ต้องการผลิตชิ้นส่วนเครื่องจักร CNC</div>
-            <div class="post-desc">สแตนเลส 304 | จำนวน 1,000 ชิ้น | ส่งมอบภายใน 30 วัน</div>
-            <div class="post-chips"><span class="chip">CNC Milling</span><span class="chip">CNC Turning</span><span class="chip">สแตนเลส 304</span></div>
-            <div class="files-sum" onclick="event.stopPropagation();openFilesList(this)"><span class="mini"><i class="fic pdf">P</i><i class="fic xls">X</i></span>2 ไฟล์แนบ · กดเพื่อดู ›<div class="files-data" style="display:none"><span class="file-chip pdf" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="pdf" data-fname="สเปกงาน CNC.pdf" data-fsize="1.2 MB"><span class="fc-ic">PDF</span><span class="fc-name">สเปกงาน CNC.pdf</span></span><span class="file-chip xls" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="xls" data-fname="BOQ รายการ.xlsx" data-fsize="86 KB"><span class="fc-ic">X</span><span class="fc-name">BOQ รายการ.xlsx</span></span></div></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-1">
-              <img class="post-thumb" src="assets/img/rfq-thumb-1.jpg">
-              <img class="post-thumb" src="assets/img/offergallery-1.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-8.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-1',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-1',1)">›</button>
-            <div class="thumb-dots" id="gal-1-dots"><span class="thumb-dot active"></span><span class="thumb-dot"></span><span class="thumb-dot"></span></div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">5</b> ข้อเสนอ</span><span class="pc-price"><span class="pc-price-lbl">ราคาเฉลี่ย</span><b class="pc-price-num">92,500 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">💬 ถาม 3</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">เสนอราคา</span>
-          </div>
-        </div>
-
-        <div class="post-card" data-type="sell" data-deadline="21" data-cat="mfg" data-location="สมุทรปราการ" style="cursor:pointer;" onclick="navigateTo('page-offer-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#c2410c" onclick="event.stopPropagation();navigateTo('page-company-profile')">S</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">Siam Metal Works</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ขาย · สมุทรปราการ · 1 ชั่วโมงที่แล้ว</span>
-            </span>
-            <span class="pc-kind sell">🏷️ ประกาศขาย</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">รับผลิตงานโลหะแผ่นทุกชนิด</div>
-            <div class="post-desc">ตัดเลเซอร์ พับ ม้วน เชื่อม ประกอบ งานเหล็ก สเตนเลส อลูมิเนียม</div>
-            <div class="post-chips"><span class="chip">งานเลเซอร์</span><span class="chip">ตัดเลเซอร์</span><span class="chip">พับ CNC</span></div>
-            <div class="files-sum" onclick="event.stopPropagation();openFilesList(this)"><span class="mini"><i class="fic pdf">P</i><i class="fic doc">W</i></span>2 ไฟล์แนบ · กดเพื่อดู ›<div class="files-data" style="display:none"><span class="file-chip pdf" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="pdf" data-fname="โบรชัวร์บริษัท.pdf" data-fsize="2.4 MB"><span class="fc-ic">PDF</span><span class="fc-name">โบรชัวร์บริษัท.pdf</span></span><span class="file-chip doc" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="doc" data-fname="ใบเสนอราคา.docx" data-fsize="48 KB"><span class="fc-ic">W</span><span class="fc-name">ใบเสนอราคา.docx</span></span></div></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-2">
-              <img class="post-thumb" src="assets/img/pfplaceholder-1.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-1.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-2.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-2',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-2',1)">›</button>
-            <div class="thumb-dots" id="gal-2-dots">
-                <span class="thumb-dot active"></span>
-                <span class="thumb-dot"></span>
-                <span class="thumb-dot"></span>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">23</b> ผู้ขอใบเสนอราคา</span><span class="pc-price"><span class="pc-price-lbl">ราคาเริ่มต้น</span><b class="pc-price-num">15,000 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-offer-detail')">💬 ถาม 2</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-offer-detail')">ขอใบเสนอราคา</span>
-          </div>
-        </div>
-
-        <div class="post-card" data-type="buy" data-deadline="9" data-cat="const" data-location="กรุงเทพมหานคร" style="cursor:pointer;" onclick="navigateTo('page-rfq-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#15803d" onclick="event.stopPropagation();navigateTo('page-company-profile')">ก</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">กรีนโปรเจกต์ จำกัด</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ซื้อ · กรุงเทพมหานคร · 2 ชั่วโมงที่แล้ว</span>
-            </span>
-            <span class="pc-kind buy">🛒 ต้องการซื้อ</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">ติดตั้ง Solar Rooftop 50 kW</div>
-            <div class="post-desc">อาคารโรงงาน พื้นที่หลังคา 500 ตร.ม.</div>
-            <div class="post-chips"><span class="chip">Solar Rooftop</span><span class="chip">ติดตั้ง</span><span class="chip">50 kW</span></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-3">
-              <img class="post-thumb" src="assets/img/post-thumb-3.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-4.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-5.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-3',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-3',1)">›</button>
-            <div class="thumb-dots" id="gal-3-dots">
-                <span class="thumb-dot active"></span>
-                <span class="thumb-dot"></span>
-                <span class="thumb-dot"></span>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">6</b> ข้อเสนอ</span><span class="pc-price"><span class="pc-price-lbl">ราคาเฉลี่ย</span><b class="pc-price-num">385,000 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">💬 ถาม 4</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">เสนอราคา</span>
-          </div>
-        </div>
-
-        <div class="post-card" data-type="sell" data-deadline="30" data-cat="logi" data-location="ปทุมธานี" style="cursor:pointer;" onclick="navigateTo('page-offer-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#be185d" onclick="event.stopPropagation();navigateTo('page-company-profile')">ก</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">คุณกิตติ ขนส่ง</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ขาย · ปทุมธานี · 3 ชั่วโมงที่แล้ว</span>
-            </span>
-            <span class="pc-kind sell">🏷️ ประกาศขาย</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่ง</div>
-            <div class="post-desc">ให้บริการทั่วประเทศ พร้อมคนขับ</div>
-            <div class="post-chips"><span class="chip">ขนส่ง</span><span class="chip">6 ล้อ</span><span class="chip">ทั่วประเทศ</span></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-4">
-              <img class="post-thumb" src="assets/img/post-thumb-6.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-7.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-8.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-4',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-4',1)">›</button>
-            <div class="thumb-dots" id="gal-4-dots">
-                <span class="thumb-dot active"></span>
-                <span class="thumb-dot"></span>
-                <span class="thumb-dot"></span>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">14</b> ผู้ขอใบเสนอราคา</span><span class="pc-price"><span class="pc-price-lbl">ราคาเริ่มต้น</span><b class="pc-price-num">3,500 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-offer-detail')">💬 ถาม 1</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-offer-detail')">ขอใบเสนอราคา</span>
-          </div>
-        </div>
-
-        <div class="post-card" data-type="buy" data-deadline="2" data-cat="it" data-location="กรุงเทพมหานคร" style="cursor:pointer;" onclick="navigateTo('page-rfq-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#6d28d9" onclick="event.stopPropagation();navigateTo('page-company-profile')">อ</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">บจก. อินโนเทค โซลูชั่น</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ซื้อ · กรุงเทพมหานคร · 4 ชั่วโมงที่แล้ว</span>
-            </span>
-            <span class="pc-kind buy">🛒 ต้องการซื้อ</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">พัฒนาเว็บไซต์บริษัท</div>
-            <div class="post-desc">เว็บไซต์องค์กร รองรับ 3 ภาษา (TH/EN/JP)</div>
-            <div class="post-chips"><span class="chip">Website</span><span class="chip">Web Development</span><span class="chip">Responsive</span></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-5">
-              <img class="post-thumb" src="assets/img/post-thumb-9.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-10.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-11.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-5',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-5',1)">›</button>
-            <div class="thumb-dots" id="gal-5-dots">
-                <span class="thumb-dot active"></span>
-                <span class="thumb-dot"></span>
-                <span class="thumb-dot"></span>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">8</b> ข้อเสนอ</span><span class="pc-price"><span class="pc-price-lbl">ราคาเฉลี่ย</span><b class="pc-price-num">68,000 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">💬 ถาม 2</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-rfq-detail')">เสนอราคา</span>
-          </div>
-        </div>
-
-        <div class="post-card" data-type="sell" data-deadline="45" data-cat="const" data-location="ระยอง" style="cursor:pointer;" onclick="navigateTo('page-offer-detail')">
-          <div class="pc-head">
-            <span class="pp-av" style="background:#0e7490" onclick="event.stopPropagation();navigateTo('page-company-profile')">อ</span>
-            <span class="pc-who">
-              <span class="pc-nameline"><span class="pp-name" onclick="event.stopPropagation();navigateTo('page-company-profile')">อีสเทิร์น อิเล็คทริค</span><svg class="pc-verified" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.4l2.6 2.6L16 9.6"></path></svg></span>
-              <span class="pc-sub">ผู้ขาย · ระยอง · 5 ชั่วโมงที่แล้ว</span>
-            </span>
-            <span class="pc-kind sell">🏷️ ประกาศขาย</span>
-          </div>
-          <div class="pc-text">
-            <div class="post-title">ออกแบบและติดตั้งระบบไฟฟ้าโรงงาน</div>
-            <div class="post-desc">รับออกแบบ ติดตั้ง เดินสาย ตรวจระบบ ครบวงจร</div>
-            <div class="post-chips"><span class="chip">ระบบไฟฟ้า</span><span class="chip">โรงงาน</span><span class="chip">ออกแบบและติดตั้ง</span></div>
-          </div>
-          <div class="post-thumb-wrap" onclick="event.stopPropagation()">
-            <div class="post-thumb-track" id="gal-6">
-              <img class="post-thumb" src="assets/img/post-thumb-12.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-13.jpg">
-              <img class="post-thumb" src="assets/img/post-thumb-14.jpg">
-            </div>
-            <button class="thumb-nav prev" onclick="cycleThumb('gal-6',-1)">‹</button>
-            <button class="thumb-nav next" onclick="cycleThumb('gal-6',1)">›</button>
-            <div class="thumb-dots" id="gal-6-dots">
-                <span class="thumb-dot active"></span>
-                <span class="thumb-dot"></span>
-                <span class="thumb-dot"></span>
-            </div>
-          </div>
-          <div class="pc-stats">
-            <span class="pc-center"><span class="pc-offers"><b class="offer-num">17</b> ผู้ขอใบเสนอราคา</span><span class="pc-price"><span class="pc-price-lbl">ราคาเริ่มต้น</span><b class="pc-price-num">80,000 ฿</b></span></span>
-          </div>
-          <div class="pc-actions">
-            <span class="bookmark-ic pc-act" onclick="event.stopPropagation();kxToggleSaveFeed(this)">🔖 บันทึก</span>
-            <span class="pc-act" onclick="event.stopPropagation();navigateTo('page-offer-detail')">💬 ถาม 3</span>
-            <span class="pc-act primary" onclick="event.stopPropagation();navigateTo('page-offer-detail')">ขอใบเสนอราคา</span>
-          </div>
-        </div>
-
-      </div>
+      <div class="feed-list"></div>
 
       <div class="feed-empty" id="feedEmpty" style="display:none;text-align:center;padding:50px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px;">
         <div style="font-size:32px;margin-bottom:10px;">🔍</div>
@@ -8418,8 +8216,7 @@ html, body{
       </div>
 
       <div class="rfq-list">
-
-        <div class="kx-empty" id="rfqEmpty" style="display:none;">
+<div class="kx-empty" id="rfqEmpty" style="display:none;">
           <div class="kx-empty-ic">📋</div>
           <div class="kx-empty-title">ยังไม่มีประกาศซื้อในสถานะนี้</div>
           <div class="kx-empty-sub">เมื่อคุณโพสต์ประกาศซื้อ (RFQ) รายการจะแสดงที่นี่</div>
@@ -8427,89 +8224,7 @@ html, body{
         </div>
 
         <!-- CARD 1 -->
-        <div class="rfq-card" onclick="navigateTo('page-rfq-detail')">
-          <img class="rfq-thumb" src="assets/img/rfq-thumb-1.jpg">
-          <div class="rfq-body">
-            <div class="rfq-title">ต้องการผลิตชิ้นส่วนเครื่องจักร CNC</div><div class="rfq-id"><span class="lock-badge">🔒 ปิดราคา</span></div>
-            <div class="files-sum" onclick="event.stopPropagation();openFilesList(this)"><span class="mini"><i class="fic pdf">P</i><i class="fic xls">X</i></span>2 ไฟล์แนบ · กดเพื่อดู ›<div class="files-data" style="display:none"><span class="file-chip pdf" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="pdf" data-fname="TOR ข้อกำหนดงาน.pdf" data-fsize="980 KB"><span class="fc-ic">PDF</span><span class="fc-name">TOR ข้อกำหนดงาน.pdf</span></span><span class="file-chip xls" onclick="event.stopPropagation();openDocPreview(this)" data-ftype="xls" data-fname="ปริมาณงาน.xlsx" data-fsize="120 KB"><span class="fc-ic">X</span><span class="fc-name">ปริมาณงาน.xlsx</span></span></div></div>
-            <div class="rfq-chips"><span>⚙️ CNC Milling</span><span>📦 จำนวน 1,000 ชิ้น</span><span>🧱 สแตนเลส 304</span></div>
-            <div class="rfq-meta"><span>📍 ชลบุรี</span><span class="sep">|</span><span>🕗 15 พ.ค. 2567</span></div>
-          </div>
-          <div class="rfq-offers">
-            <div class="num">8</div>
-            <div class="label">ข้อเสนอ</div>
-            <div class="rfq-avg">ราคาเฉลี่ย<b>92,500 ฿</b></div>
-          </div>
-          <div class="rfq-status-col">
-            <div class="status-top"><span class="status-live"><span class="dot"></span>เปิดรับ</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('rfq','')">✎</button></div>
-            <div class="deadline-label">สิ้นสุด</div>
-            <div class="deadline-date">25 พ.ค. 2567</div>
-          </div>
         </div>
-
-        <!-- CARD 2 -->
-        <div class="rfq-card" onclick="navigateTo('page-rfq-detail')">
-          <img class="rfq-thumb" src="assets/img/rfq-thumb-2.jpg">
-          <div class="rfq-body">
-            <div class="rfq-title">ติดตั้ง Solar Rooftop 50 kW</div><div class="rfq-id"><span class="lock-badge">🔒 ปิดราคา</span></div>
-            
-            <div class="rfq-chips"><span>☀️ Solar Rooftop</span><span>⚡ ขนาด 50 kW</span><span>🏭 พื้นที่หลังคา 500 ตร.ม.</span></div>
-            <div class="rfq-meta"><span>📍 กรุงเทพมหานคร</span><span class="sep">|</span><span>🕗 12 พ.ค. 2567</span></div>
-          </div>
-          <div class="rfq-offers">
-            <div class="num">5</div>
-            <div class="label">ข้อเสนอ</div>
-            <div class="rfq-avg">ราคาเฉลี่ย<b>385,000 ฿</b></div>
-          </div>
-          <div class="rfq-status-col">
-            <div class="status-top"><span class="status-live"><span class="dot"></span>เปิดรับ</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('rfq','')">✎</button></div>
-            <div class="deadline-label">สิ้นสุด</div>
-            <div class="deadline-date">22 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <!-- CARD 3 -->
-        <div class="rfq-card" onclick="navigateTo('page-rfq-detail')">
-          <img class="rfq-thumb" src="assets/img/rfq-thumb-3.jpg">
-          <div class="rfq-body">
-            <div class="rfq-title">รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่ง</div><div class="rfq-id"><span class="lock-badge">🔓 เปิดราคา</span></div>
-            
-            <div class="rfq-chips"><span>🚚 6 ล้อ ตู้ทึบ</span><span>🔁 รายเที่ยว</span><span>🗺️ ระยะทางในประเทศ</span></div>
-            <div class="rfq-meta"><span>📍 สมุทรปราการ</span><span class="sep">|</span><span>🕗 10 พ.ค. 2567</span></div>
-          </div>
-          <div class="rfq-offers">
-            <div class="num">3</div>
-            <div class="label">ข้อเสนอ</div>
-          </div>
-          <div class="rfq-status-col">
-            <div class="status-top"><span class="status-live"><span class="dot"></span>เปิดรับ</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('rfq','')">✎</button></div>
-            <div class="deadline-label">สิ้นสุด</div>
-            <div class="deadline-date">20 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <!-- CARD 4 -->
-        <div class="rfq-card" onclick="navigateTo('page-rfq-detail')">
-          <img class="rfq-thumb" src="assets/img/rfq-thumb-4.jpg">
-          <div class="rfq-body">
-            <div class="rfq-title">พัฒนาเว็บไซต์บริษัท</div><div class="rfq-id"><span class="lock-badge">🔒 ปิดราคา</span></div>
-            
-            <div class="rfq-chips"><span>💻 Website</span><span>🌐 3 ภาษา</span><span>📱 รองรับ 3 ภาษา (TH/EN/JP)</span></div>
-            <div class="rfq-meta"><span>📍 กรุงเทพมหานคร</span><span class="sep">|</span><span>🕗 8 พ.ค. 2567</span></div>
-          </div>
-          <div class="rfq-offers">
-            <div class="num">6</div>
-            <div class="label">ข้อเสนอ</div>
-            <div class="rfq-avg">ราคาเฉลี่ย<b>68,000 ฿</b></div>
-          </div>
-          <div class="rfq-status-col">
-            <div class="status-top"><span class="status-live"><span class="dot"></span>เปิดรับ</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('rfq','')">✎</button></div>
-            <div class="deadline-label">สิ้นสุด</div>
-            <div class="deadline-date">18 พ.ค. 2567</div>
-          </div>
-        </div>
-
-      </div>
 
       <div class="load-more">ดูเพิ่มเติม ⌄</div>
     </div>
@@ -8625,7 +8340,7 @@ html, body{
       <div class="winner-row">
         <div class="winner-av" id="winnerAv">S</div>
         <div class="winner-info">
-          <div class="winner-name" id="winnerName">ผู้เสนอ #1</div>
+          <div class="winner-name" id="winnerName"></div>
           <div class="winner-price">ราคาที่เสนอ <b id="winnerPrice">6,200</b> บาท/วัน</div>
         </div>
         <div class="winner-actions">
@@ -8638,37 +8353,6 @@ html, body{
     <!-- COMPARE OFFERS -->
 
     <div class="card" id="rfqQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
-      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(3)</span></div>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">?</div>
-            <div style="flex:1;">
-              <div style="font-size:15px;color:var(--ink);"><b>ผู้ให้บริการ (ไม่ระบุชื่อ)</b> <span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· 10 นาทีที่แล้ว</span></div>
-              <div style="font-size:15px;color:var(--ink);margin-top:3px;">วัสดุที่ต้องการเป็นสแตนเลส 304 หรือ 316 ครับ? และต้องการ tolerance เท่าไหร่</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">
-            <div style="width:32px;height:32px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">ท</div>
-            <div style="flex:1;background:var(--blue-50);border:1px solid #dae6ff;border-radius:11px;padding:10px 13px;">
-              <div style="font-size:15px;color:var(--ink);"><b class="kx-rfq-owner">บจก. ไทยพรีซิชั่น</b> <span style="font-size:12px;font-weight:600;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span></div>
-              <div style="font-size:15px;color:var(--ink);margin-top:3px;">สแตนเลส 304 ครับ tolerance ±0.05 mm ตามแบบที่แนบไว้</div>
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">?</div>
-          <div style="flex:1;">
-            <div style="font-size:15px;color:var(--ink);"><b>ผู้ให้บริการ (ไม่ระบุชื่อ)</b> <span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· 25 นาทีที่แล้ว</span></div>
-            <div style="font-size:15px;color:var(--ink);margin-top:3px;">ยอดผลิต 1,000 ชิ้นนี้ ต้องส่งครั้งเดียวหรือทยอยส่งได้ครับ?</div>
-            <div style="font-size:14px;color:var(--ink-soft);margin-top:5px;">⏳ รอเจ้าของประกาศตอบ</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">
-        <input type="text" class="kx-askin" placeholder="ถามเรื่องสเปก/เงื่อนไขงาน..." style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);">
-        <button type="button" onclick="kxAskQuestion(this)" style="background: var(--blue-600);border:none;border-radius:10px;padding:11px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ถาม</button>
-      </div>
     </div>
     <div id="compareOffersSection">
     <div class="compare-head">
@@ -8688,110 +8372,6 @@ html, body{
     </div>
 
     <div class="offer-list sealed" id="offerList">
-
-      <!-- OFFER 1 -->
-      <div class="offer-card">
-        <div class="offer-av" style="cursor:pointer" onclick="navigateTo('page-company-profile')">S</div>
-        <div class="offer-main">
-          <div class="offer-name-row" style="cursor:pointer" onclick="navigateTo('page-company-profile')">ผู้เสนอ #1</div>
-          <div class="offer-loc">ชลบุรี</div>
-          <div class="offer-stats">
-            <span>⭐ คะแนน 4.8/5.0</span>
-            <span>📋 งานสำเร็จ 124 ชิ้น</span>
-            <span>🛡️ ยืนยันตัวตนแล้ว</span>
-          </div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">ราคาเสนอ</div>
-          <div class="price-num">6,200</div>
-          <div class="price-sub">บาท/วัน<br>ต่ำกว่าเฉลี่ย 3%</div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">วันส่งมอบ</div>
-          <div class="days-num green">3 วัน</div>
-          <div class="days-sub">เร็วกว่ากำหนด 2 วัน</div>
-        </div>
-        <div class="offer-features">
-          <div class="col-label" style="text-align:left;">ข้อเสนอพิเศษ</div>
-          <div class="feature-item"><span class="c">✓</span>ฟรีค่าขนส่งพื้นที่</div>
-          <div class="feature-item"><span class="c">✓</span>รับประกัน 30 วัน</div>
-          <div class="feature-item"><span class="c">✓</span>คนขับมีใบอนุญาตครบ</div>
-        </div>
-        <div class="offer-actions">
-          <button class="btn-choose" onclick="selectWinner('ผู้เสนอ #1', '6,200', 'S', 'var(--blue-700)')">✓ เลือก</button>
-          <button class="btn-view" onclick="openOfferAttachments('ผู้เสนอ #1','KX-QT-2567-00218')">📎 ไฟล์แนบ</button>
-        </div>
-      </div>
-
-      <!-- OFFER 2 -->
-      <div class="offer-card">
-        <div class="offer-av" style="background:var(--green);cursor:pointer" onclick="navigateTo('page-company-profile')">B</div>
-        <div class="offer-main">
-          <div class="offer-name-row" style="cursor:pointer" onclick="navigateTo('page-company-profile')">ผู้เสนอ #2</div>
-          <div class="offer-loc">สมุทรปราการ</div>
-          <div class="offer-stats">
-            <span>⭐ คะแนน 4.5/5.0</span>
-            <span>📋 งานสำเร็จ 89 ชิ้น</span>
-            <span>🛡️ ยืนยันตัวตนแล้ว</span>
-          </div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">ราคาเสนอ</div>
-          <div class="price-num">5,800</div>
-          <div class="price-sub">บาท/วัน<br>ถูกสุด 🔥</div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">วันส่งมอบ</div>
-          <div class="days-num">5 วัน</div>
-          <div class="days-sub">ตามกำหนด</div>
-        </div>
-        <div class="offer-features">
-          <div class="col-label" style="text-align:left;">ข้อเสนอพิเศษ</div>
-          <div class="feature-item"><span class="c">✓</span>ส่วนลด 10% ถ้าเช่า 7 วัน+</div>
-          <div class="feature-item"><span class="c">✓</span>รวมค่าน้ำมันแล้ว</div>
-          <div class="feature-item"><span class="c">✓</span>คนขับประสบการณ์ 10 ปี</div>
-        </div>
-        <div class="offer-actions">
-          <button class="btn-choose" onclick="selectWinner('ผู้เสนอ #2', '5,800', 'B', 'var(--green)')">✓ เลือก</button>
-          <button class="btn-view" onclick="openOfferAttachments('ผู้เสนอ #2','KX-QT-2567-00231')">📎 ไฟล์แนบ</button>
-        </div>
-      </div>
-
-      <!-- OFFER 3 -->
-      <div class="offer-card">
-        <div class="offer-av" style="background:var(--orange);cursor:pointer" onclick="navigateTo('page-company-profile')">C</div>
-        <div class="offer-main">
-          <div class="offer-name-row" style="cursor:pointer" onclick="navigateTo('page-company-profile')">ผู้เสนอ #3</div>
-          <div class="offer-loc">กรุงเทพฯ</div>
-          <div class="offer-stats">
-            <span>⭐ คะแนน 4.9/5.0</span>
-            <span>📋 งานสำเร็จ 256 ชิ้น</span>
-            <span>🛡️ ยืนยันตัวตนแล้ว</span>
-          </div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">ราคาเสนอ</div>
-          <div class="price-num">7,500</div>
-          <div class="price-sub high">บาท/วัน<br>สูงกว่าเฉลี่ย 6%</div>
-        </div>
-        <div class="offer-col">
-          <div class="col-label">วันส่งมอบ</div>
-          <div class="days-num green">1 วัน</div>
-          <div class="days-sub">เร่งด่วน ⚡</div>
-        </div>
-        <div class="offer-features">
-          <div class="col-label" style="text-align:left;">ข้อเสนอพิเศษ</div>
-          <div class="feature-item"><span class="c">✓</span>รถเครนปี 2024</div>
-          <div class="feature-item"><span class="c">✓</span>ประกันภัยครบวงจร</div>
-          <div class="feature-item"><span class="c">✓</span>ทีมช่างติดตั้ง 2 คน</div>
-          <div class="feature-item"><span class="c">✓</span>รับประกัน 90 วัน</div>
-        </div>
-        <div class="offer-actions">
-          <button class="btn-choose" onclick="selectWinner('ผู้เสนอ #3', '7,500', 'C', 'var(--orange)')">✓ เลือก</button>
-          <button class="btn-view" onclick="openOfferAttachments('ผู้เสนอ #3','KX-QT-2567-00244')">📎 ไฟล์แนบ</button>
-        </div>
-      </div>
-
     </div>
 
     <div class="load-more-offers">⌄ ดูข้อเสนออีก 4 ราย</div>
@@ -9482,6 +9062,8 @@ html, body{
       <!-- CHAT THREAD -->
       <div class="chat-thread">
         <div class="chat-header">
+          <!-- phones show one pane at a time, so the thread needs a way back -->
+          <button type="button" class="chat-back" onclick="kxCloseConversation()" aria-label="กลับไปรายการสนทนา">‹</button>
           <div class="conv-avatar"></div>
           <div class="chat-header-info">
             <div class="chat-name">เลือกการสนทนา</div>
@@ -9711,8 +9293,17 @@ html, body{
     '</div>';
   }
 
+  /* On a phone the two panes are one screen each, so opening a conversation
+     has to swap them and closing has to swap back. On a desktop the class does
+     nothing — both panes are always visible there. */
+  function shell(){ return document.querySelector('#page-messages .msg-shell'); }
+  window.kxCloseConversation = function(){
+    var s = shell(); if(s) s.classList.remove('kx-thread-open');
+  };
+
   window.kxOpenConversation = async function(id){
     if(!window.kxSession) return;
+    var s = shell(); if(s) s.classList.add('kx-thread-open');
     current = id;
     var conv = CONVS.filter(function(c){ return c.id === id; })[0];
     var other = (conv && conv.other) || {};
@@ -10545,145 +10136,7 @@ html, body{
         <div class="select-chip">ล่าสุดก่อน ⌄</div>
       </div>
 
-      <div class="bid-list" id="bidList">
-
-        <div class="bid-row" data-status="pending" data-origin="offer">
-          <img class="bid-thumb" src="assets/img/offer-thumb-1.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">รับผลิตงานโลหะแผ่นทุกชนิด</div>
-            <div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">G</span>ผู้ซื้อ: Global Parts Co., Ltd.</div>
-            <div class="bid-meta"><span>📍 สมุทรปราการ</span><span class="sep">|</span><span>🕗 19 พ.ค. 2567</span></div>
-            <div class="bid-files"><span class="bid-file pdf">📄 ใบเสนอราคา-0021.pdf</span><span class="bid-file xls">📊 BOQ-โลหะแผ่น.xlsx</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">89,500</div>
-            <div class="price-cmp low">ต่ำกว่างบที่ตั้งไว้</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill pending"><span class="dot"></span>รอผล</span>
-            <div class="bid-sub-label">ปิดรับข้อเสนอ</div>
-            <div class="bid-sub-value">-</div>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="pending" data-origin="offer">
-          <img class="bid-thumb" src="assets/img/offer-thumb-2.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">รับกลึง กัด เจาะ ชิ้นงาน CNC ตามแบบ</div>
-            <div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);">A</span>ผู้ซื้อ: Apex Manufacturing</div>
-            <div class="bid-meta"><span>📍 ราชบุรี</span><span class="sep">|</span><span>🕗 21 พ.ค. 2567</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">งบประมาณผู้ซื้อ</div>
-            <div class="price-num">120,000</div>
-            <div class="price-cmp mid">รอคุณเสนอราคา</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill pending"><span class="dot"></span>รอตอบกลับ</span>
-            <div class="bid-sub-label">ปิดรับข้อเสนอ</div>
-            <div class="bid-sub-value">30 พ.ค. 2567</div>
-            <button class="btn-view-rfq" onclick="event.stopPropagation();openBidRespond('Apex Manufacturing')">ตอบกลับด้วยใบเสนอราคา</button>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="pending" data-origin="rfq">
-          <img class="bid-thumb" src="assets/img/post-thumb-8.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">ต้องการซ่อมบำรุงเครื่องจักร CNC ประจำปี</div>
-            <div class="bid-buyer"><span class="bid-buyer-av">V</span>ผู้ซื้อ: Veera Industrial Co., Ltd.</div>
-            <div class="bid-meta"><span>📍 ชลบุรี</span><span class="sep">|</span><span>🕗 20 พ.ค. 2567</span></div>
-            <div class="bid-files"><span class="bid-file pdf">📄 ใบเสนอราคา-0014.pdf</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">86,000</div>
-            <div class="price-cmp low">ต่ำกว่าเฉลี่ย 4%</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill pending"><span class="dot"></span>รอผล</span>
-            <div class="bid-sub-label">ปิดรับข้อเสนอ</div>
-            <div class="bid-sub-value">28 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="won" data-origin="rfq">
-          <img class="bid-thumb" src="assets/img/rfq-thumb-3.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่ง</div>
-            <div class="bid-buyer"><span class="bid-buyer-av" style="background:var(--orange);">K</span>ผู้ซื้อ: คุณกิตติ ขนส่ง</div>
-            <div class="bid-meta"><span>📍 สมุทรปราการ</span><span class="sep">|</span><span>🕗 10 พ.ค. 2567</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">6,200</div>
-            <div class="price-cmp mid">ใกล้เคียงเฉลี่ย</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill won"><span class="dot"></span>ชนะ 🎉</span>
-            <div class="bid-sub-label">ตัดสินใจเมื่อ</div>
-            <div class="bid-sub-value">14 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="won" data-origin="rfq">
-          <img class="bid-thumb" src="assets/img/offer-thumb-4.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">ออกแบบและติดตั้งระบบไฟฟ้าโรงงาน</div>
-            <div class="bid-buyer"><span class="bid-buyer-av" style="background:var(--green);">T</span>ผู้ซื้อ: Thai Solar Energy</div>
-            <div class="bid-meta"><span>📍 ระยอง</span><span class="sep">|</span><span>🕗 2 พ.ค. 2567</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">312,000</div>
-            <div class="price-cmp low">ต่ำกว่าเฉลี่ย 8%</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill won"><span class="dot"></span>ชนะ 🎉</span>
-            <div class="bid-sub-label">ตัดสินใจเมื่อ</div>
-            <div class="bid-sub-value">6 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="lost" data-origin="rfq">
-          <img class="bid-thumb" src="assets/img/rfq-thumb-4.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">พัฒนาเว็บไซต์บริษัท</div>
-            <div class="bid-buyer"><span class="bid-buyer-av" style="background:#be185d;">W</span>ผู้ซื้อ: WebPro Studio</div>
-            <div class="bid-meta"><span>📍 กรุงเทพมหานคร</span><span class="sep">|</span><span>🕗 28 เม.ย. 2567</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">145,000</div>
-            <div class="price-cmp high">สูงกว่าเฉลี่ย 12%</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill lost"><span class="dot"></span>ไม่ผ่าน</span>
-            <div class="bid-sub-label">ตัดสินใจเมื่อ</div>
-            <div class="bid-sub-value">3 พ.ค. 2567</div>
-          </div>
-        </div>
-
-        <div class="bid-row" data-status="pending" data-origin="rfq">
-          <img class="bid-thumb" src="assets/img/post-thumb-6.jpg" alt="" loading="lazy">
-          <div class="bid-body">
-            <div class="bid-title">หาเช่ารถเครน 25 ตัน พร้อมคนขับ</div>
-            <div class="bid-buyer"><span class="bid-buyer-av">S</span>ผู้ซื้อ: บริษัท สมาร์กเทค จำกัด</div>
-            <div class="bid-meta"><span>📍 กรุงเทพฯ, บางแค</span><span class="sep">|</span><span>🕗 8 ก.ค. 2569</span></div>
-          </div>
-          <div class="bid-price-col">
-            <div class="price-lbl">ราคาที่เสนอ</div>
-            <div class="price-num">6,200</div>
-            <div class="price-cmp low">ต่ำกว่าเฉลี่ย 3%</div>
-          </div>
-          <div class="bid-status-col">
-            <span class="status-pill pending"><span class="dot"></span>รอผล</span>
-            <div class="bid-sub-label">ปิดรับข้อเสนอ</div>
-            <div class="bid-sub-value">15 ก.ค. 2569</div>
-          </div>
-        </div>
-
-      </div>
+      <div class="bid-list" id="bidList"></div>
 
       <div class="load-more">ดูเพิ่มเติม ⌄</div>
     </div>
@@ -10775,109 +10228,13 @@ html, body{
       </div>
 
       <div class="offer-list" id="offerList">
-
-        <div class="kx-empty" id="offerEmpty" style="display:none;">
+<div class="kx-empty" id="offerEmpty" style="display:none;">
           <div class="kx-empty-ic">📦</div>
           <div class="kx-empty-title">ยังไม่มีประกาศขายในสถานะนี้</div>
           <div class="kx-empty-sub">เมื่อคุณโพสต์ประกาศขาย รายการจะแสดงที่นี่</div>
           <button class="btn-create" onclick="newPost()">＋ โพสต์ประกาศ</button>
         </div>
-
-        <div class="offer-row" data-status="active" onclick="navigateTo('page-offer-detail')">
-          <img class="offer-thumb" src="assets/img/offer-thumb-1.jpg">
-          <div class="offer-body">
-            <div class="offer-title">รับผลิตงานโลหะแผ่นทุกชนิด</div>
-            <div class="offer-tags"><span class="offer-tag">งานเลเซอร์</span><span class="offer-tag">ตัดเลเซอร์</span><span class="offer-tag">พับ CNC</span></div>
-            <div class="offer-stats-row"><span>👁️ 842 วิว</span><span>💬 23 ผู้สนใจ</span><span class="quote-badge" onclick="event.stopPropagation();openQuoteRequestsModal('OFR-2505-0021')" style="cursor:pointer;">🧾 9 คำขอราคา</span><span>🕗 1 พ.ค. 2567</span></div>
-          </div>
-          <div class="offer-price-col">
-            <div class="price-lbl">ราคาเริ่มต้น</div>
-            <div class="price-num">15,000 ฿</div>
-            <div class="stock-note ok">พร้อมรับงาน</div>
-          </div>
-          <div class="offer-status-col">
-            <div class="offer-status-top"><span class="status-pill active-st"><span class="dot"></span>เปิดอยู่</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('offer','OFR-2505-0021')">✎</button></div>
-            <div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button><div class="offer-status-menu"><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'active')"><span class="osm-dot g"></span>เปิดอยู่</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'paused')"><span class="osm-dot a"></span>พักไว้</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'closed')"><span class="osm-dot c"></span>ปิดแล้ว</div></div></div></div>
-          </div>
         </div>
-
-        <div class="offer-row" data-status="active" onclick="navigateTo('page-offer-detail')">
-          <img class="offer-thumb" src="assets/img/offer-thumb-2.jpg">
-          <div class="offer-body">
-            <div class="offer-title">รับกลึง กัด เจาะ ชิ้นงาน CNC ตามแบบ</div>
-            
-            <div class="offer-tags"><span class="offer-tag">CNC Milling</span><span class="offer-tag">CNC Turning</span></div>
-            <div class="offer-stats-row"><span>👁️ 1,204 วิว</span><span>💬 41 ผู้สนใจ</span><span class="quote-badge" onclick="event.stopPropagation();openQuoteRequestsModal('OFR-2505-0018')" style="cursor:pointer;">🧾 15 คำขอราคา</span><span>🕗 22 เม.ย. 2567</span></div>
-          </div>
-          <div class="offer-price-col">
-            <div class="price-lbl">ราคาเริ่มต้น</div>
-            <div class="price-num">8,500 ฿</div>
-            <div class="stock-note ok">พร้อมรับงาน</div>
-          </div>
-          <div class="offer-status-col">
-            <div class="offer-status-top"><span class="status-pill active-st"><span class="dot"></span>เปิดอยู่</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('offer','OFR-2505-0018')">✎</button></div>
-            <div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button><div class="offer-status-menu"><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'active')"><span class="osm-dot g"></span>เปิดอยู่</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'paused')"><span class="osm-dot a"></span>พักไว้</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'closed')"><span class="osm-dot c"></span>ปิดแล้ว</div></div></div></div>
-          </div>
-        </div>
-
-        <div class="offer-row" data-status="paused" onclick="navigateTo('page-offer-detail')">
-          <img class="offer-thumb" src="assets/img/offer-thumb-3.jpg">
-          <div class="offer-body">
-            <div class="offer-title">รถบรรทุก 6 ล้อ ตู้ทึบ รับจ้างขนส่งทั่วประเทศ</div>
-            
-            <div class="offer-tags"><span class="offer-tag">ขนส่ง</span><span class="offer-tag">6 ล้อ</span></div>
-            <div class="offer-stats-row"><span>👁️ 530 วิว</span><span>💬 9 ผู้สนใจ</span><span class="quote-badge" onclick="event.stopPropagation();openQuoteRequestsModal('OFR-2505-0011')" style="cursor:pointer;">🧾 2 คำขอราคา</span><span>🕗 15 เม.ย. 2567</span></div>
-          </div>
-          <div class="offer-price-col">
-            <div class="price-lbl">ราคาเริ่มต้น</div>
-            <div class="price-num">3,500 ฿</div>
-            <div class="stock-note out">รถไม่ว่าง</div>
-          </div>
-          <div class="offer-status-col">
-            <div class="offer-status-top"><span class="status-pill paused"><span class="dot"></span>พักไว้</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('offer','OFR-2505-0011')">✎</button></div>
-            <div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button><div class="offer-status-menu"><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'active')"><span class="osm-dot g"></span>เปิดอยู่</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'paused')"><span class="osm-dot a"></span>พักไว้</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'closed')"><span class="osm-dot c"></span>ปิดแล้ว</div></div></div></div>
-          </div>
-        </div>
-
-        <div class="offer-row" data-status="active" onclick="navigateTo('page-offer-detail')">
-          <img class="offer-thumb" src="assets/img/offer-thumb-4.jpg">
-          <div class="offer-body">
-            <div class="offer-title">ออกแบบและติดตั้งระบบไฟฟ้าโรงงาน ครบวงจร</div>
-            
-            <div class="offer-tags"><span class="offer-tag">ระบบไฟฟ้า</span><span class="offer-tag">โรงงาน</span></div>
-            <div class="offer-stats-row"><span>👁️ 690 วิว</span><span>💬 15 ผู้สนใจ</span><span class="quote-badge" onclick="event.stopPropagation();openQuoteRequestsModal('OFR-2505-0009')" style="cursor:pointer;">🧾 6 คำขอราคา</span><span>🕗 8 เม.ย. 2567</span></div>
-          </div>
-          <div class="offer-price-col">
-            <div class="price-lbl">ราคาเริ่มต้น</div>
-            <div class="price-num">80,000 ฿</div>
-            <div class="stock-note ok">พร้อมรับงาน</div>
-          </div>
-          <div class="offer-status-col">
-            <div class="offer-status-top"><span class="status-pill active-st"><span class="dot"></span>เปิดอยู่</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('offer','OFR-2505-0009')">✎</button></div>
-            <div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button><div class="offer-status-menu"><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'active')"><span class="osm-dot g"></span>เปิดอยู่</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'paused')"><span class="osm-dot a"></span>พักไว้</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'closed')"><span class="osm-dot c"></span>ปิดแล้ว</div></div></div></div>
-          </div>
-        </div>
-
-        <div class="offer-row" data-status="closed" onclick="navigateTo('page-offer-detail')">
-          <img class="offer-thumb" src="assets/img/offer-thumb-5.jpg">
-          <div class="offer-body">
-            <div class="offer-title">รับพัฒนาเว็บไซต์และระบบหลังบ้าน</div>
-            
-            <div class="offer-tags"><span class="offer-tag">Website</span><span class="offer-tag">Web Development</span></div>
-            <div class="offer-stats-row"><span>👁️ 2,150 วิว</span><span>💬 58 ผู้สนใจ</span><span class="quote-badge" onclick="event.stopPropagation();openQuoteRequestsModal('OFR-2504-0032')" style="cursor:pointer;">🧾 21 คำขอราคา</span><span>🕗 2 มี.ค. 2567</span></div>
-          </div>
-          <div class="offer-price-col">
-            <div class="price-lbl">ราคาเริ่มต้น</div>
-            <div class="price-num">45,000 ฿</div>
-            <div class="stock-note out">ปิดรับงานแล้ว</div>
-          </div>
-          <div class="offer-status-col">
-            <div class="offer-status-top"><span class="status-pill closed"><span class="dot"></span>ปิดแล้ว</span><button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost('offer','OFR-2504-0032')">✎</button></div>
-            <div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button><div class="offer-status-menu"><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'active')"><span class="osm-dot g"></span>เปิดอยู่</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'paused')"><span class="osm-dot a"></span>พักไว้</div><div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,'closed')"><span class="osm-dot c"></span>ปิดแล้ว</div></div></div></div>
-          </div>
-        </div>
-
-      </div>
 
       <div class="load-more">ดูเพิ่มเติม ⌄</div>
     </div>
@@ -11884,8 +11241,10 @@ html, body{
             '<span class="mr-file-ic">' + (f.file_kind === 'pdf' ? 'PDF' : 'IMG') + '</span>' +
             '<span class="mr-file-name">' + mrEsc(f.file_name) + '</span></a>';
         }
+        // ใบเสนอราคาที่ผู้ขายตอบกลับ: its own pill beside yours, rather than a
+        // chip wedged into the price box where it had no room for a filename
         var quoteDoc = (r.replyFiles && r.replyFiles.length)
-          ? '<div class="mr-quotedoc">' + r.replyFiles.map(function(f){ return fileChip(f, 'strong'); }).join('') + '</div>'
+          ? window.kxFilesSummary(r.replyFiles, 'ใบเสนอราคาที่ได้รับ')
           : '';
         var files = (r.myFiles && r.myFiles.length
               // the feed's summary pill, same as ที่ส่ง — the scrolling chip row
@@ -11896,7 +11255,7 @@ html, body{
 
         var price = got
           ? '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">' + r.price + '</div>' +
-            '<div class="price-cmp mid">บาท</div>' + quoteDoc
+            '<div class="price-cmp mid">บาท</div>'
           : '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">—</div>' +
             '<div class="price-cmp mid">ยังไม่ได้รับราคา</div>';
 
@@ -11917,9 +11276,9 @@ html, body{
               (r.sellerId ? ' onclick="event.stopPropagation();kxViewProfile(\'' + r.sellerId + '\')"' : '') + '>' +
               r.seller.charAt(0) + '</span>ผู้ขาย: ' + r.seller + '</div>' +
             '<div class="bid-meta"><span>📍 ' + r.loc + '</span><span class="sep">|</span><span>🕗 ' + r.date + '</span></div>' +
-            files +
+            files + quoteDoc +
           '</div>' +
-          '<div class="bid-price-col' + (quoteDoc ? ' has-doc' : '') + '">' + price + '</div>' +
+          '<div class="bid-price-col">' + price + '</div>' +
           '<div class="bid-status-col">' + status + '</div>' +
         '</div>';
       }).join('');
@@ -12585,7 +11944,7 @@ html, body{
         <div><span class="qpdf-lbl">วันที่</span><b>19 ก.ค. 2569</b></div>
         <div><span class="qpdf-lbl">ยืนราคาถึง</span><b>02 ส.ค. 2569</b></div>
       </div>
-      <div class="qpdf-to"><span class="qpdf-lbl">เสนอให้</span><b id="qpdfTo">Apex Manufacturing Co., Ltd.</b></div>
+      <div class="qpdf-to"><span class="qpdf-lbl">เสนอให้</span><b id="qpdfTo"></b></div>
       <table class="qpdf-table">
         <thead><tr><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>รวม</th></tr></thead>
         <tbody>
@@ -16468,8 +15827,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-kind,
 #page-company-profile .kx-wall .pc-kind{ font-size:14px; font-weight:600; }
 
+/* 16/400. At 18/600 the title outweighed the name above it and the two
+   headline lines competed; at the same size as the name and the ordinary
+   weight, the card reads as a person saying a thing. */
 #page-feed .pc-text .post-title,
-#page-company-profile .kx-wall .pc-text .post-title{ font-size:18px; font-weight:600; line-height:1.45; }
+#page-company-profile .kx-wall .pc-text .post-title{ font-size:16px; font-weight:400; line-height:1.5; }
 #page-feed .pc-text .post-desc,
 #page-company-profile .kx-wall .pc-text .post-desc{ font-size:15px; font-weight:400; line-height:1.7; }
 
@@ -16629,9 +15991,21 @@ body.kx-auth .kx-burger{ display:none !important; }
    files are attached, so there is nothing left to clamp or scroll. It sits
    flush left in the text column rather than carrying the feed's own margin
    into a vertically centred body. */
+/* The card can carry two of these — the files you sent with the request, and
+   the quotation that came back — so they sit as a pair on their own line
+   rather than one of them being folded into the price box. */
 #page-my-bids .bid-body > .files-sum,
 #page-my-requests .bid-body > .files-sum{
-  align-self:flex-start; margin:8px 0 0; max-width:100%;
+  align-self:flex-start; margin:8px 8px 0 0; max-width:100%;
+}
+#page-my-requests .bid-body{ flex-wrap:wrap; align-content:center; }
+#page-my-requests .bid-body > .bid-title,
+#page-my-requests .bid-body > .bid-buyer,
+#page-my-requests .bid-body > .bid-meta,
+#page-my-requests .bid-body > .mr-note{ flex:0 0 100%; }
+/* the one that answers you reads as the more important of the two */
+#page-my-requests .bid-body > .files-sum:last-of-type{
+  border-color:#c2d6ff; background:var(--blue-50); color:var(--blue-700);
 }
 /* ที่ส่ง holds both kinds — a bid on someone's RFQ and a reply to a request on
    your own listing — but the row already says which: ผู้ซื้อ / ผู้ขอราคา on the
@@ -22187,6 +21561,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       else if(window.kxSession && window.kxViewProfile) window.kxViewProfile(window.kxSession.user.id);
     }
     if(id === 'page-messages'){
+      // arriving at ข้อความ lands on the list, not on whichever thread was
+      // last open — kxStartChat opens one itself right after this
+      if(window.kxCloseConversation) window.kxCloseConversation();
       if(window.kxLoadConversations) window.kxLoadConversations();
       if(window.kxChatPollStart) window.kxChatPollStart();
     }else if(window.kxChatPollStop) window.kxChatPollStop();
