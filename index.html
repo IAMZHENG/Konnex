@@ -8684,7 +8684,9 @@ html, body{
 
     <!-- GRID -->
     <div class="grid">
-      <div class="left">
+      <!-- data-pf-tab is what the two-column board on ภาพรวม keys off; pfTab keeps
+           it current, and it starts on overview because that is the tab that opens -->
+      <div class="left" data-pf-tab="overview">
 
         <!-- ABOUT -->
         <div class="card" data-pf-sec="overview">
@@ -8717,7 +8719,9 @@ html, body{
              hand-written REVIEWS array, per-criterion bars — and a second
              script that wrote into the same slots, so two sources raced for one
              card and a real profile briefly wore someone else's reputation. -->
-        <div class="card" id="pfReviewsCard" data-pf-sec="reviews"></div>
+        <!-- on both: รีวิว is part of who this account is, so it sits in the board on
+             ภาพรวม, and its own tab is still the place to read all of them -->
+        <div class="card" id="pfReviewsCard" data-pf-sec="overview reviews"></div>
 
         <!-- TRACK RECORD — filled by the system, not typed in -->
         <div class="card" id="pfWinsCard" data-pf-sec="wins">
@@ -8937,13 +8941,47 @@ html, body{
      that applyToProfile injects) counts as part of ภาพรวม, so it cannot go missing by
      being forgotten. The right rail — ติดต่อ, การยืนยันตัวตน, ใบรับรอง, ความเชี่ยวชาญ —
      is never hidden: it is how someone reaches the seller whatever they are reading. */
+  /* Show the cards belonging to one section and hide the rest.
+     data-pf-sec takes a list, so a card can belong to more than one tab — รีวิว is
+     read on ภาพรวม and on its own tab, and it is the same card either way.
+
+     Split out from pfTab because the card loaders (kxLoadServices, kxLoadReviews,
+     kxLoadVerify) each ended by forcing their own card visible, which put บริการ
+     and รีวิว back on ภาพรวม whatever tab was showing. They re-apply the section
+     instead now. */
+  function pfShowSection(sec){
+    document.querySelectorAll('#page-company-profile .left > .card').forEach(function(c){
+      var own = (c.getAttribute('data-pf-sec') || 'overview').split(/\s+/);
+      // data-pf-hide marks a card kept off this particular page — ผลงานล่าสุด on a
+      // stranger's profile, ความเชี่ยวชาญ with no tags. Belonging to the section is
+      // not enough to bring one of those back.
+      var hidden = c.getAttribute('data-pf-hide') === '1';
+      c.style.display = (!hidden && own.indexOf(sec) > -1) ? '' : 'none';
+    });
+    // the two-column board is ภาพรวม's alone; see the grid rules
+    var left = document.querySelector('#page-company-profile .left');
+    if(left) left.setAttribute('data-pf-tab', sec);
+  }
+  /* Hide or show a card for a reason other than which tab is open — it has nothing
+     in it, or it is not this viewer's to see. Recorded on the element so that
+     re-applying the tab later does not undo the decision. */
+  window.pfMarkHidden = function(card, hide){
+    if(!card) return;
+    if(hide) card.setAttribute('data-pf-hide', '1');
+    else card.removeAttribute('data-pf-hide');
+    card.style.display = hide ? 'none' : '';
+  };
+
+  // re-apply whatever tab is currently showing
+  window.pfApplyTab = function(){
+    var left = document.querySelector('#page-company-profile .left');
+    pfShowSection((left && left.getAttribute('data-pf-tab')) || 'overview');
+  };
+
   function pfTab(sec, el){
     document.querySelectorAll('#page-company-profile .tabs .tab').forEach(function(t){ t.classList.remove('active'); });
     if(el) el.classList.add('active');
-    document.querySelectorAll('#page-company-profile .left > .card').forEach(function(c){
-      var own = c.getAttribute('data-pf-sec') || 'overview';
-      c.style.display = (own === sec) ? '' : 'none';
-    });
+    pfShowSection(sec);
     // kxRenderProfileShell already loaded this card from the reviews table; the
     // demo painter that used to be called here has gone
     // ภาพรวม carries a wins preview, so it needs the same data the wins tab does
@@ -14181,9 +14219,50 @@ body.kx-auth .kx-burger{ display:none !important; }
 /* the tab strip lives inside the header card, which no longer has padding of its own */
 #page-company-profile .hero-card .tabs{ padding:0 20px; margin:0; }
 
-/* Content before paperwork. .left is a flex column, so order does this without moving
-   markup — which matters because ข้อมูลบริษัท is injected at runtime by applyToProfile
-   and lands wherever it lands. :has() picks out ติดต่อ, the one card with no id. */
+/* ภาพรวม is a two-column board. The six cards that answer "who is this account" —
+   เกี่ยวกับ, ติดต่อ, ข้อมูลส่วนตัว, รีวิว, การยืนยันตัวตน, ความเชี่ยวชาญ — pair up at the
+   top, and everything after them keeps the full width it had: ผลงานล่าสุด, ใบรับรอง
+   and the wall are lists, and a list reads worse in half a column.
+
+   Ordering is done with order rather than by moving markup, because ข้อมูลบริษัท /
+   ข้อมูลส่วนตัว is injected at runtime by applyToProfile and lands next to เกี่ยวกับ
+   wherever that is.
+
+   Scoped to ภาพรวม: the other tabs show a single card, and one card alone in a
+   two-column grid would sit in half the page for no reason. pfTab keeps
+   data-pf-tab current. */
+#page-company-profile .left[data-pf-tab="overview"]{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  /* not stretch: pairing a long รีวิว against a four-row ข้อมูลบริษัท would blow the
+     short one up into a mostly empty card */
+  align-items:start;
+  gap:16px;
+}
+/* full width is the default; the six below opt out of it */
+#page-company-profile .left[data-pf-tab="overview"] > .card{ grid-column:1 / -1; order:9; }
+#page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type,
+#page-company-profile .left[data-pf-tab="overview"] > #pfContactCard,
+#page-company-profile .left[data-pf-tab="overview"] > #kxFactsCard,
+#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard,
+#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard,
+#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ grid-column:auto; }
+
+#page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type{ order:1; } /* เกี่ยวกับ */
+#page-company-profile .left[data-pf-tab="overview"] > #pfContactCard{ order:2; }
+#page-company-profile .left[data-pf-tab="overview"] > #kxFactsCard{ order:3; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard{ order:4; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard{ order:5; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ order:6; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfRecentCard{ order:8; }
+
+/* one column on anything narrow — two half-width cards on a phone is neither */
+@media (max-width: 900px){
+  #page-company-profile .left[data-pf-tab="overview"]{ grid-template-columns:minmax(0,1fr); }
+  #page-company-profile .left[data-pf-tab="overview"] > .card{ grid-column:1 / -1; }
+}
+
+/* the flex column the other tabs still use */
 #page-company-profile .left > .card{ order:5; }
 #page-company-profile .left > .card:first-of-type{ order:1; }   /* เกี่ยวกับ */
 #page-company-profile #pfRecentCard{ order:2; }                 /* ผลงานล่าสุด */
@@ -17500,8 +17579,18 @@ body.kx-auth .kx-burger{ display:none !important; }
   function applyToProfile(){
     var p = document.getElementById('page-company-profile');
     if(!p) return;
+    /* This painter fills the page from *your* cached profile, so it must never run
+       over someone else's page — that is what the guard is for. It used to refuse
+       whenever the profile page was showing at all, which also blocked your own:
+       kxViewProfile navigates here first and calls kxProfileFromRow after, so
+       ข้อมูลบริษัท / ข้อมูลส่วนตัว was never built when you opened your own profile.
+       The question is whose page is on screen, not whether one is. */
     var active = document.querySelector('.app-page.active');
-    if(active && active.id === 'page-company-profile') return;
+    if(active && active.id === 'page-company-profile'){
+      var viewing = window.kxProfileViewingId;
+      var meId = window.kxSession && window.kxSession.user && window.kxSession.user.id;
+      if(viewing && meId && viewing !== meId) return;
+    }
 
     var h1 = p.querySelector('.hero-idblock h1');
     if(h1){
@@ -17607,7 +17696,11 @@ body.kx-auth .kx-burger{ display:none !important; }
           facts = document.createElement('div');
           facts.className = 'card';
           facts.id = 'kxFactsCard';
+          // it reads as part of ภาพรวม; say so rather than leaning on the default,
+          // and re-apply the tab because this card arrives after pfTab has run
+          facts.setAttribute('data-pf-sec', 'overview');
           aboutCard.parentNode.insertBefore(facts, aboutCard.nextSibling);
+          if(window.pfApplyTab) window.pfApplyTab();
         }
         facts.innerHTML = '<h3>' + (isCompany ? 'ข้อมูลบริษัท' : 'ข้อมูลส่วนตัว') + '</h3><div class="kx-facts"></div>';
         var host2 = facts.querySelector('.kx-facts');
@@ -20948,7 +21041,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     });
 
     var recent = document.getElementById('pfRecentCard');
-    if(recent) recent.style.display = '';
+    if(recent && window.pfApplyTab) window.pfApplyTab();
 
     /* Last, because the two cards above are rebuilt from their original heading
        markup — which brings เขียนรีวิว and เพิ่มบริการ back with it. */
@@ -21029,10 +21122,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     var mine = !!(window.kxSession && id === window.kxSession.user.id);
     if(mine){
       GUEST_HIDDEN.forEach(function(cid){
-        var el = document.getElementById(cid); if(el) el.style.display = '';
+        var el = document.getElementById(cid);
+        if(el){ el.removeAttribute('data-pf-hide'); el.style.display = ''; }
       });
       var cc = document.getElementById('pfContactCard');
-      if(cc) cc.style.display = '';
+      if(cc){ cc.removeAttribute('data-pf-hide'); cc.style.display = ''; }
       /* From the row we just fetched, not from the localStorage cache.
          kxApplyProfile paints whatever that cache holds, which is stale after
          editing elsewhere and belongs to the wrong person entirely if another
@@ -21081,7 +21175,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       }
       var btn = contactCard.querySelector('button');
       if(btn) btn.setAttribute('onclick', "kxStartChat('" + id + "', null)");
-      contactCard.style.display = '';
+      pfMarkHidden(contactCard, false);
     }
 
     // ความเชี่ยวชาญ and ใบรับรอง: their own, or the card goes
@@ -21090,7 +21184,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       var tagBox = skillsCard.querySelector('.tags');
       var sk = Array.isArray(pr.skills) ? pr.skills : [];
       if(tagBox) tagBox.innerHTML = sk.map(function(s){ return '<span class="tag">' + esc(s) + '</span>'; }).join('');
-      skillsCard.style.display = sk.length ? '' : 'none';
+      pfMarkHidden(skillsCard, !sk.length);
     }
     var certCard = document.getElementById('pfCertCard');
     if(certCard){
@@ -21101,12 +21195,13 @@ body.kx-auth .kx-burger{ display:none !important; }
           '<div><div class="cert-title">' + esc(c.name || '') + '</div>' +
           '<div class="cert-sub">' + esc(c.desc || '') + '</div></div></div>';
       }).join(''));
-      certCard.style.display = cs.length ? '' : 'none';
+      pfMarkHidden(certCard, !cs.length);
     }
 
     // ผลงานล่าสุด is yours to show, not a stranger's
     if(!mine) GUEST_HIDDEN.forEach(function(cid){
-      var el = document.getElementById(cid); if(el) el.style.display = 'none';
+      var el = document.getElementById(cid);
+      if(el){ el.setAttribute('data-pf-hide', '1'); el.style.display = 'none'; }
     });
     // applyToProfile builds this one from YOUR localStorage and leaves it in the
     // page; without this it stays behind and shows your own company facts under
@@ -21628,6 +21723,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-saved' && window.kxLoadSaved) window.kxLoadSaved();
     if(id === 'page-history' && window.kxLoadHistory) window.kxLoadHistory();
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
+    /* The tabs only ever ran on click, so a profile opened fresh showed every
+       card at once — บริการของฉัน and ผลงานสะสม included, which belong to their
+       own tabs. ภาพรวม is the tab that is marked active on arrival, so run it. */
+    if(id === 'page-company-profile' && typeof pfTab === 'function'){
+      pfTab('overview', document.querySelector('#page-company-profile .tabs .tab'));
+    }
     if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
     if(id === 'page-settings' && window.kxLoadPrefs) window.kxLoadPrefs();
     // ประเภทบัญชี lives here, so the chips have to show the account's real type
@@ -21708,7 +21809,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       : '<div style="padding:24px 8px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
         (isOwner ? 'ยังไม่มีบริการ — กด “＋ เพิ่มบริการ” เพื่อเพิ่มรายการแรก' : 'ยังไม่มีบริการที่เพิ่มไว้') + '</div>');
     if(window.kxApplyIcons) window.kxApplyIcons(card);
-    card.style.display = '';
+    if(window.pfApplyTab) window.pfApplyTab();
   };
 
   window.kxDeleteService = async function(id){
@@ -21756,7 +21857,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         }).join('')
       : '<div style="padding:24px 8px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
         'ยังไม่มีรีวิว<br><span style="font-size:13px;">รีวิวเขียนได้เมื่อทำงานร่วมกันจบแล้ว</span></div>');
-    card.style.display = '';
+    if(window.pfApplyTab) window.pfApplyTab();
   };
 
   /* Deals the two of you closed together — you own a post they won, or they own
@@ -21938,7 +22039,7 @@ body.kx-auth .kx-burger{ display:none !important; }
           (isOwner ? 'ยังไม่ได้ยืนยันตัวตน — ยืนยันแล้วผู้ซื้อจะไว้ใจข้อเสนอของคุณมากขึ้น'
                    : 'ยังไม่ได้ยืนยันตัวตน') + '</div>' +
           (isOwner ? '<button type="button" class="btn btn-primary btn-sm" onclick="openVerify()">ยืนยันตัวตน</button>' : ''));
-    card.style.display = '';
+    if(window.pfApplyTab) window.pfApplyTab();
   };
 })();
 </script>
