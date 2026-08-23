@@ -8261,11 +8261,9 @@ html, body{
   // emits it. Name and picture come from the same stores the profile page writes to,
   // so an uploaded avatar shows here too.
   function kxNavFooter(activePage){
-    var name = 'Konnex Admin';
-    try{
-      var p = JSON.parse(localStorage.getItem('kx.profile') || '{}');
-      if(p && p.name) name = p.name;
-    }catch(e){}
+    // kxCurrentUser is the profiles row; the old kx.profile cache was one key for
+    // the whole browser, so it showed whoever signed in here last
+    var name = (window.kxCurrentUser && window.kxCurrentUser.company_name) || 'บัญชีของฉัน';
     var src = '';
     try{ src = localStorage.getItem('kx.avatar') || ''; }catch(e){}
     var av = src
@@ -8310,9 +8308,7 @@ html, body{
       // the profile name is set as text, never parsed as markup
       var n = nav.querySelector('.side-me-name');
       if(n){
-        var nm = 'Konnex Admin';
-        try{ var p = JSON.parse(localStorage.getItem('kx.profile') || '{}'); if(p && p.name) nm = p.name; }catch(e){}
-        n.textContent = nm;
+        n.textContent = (window.kxCurrentUser && window.kxCurrentUser.company_name) || 'บัญชีของฉัน';
       }
       if(window.kxApplyIcons) window.kxApplyIcons(nav);
     });
@@ -8632,7 +8628,6 @@ html, body{
 
     <div class="card" id="rfqQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
       <div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(3)</span></div>
-      <div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
@@ -9960,17 +9955,17 @@ html, body{
               <label class="kx-cover-up" id="epCoverBox">
                 <img id="epCoverImg" alt="" hidden>
                 <span class="kx-cover-hint" id="epCoverHint"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="m21 17-5-5-4 4-2-2-4 4"></path></svg></span><br>คลิกเพื่ออัปโหลดรูปปก (แนะนำ 1200×300px)</span>
-                <input type="file" accept="image/jpeg,image/png,image/webp" hidden id="epCoverInput">
+                <input type="file" accept="image/*" hidden id="epCoverInput">
               </label>
               <div class="ep-media-row">
                 <label class="kx-avatar-up" id="epAvatarBox">
                   <img id="epAvatarImg" alt="" hidden>
                   <span id="epAvatarLetter"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg></span></span>
                   <span class="kx-avatar-cap" id="epAvatarCap">อัปโหลดโลโก้</span>
-                  <input type="file" accept="image/jpeg,image/png,image/webp" hidden id="epAvatarInput">
+                  <input type="file" accept="image/*" hidden id="epAvatarInput">
                 </label>
                 <div>
-                  <div class="ep-hint" id="epMediaHint">ไฟล์ JPG, PNG ขนาดไม่เกิน 2MB (แนะนำสัดส่วน 1:1)</div>
+                  <div class="ep-hint" id="epMediaHint">ไฟล์รูปภาพ (แนะนำสัดส่วน 1:1) — รูปใหญ่จะย่อให้อัตโนมัติ</div>
                   <button type="button" class="ep-linkbtn" id="epAvatarClear" onclick="kxClearUpload('avatar')" style="display:none;">ลบรูป</button>
                   <div class="kx-up-err" id="epUploadErr"></div>
                 </div>
@@ -9981,8 +9976,8 @@ html, body{
               <h2 id="epBasicTitle">ข้อมูลพื้นฐาน</h2>
               <p class="ep-sub" id="epBasicSub">ข้อมูลทั่วไปเกี่ยวกับบริษัทของคุณ</p>
               <div class="ep-field">
-                <label for="pfName" id="epNameLabel">ชื่อบริษัท <span class="au-req">*</span></label>
-                <input type="text" id="pfName" placeholder="เช่น บจก. ไทยพรีซิชั่น">
+                <label for="epName" id="epNameLabel">ชื่อบริษัท <span class="au-req">*</span></label>
+                <input type="text" id="epName" placeholder="เช่น บจก. ไทยพรีซิชั่น">
               </div>
               <div class="ep-field">
                 <label for="pfTagline">แท็กไลน์ / คำอธิบายสั้น</label>
@@ -11493,7 +11488,6 @@ html, body{
           </div>
     <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
       <div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(2)</span></div>
-      <div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>
       <div style="display:flex;flex-direction:column;gap:16px;">
         <div>
           <div style="display:flex;gap:10px;align-items:flex-start;">
@@ -16905,7 +16899,21 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(typeof vfSetType === 'function' && document.getElementById('vfTypePerson')) vfSetType(type);
   }
 
-  window.authEntity = function(type){ save(type); apply(type); };
+  /* Choosing the type has to reach the answer read() gives, or nothing sticks.
+     read() prefers kxCurrentUser.business_type — correct, the account decides —
+     but authEntity only wrote localStorage and repainted the labels. So on
+     ตั้งค่า → ประเภทบัญชี you could pick บุคคลธรรมดา, watch every label change,
+     press save, and have saveProfileToDb write the old นิติบุคคล straight back,
+     because it asks kxEntity() and kxEntity() was still reading the stale row.
+     The row is updated by the save; this keeps the in-memory copy in step so
+     the save has the new value to write. */
+  window.authEntity = function(type){
+    if(type !== 'person' && type !== 'company') return;
+    save(type);
+    if(window.kxCurrentUser) window.kxCurrentUser.business_type = type;
+    apply(type);
+    if(typeof window.kxApplyEntity === 'function') window.kxApplyEntity(type);
+  };
   window.kxEntity = read;
 
   window.authSubmitRegister = async function(){
@@ -17036,13 +17044,37 @@ body.kx-auth .kx-burger{ display:none !important; }
     e.style.display = msg ? 'block' : 'none';
   }
 
-  function show(kind, file, input){
+  /* Telling someone their 14MB photo is too big and stopping there asks them to
+     go and find image software. Every camera on a phone produces files this
+     size; the app already knows how to shrink one — kxImageFile draws it onto a
+     canvas and re-encodes it — and has been doing that on upload for a while.
+     Doing it here too means the limit stops being something to refuse over.
+
+     The check stays as a floor: if a picture is still over the limit after
+     re-encoding at 1600px, something is wrong with it and saying so is better
+     than uploading it. */
+  async function show(kind, file, input){
     fail('');
     // On reject, drop the file from the input too. Leaving it there keeps the old
     // preview on screen while the input holds a file that failed validation.
     function reject(msg){ fail(msg); if(input) input.value = ''; }
-    if(OK.indexOf(file.type) === -1){ reject('รองรับเฉพาะไฟล์ JPG, PNG หรือ WebP'); return; }
-    if(file.size > MAX){ reject('ไฟล์ใหญ่เกิน 2MB (ไฟล์นี้ ' + (file.size/1048576).toFixed(1) + 'MB)'); return; }
+    if(OK.indexOf(file.type) === -1 && !/^image\//.test(file.type)){
+      reject('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WebP)'); return;
+    }
+    if(file.size > MAX){
+      fail('กำลังย่อรูป...');
+      try{
+        var small = await window.kxImageFile(URL.createObjectURL(file), kind);
+        if(small.size > MAX){
+          reject('ย่อรูปแล้วยังใหญ่เกิน 2MB — กรุณาเลือกรูปอื่น'); return;
+        }
+        file = small;
+        fail('');
+      }catch(e){
+        console.error('resize failed', e);
+        reject('อ่านไฟล์รูปไม่ได้ กรุณาเลือกรูปอื่น'); return;
+      }
+    }
 
     var img = document.getElementById(kind === 'cover' ? 'epCoverImg' : 'epAvatarImg');
     if(!img) return;
@@ -17713,7 +17745,16 @@ body.kx-auth .kx-burger{ display:none !important; }
 // One record backs the edit form, the preview card, the completeness meter and the
 // public company profile, so the three can't drift apart.
 (function(){
-  var KEY = 'kx.profile';
+  /* The cache is per account. It used to be one key for the whole browser, so
+     signing in as somebody else inherited the previous person's form — which is
+     how แก้ไขโปรไฟล์ came to show one name while the preview beside it showed
+     another. The row is the source either way; this only decides how fast the
+     form fills before it arrives, and it must not fill with someone else's. */
+  var BASE_KEY = 'kx.profile';
+  function keyFor(){
+    var uid = window.kxSession && window.kxSession.user && window.kxSession.user.id;
+    return uid ? BASE_KEY + ':' + uid : BASE_KEY;
+  }
   var AREAS = ['ชลบุรี','ระยอง','ฉะเชิงเทรา','กรุงเทพมหานคร','สมุทรปราการ','ปทุมธานี','อยุธยา','ทั่วประเทศ'];
 
   /* These were Prime CNC's details — a company name, an ISO 9001 certificate,
@@ -17735,15 +17776,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     var d = {};
     for(var k in DEFAULTS) d[k] = Array.isArray(DEFAULTS[k]) ? DEFAULTS[k].slice() : DEFAULTS[k];
     try{
-      var raw = localStorage.getItem(KEY);
+      var raw = localStorage.getItem(keyFor());
       if(raw){ var saved = JSON.parse(raw); for(var j in saved) if(j in d) d[j] = saved[j]; }
     }catch(e){}
     return d;
   }
   function persist(){
-    try{ localStorage.setItem(KEY, JSON.stringify(data)); }
+    try{ localStorage.setItem(keyFor(), JSON.stringify(data)); }
     catch(e){ /* quota — the session copy still works */ }
   }
+  // the old browser-wide key belonged to whoever used this browser last
+  try{ localStorage.removeItem(BASE_KEY); }catch(e){}
 
   /* ---- the profiles row is the real store ----
      localStorage stays as a same-browser cache so the form still fills
@@ -17833,7 +17876,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   // ---------- form -> data ----------
   function collect(){
-    data.name = val('pfName'); data.tagline = val('pfTagline'); data.about = val('pfAbout');
+    data.name = val('epName'); data.tagline = val('pfTagline'); data.about = val('pfAbout');
     data.bizType = val('pfBizType'); data.founded = val('pfFounded'); data.employees = val('pfEmployees');
     data.capital = val('pfCapital');
     data.occupation = val('pfOccupation'); data.experience = val('pfExperience');
@@ -17855,7 +17898,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   // ---------- data -> form ----------
   function fill(){
-    set('pfName', data.name); set('pfTagline', data.tagline); set('pfAbout', data.about);
+    set('epName', data.name); set('pfTagline', data.tagline); set('pfAbout', data.about);
     set('pfBizType', data.bizType); set('pfFounded', data.founded); set('pfEmployees', data.employees);
     set('pfCapital', data.capital);
     set('pfOccupation', data.occupation); set('pfExperience', data.experience);
@@ -17990,13 +18033,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     txt('epBasicTitle', person ? 'ข้อมูลของฉัน' : 'ข้อมูลพื้นฐาน');
     txt('epBasicSub', person ? 'ข้อมูลทั่วไปเกี่ยวกับคุณ' : 'ข้อมูลทั่วไปเกี่ยวกับบริษัทของคุณ');
     txt('epAvatarCap', person ? 'อัปโหลดรูปโปรไฟล์' : 'อัปโหลดโลโก้');
-    txt('epMediaHint', person ? 'ไฟล์ JPG, PNG ขนาดไม่เกิน 2MB (ใช้รูปหน้าตรงที่ชัดเจน)'
-                              : 'ไฟล์ JPG, PNG ขนาดไม่เกิน 2MB (แนะนำสัดส่วน 1:1)');
+    txt('epMediaHint', person ? 'ไฟล์รูปภาพ (ใช้รูปหน้าตรงที่ชัดเจน) — รูปใหญ่จะย่อให้อัตโนมัติ'
+                              : 'ไฟล์รูปภาพ (แนะนำสัดส่วน 1:1) — รูปใหญ่จะย่อให้อัตโนมัติ');
     var nl = $('epNameLabel');
     if(nl) nl.innerHTML = (person ? 'ชื่อ - นามสกุล' : 'ชื่อบริษัท') + ' <span class="au-req">*</span>';
     var al = $('epAboutLabel');
     if(al) al.innerHTML = (person ? 'เกี่ยวกับตัวคุณ / ความเชี่ยวชาญ' : 'เกี่ยวกับบริษัท') + ' <span class="au-req">*</span>';
-    var n = $('pfName');
+    var n = $('epName');
     if(n) n.placeholder = person ? 'เช่น สมชาย ใจดี' : 'เช่น บจก. ไทยพรีซิชั่น';
   }
 
@@ -18232,7 +18275,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   function init(){
     data = load();
 
-    ['pfName','pfTagline','pfAbout','pfBizType','pfFounded','pfEmployees','pfCapital',
+    ['epName','pfTagline','pfAbout','pfBizType','pfFounded','pfEmployees','pfCapital',
      'pfTaxId','pfPhone','pfEmail','pfWebsite','pfHours','pfAddress'].forEach(function(id){
       var el = $(id);
       if(el) el.addEventListener('input', refresh);
@@ -19247,12 +19290,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(window.kxCurrentUser) for(var k in patch) window.kxCurrentUser[k] = patch[k];
     }
     try{ localStorage.setItem('kx.settings', JSON.stringify(data)); }catch(e){}
-    // the rail and the profile read the same name, so they follow
-    try{
-      var p = JSON.parse(localStorage.getItem('kx.profile') || '{}');
-      p.contact = data.setName; p.email = data.setEmail; p.phone = data.setPhone;
-      localStorage.setItem('kx.profile', JSON.stringify(p));
-    }catch(e){}
+    // the rail reads kxCurrentUser, which the update above already refreshed
+    if(window.renderSidebars) window.renderSidebars();
     kxToast('บันทึกข้อมูลบัญชีแล้ว');
   };
   /* Said "อัปเดตรหัสผ่านแล้ว" and changed nothing — it cleared the two boxes
@@ -19635,9 +19674,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     if(window.kxSession){
       await kxEnsureProfile(window.kxSession.user);
-      // not awaited: neither of these should hold up the app
+      // not awaited: none of these should hold up the app
       if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
       if(window.kxWarmInterest) window.kxWarmInterest();
+      // fills the edit form and the rail's name from the row, not from a cache
+      if(window.kxLoadProfile) window.kxLoadProfile();
       if(activeId === 'page-auth') navigateTo('page-feed');
     }else if(activeId && activeId !== 'page-auth'){
       navigateTo('page-auth');
@@ -21201,8 +21242,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     block.innerHTML =
       '<div style="font-size:16px;font-weight:800;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ ' +
         '<span style="color:var(--ink-faint);font-weight:600;">(' + qs.length + ')</span></div>' +
-      '<div style="font-size:12.5px;color:var(--ink-soft);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;margin:10px 0 16px;">' +
-        '💡 ถามได้เฉพาะเรื่องสเปก/เงื่อนไขงาน — กรุณาอย่าใส่ราคาหรือช่องทางติดต่อ</div>' +
       (qs.length
         ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
             qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.profiles); }).join('') + '</div>'
@@ -22042,6 +22081,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(id === 'page-dashboard' && window.kxLoadDashboard) window.kxLoadDashboard();
     if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
     if(id === 'page-settings' && window.kxLoadPrefs) window.kxLoadPrefs();
+    /* kxLoadProfile was written and never called, so แก้ไขโปรไฟล์ only ever
+       filled from the browser cache — which is why the form could show one
+       name while the preview beside it showed the account's real one. */
+    if(id === 'page-edit-profile' && window.kxLoadProfile) window.kxLoadProfile();
     /* page-company-profile keeps whoever was last painted onto it, so reaching
        it any other way — the ดูโปรไฟล์ row in the rail, the avatar menu, a back
        button — used to show the last person you looked at instead of you. */
