@@ -11244,14 +11244,14 @@ html, body{
         // ใบเสนอราคาที่ผู้ขายตอบกลับ: its own pill beside yours, rather than a
         // chip wedged into the price box where it had no room for a filename
         var quoteDoc = (r.replyFiles && r.replyFiles.length)
-          ? window.kxFilesSummary(r.replyFiles, 'ใบเสนอราคาที่ได้รับ')
+          ? window.kxFilesSummary(r.replyFiles, 'ใบเสนอราคาที่ได้รับ', true)
           : '';
-        var files = (r.myFiles && r.myFiles.length
-              // the feed's summary pill, same as ที่ส่ง — the scrolling chip row
-              // it replaces was only ever a way to fit five filenames on a card
-              ? window.kxFilesSummary(r.myFiles, 'ที่คุณแนบไป')
-              : '') +
-            (got && r.note ? '<div class="mr-note">↳ ' + mrEsc(r.note) + '</div>' : '');
+        // the feed's summary pill, same as ที่ส่ง — the scrolling chip row it
+        // replaces was only ever a way to fit five filenames on a card
+        var files = (r.myFiles && r.myFiles.length)
+          ? window.kxFilesSummary(r.myFiles, 'ที่คุณแนบ', true) : '';
+        // the seller's note is a paragraph, not a pill — it keeps its own line
+        var note = (got && r.note) ? '<div class="mr-note">↳ ' + mrEsc(r.note) + '</div>' : '';
 
         var price = got
           ? '<div class="price-lbl">ราคาที่เสนอ</div><div class="price-num">' + r.price + '</div>' +
@@ -11276,7 +11276,8 @@ html, body{
               (r.sellerId ? ' onclick="event.stopPropagation();kxViewProfile(\'' + r.sellerId + '\')"' : '') + '>' +
               r.seller.charAt(0) + '</span>ผู้ขาย: ' + r.seller + '</div>' +
             '<div class="bid-meta"><span>📍 ' + r.loc + '</span><span class="sep">|</span><span>🕗 ' + r.date + '</span></div>' +
-            files + quoteDoc +
+            // the two pills share a row of their own; see .mr-filerow
+            ((files || quoteDoc) ? '<div class="mr-filerow">' + files + quoteDoc + '</div>' : '') + note +
           '</div>' +
           '<div class="bid-price-col">' + price + '</div>' +
           '<div class="bid-status-col">' + status + '</div>' +
@@ -15827,11 +15828,10 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-kind,
 #page-company-profile .kx-wall .pc-kind{ font-size:14px; font-weight:600; }
 
-/* 16/400. At 18/600 the title outweighed the name above it and the two
-   headline lines competed; at the same size as the name and the ordinary
-   weight, the card reads as a person saying a thing. */
+/* 16/500. Same size as the name above it, one rung lighter — enough to sit
+   below it without disappearing into the description under it. */
 #page-feed .pc-text .post-title,
-#page-company-profile .kx-wall .pc-text .post-title{ font-size:16px; font-weight:400; line-height:1.5; }
+#page-company-profile .kx-wall .pc-text .post-title{ font-size:16px; font-weight:500; line-height:1.5; }
 #page-feed .pc-text .post-desc,
 #page-company-profile .kx-wall .pc-text .post-desc{ font-size:15px; font-weight:400; line-height:1.7; }
 
@@ -15993,18 +15993,19 @@ body.kx-auth .kx-burger{ display:none !important; }
    into a vertically centred body. */
 /* The card can carry two of these — the files you sent with the request, and
    the quotation that came back — so they sit as a pair on their own line
-   rather than one of them being folded into the price box. */
-#page-my-bids .bid-body > .files-sum,
-#page-my-requests .bid-body > .files-sum{
-  align-self:flex-start; margin:8px 8px 0 0; max-width:100%;
+   rather than one of them being folded into the price box.
+   The pair gets its own row element: .bid-body is a *column* flex, and
+   flex-wrap on a column wraps into columns, which laid the whole card out
+   sideways across the price box. */
+#page-my-bids .bid-body > .files-sum{
+  align-self:flex-start; margin:8px 0 0; max-width:100%;
 }
-#page-my-requests .bid-body{ flex-wrap:wrap; align-content:center; }
-#page-my-requests .bid-body > .bid-title,
-#page-my-requests .bid-body > .bid-buyer,
-#page-my-requests .bid-body > .bid-meta,
-#page-my-requests .bid-body > .mr-note{ flex:0 0 100%; }
+#page-my-requests .mr-filerow{
+  display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; min-width:0;
+}
+#page-my-requests .mr-filerow > .files-sum{ margin:0; max-width:100%; }
 /* the one that answers you reads as the more important of the two */
-#page-my-requests .bid-body > .files-sum:last-of-type{
+#page-my-requests .mr-filerow > .files-sum:last-child{
   border-color:#c2d6ff; background:var(--blue-50); color:var(--blue-700);
 }
 /* ที่ส่ง holds both kinds — a bid on someone's RFQ and a reply to a request on
@@ -20096,14 +20097,17 @@ body.kx-auth .kx-burger{ display:none !important; }
 
      `label` because "ไฟล์ที่คุณแนบไป" on ที่ขอ says something the count alone
      does not — whose files these are, on a card that shows both sides'. */
-  function filesSummaryHTML(docs, label){
+  function filesSummaryHTML(docs, label, compact){
     docs = docs || [];
     if(!docs.length) return '';
+    // compact drops the 'กดเพื่อดู' tail — used where two of these share a row
+    // and the words would push the pair onto a second line
     return '<div class="files-sum" onclick="event.stopPropagation();openFilesList(this)">' +
       '<span class="mini">' + docs.slice(0, 3).map(function(d){
         return '<i class="fic ' + d.file_kind + '">' + fileKindLetter(d.file_kind) + '</i>';
       }).join('') + '</span>' +
-      (label ? esc(label) + ' ' : '') + docs.length + ' ไฟล์แนบ · กดเพื่อดู ›' +
+      (label ? esc(label) + ' ' : '') + docs.length +
+      (compact ? ' ไฟล์' : ' ไฟล์แนบ · กดเพื่อดู ›') +
       '<div class="files-data" style="display:none">' + docs.map(function(d){
         return '<a class="file-chip ' + d.file_kind + '" target="_blank" rel="noopener"' +
           ' href="' + esc(d.file_url) + '" onclick="event.stopPropagation()"' +
@@ -20663,26 +20667,26 @@ body.kx-auth .kx-burger{ display:none !important; }
           '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;overflow:hidden;">' +
             avatarInner(ownerProfile, ownerName) + '</div>' +
           '<div style="flex:1;background:var(--blue-50);border:1px solid #dae6ff;border-radius:11px;padding:10px 13px;">' +
-            '<div style="font-size:15px;color:var(--ink);"><b>' + esc(ownerName) + '</b> ' +
+            '<div style="font-size:15px;font-weight:500;color:var(--ink);"><span style="font-weight:600;">' + esc(ownerName) + '</span> ' +
               '<span style="font-size:12px;font-weight:600;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span></div>' +
-            '<div style="font-size:15px;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.answer) + '</div>' +
+            '<div style="font-size:15px;font-weight:500;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.answer) + '</div>' +
           '</div></div>'
       : isOwner
         ? '<div style="display:flex;gap:8px;margin:10px 0 0 42px;">' +
             '<input type="text" class="kx-answerin" data-qid="' + q.id + '" placeholder="ตอบคำถามนี้..." ' +
-              'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);">' +
-            '<button type="button" onclick="kxAnswerQuestion(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ตอบ</button>' +
+              'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;font-weight:500;font-family:inherit;outline:none;color:var(--ink);">' +
+            '<button type="button" onclick="kxAnswerQuestion(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:15px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ตอบ</button>' +
           '</div>'
-        : '<div style="font-size:14px;color:var(--ink-soft);margin:5px 0 0 42px;">⏳ รอเจ้าของประกาศตอบ</div>';
+        : '<div style="font-size:15px;font-weight:500;color:var(--ink-soft);margin:5px 0 0 42px;">⏳ รอเจ้าของประกาศตอบ</div>';
 
     return '<div>' +
       '<div style="display:flex;gap:10px;align-items:flex-start;">' +
         '<div title="ดูโปรไฟล์" onclick="' + openAsker + '" style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;overflow:hidden;cursor:pointer;">' +
           avatarInner(asker, askerName) + '</div>' +
         '<div style="flex:1;">' +
-          '<div style="font-size:15px;color:var(--ink);"><b>' + head + '</b> ' +
+          '<div style="font-size:15px;font-weight:500;color:var(--ink);"><span style="font-weight:600;">' + head + '</span> ' +
             '<span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· ' + relTime(q.created_at) + '</span></div>' +
-          '<div style="font-size:15px;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.body) + '</div>' +
+          '<div style="font-size:15px;font-weight:500;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.body) + '</div>' +
         '</div>' +
       '</div>' + reply +
     '</div>';
