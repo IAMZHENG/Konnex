@@ -8264,8 +8264,10 @@ html, body{
     // kxCurrentUser is the profiles row; the old kx.profile cache was one key for
     // the whole browser, so it showed whoever signed in here last
     var name = (window.kxCurrentUser && window.kxCurrentUser.company_name) || 'บัญชีของฉัน';
-    var src = '';
-    try{ src = localStorage.getItem('kx.avatar') || ''; }catch(e){}
+    // profiles.avatar_url, for the same reason as the name above it: kx.avatar
+    // was one key for the whole browser, so this row wore the picture of
+    // whoever signed in here last
+    var src = (window.kxCurrentUser && window.kxCurrentUser.avatar_url) || '';
     var av = src
       ? '<span class="side-me-av"><img src="' + src + '" alt=""></span>'
       : '<span class="side-me-av">' + name.charAt(0).toUpperCase() + '</span>';
@@ -12306,7 +12308,7 @@ html, body{
             <div class="au-entcard active" id="auEntCompany" onclick="authEntity('company')" role="radio" aria-checked="true" tabindex="0"><div class="au-radio on"></div><div><div class="au-rt">นิติบุคคล</div><div class="au-rs">ยืนยันด้วยหนังสือรับรองบริษัท</div></div></div>
           </div>
           <div class="au-field"><label id="auNameLabel">ชื่อบริษัท / ธุรกิจ <span class="au-req">*</span></label><input type="text" id="auNameInput" placeholder="เช่น บจก. ไทยพรีซิชั่น"></div>
-          <div class="au-field"><label id="auTaxLabel">เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี <span class="au-req">*</span></label><input type="text" id="auTaxInput" inputmode="numeric" maxlength="13" placeholder="เลข 13 หลัก"></div>
+          <div class="au-field"><label id="auTaxLabel">เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี (ไม่บังคับ)</label><input type="text" id="auTaxInput" inputmode="numeric" maxlength="13" placeholder="เลข 13 หลัก (เว้นว่างไว้ก่อนได้)"></div>
           <div class="au-row2"><div class="au-field"><label id="auContactLabel">ชื่อผู้ติดต่อ <span class="au-req">*</span></label><input type="text" id="auContactInput" placeholder="ชื่อ-นามสกุล"></div><div class="au-field"><label>เบอร์โทรศัพท์ <span class="au-req">*</span></label><input type="tel" id="auPhoneInput" placeholder="08x-xxx-xxxx"></div></div>
           <div class="au-field"><label>อีเมล <span class="au-req">*</span></label><input id="auRegEmail" type="email" placeholder="you@company.co.th"></div>
           <div class="au-field"><label>รหัสผ่าน <span class="au-req">*</span></label><input id="auRegPassword" type="password" placeholder="อย่างน้อย 8 ตัวอักษร"></div>
@@ -16844,7 +16846,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       name:    'ชื่อ-นามสกุล',
       namePh:  'เช่น สมชาย ใจดี',
       tax:     'เลขบัตรประชาชน',
-      taxPh:   'เลข 13 หลัก',
+      taxPh:   'เลข 13 หลัก (เว้นว่างไว้ก่อนได้)',
       contact: 'ชื่อผู้ติดต่อ (ถ้าต่างจากด้านบน)',
       avatar:  'รูปโปรไฟล์',
       media:   'รูปปกและรูปโปรไฟล์'
@@ -16853,7 +16855,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       name:    'ชื่อบริษัท / ธุรกิจ',
       namePh:  'เช่น บจก. ไทยพรีซิชั่น',
       tax:     'เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี',
-      taxPh:   'เลข 13 หลัก',
+      taxPh:   'เลข 13 หลัก (เว้นว่างไว้ก่อนได้)',
       contact: 'ชื่อผู้ติดต่อ',
       avatar:  'โลโก้บริษัท',
       media:   'รูปปกและโลโก้บริษัท'
@@ -16880,7 +16882,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(dot) dot.classList.toggle('on', on);
     });
     setText('auNameLabel', c.name, true);
-    setText('auTaxLabel', c.tax, true);
+    // no longer required — see authSubmitRegister
+    setText('auTaxLabel', c.tax + ' (ไม่บังคับ)', false);
     setText('auContactLabel', c.contact, type === 'company');
     var ni = document.getElementById('auNameInput'); if(ni) ni.placeholder = c.namePh;
     var ti = document.getElementById('auTaxInput');  if(ti) ti.placeholder = c.taxPh;
@@ -16982,17 +16985,18 @@ body.kx-auth .kx-burger{ display:none !important; }
       kxToast(isPerson ? 'กรุณากรอกชื่อ-นามสกุล' : 'กรุณากรอกชื่อบริษัท / ธุรกิจ');
       return;
     }
+    /* Optional. It was required at signup, which puts an identity document in
+       the way of looking around — and the number alone verifies nothing, since
+       nothing checks it against a registry. การยืนยันตัวตน is where identity is
+       actually established, with documents and an approval. Left blank it stays
+       blank; typed, it still has to be 13 digits, because a half-entered one is
+       worse than none. */
     var taxEl = document.getElementById('auTaxInput');
     if(taxEl) taxEl.classList.remove('bad');
     var taxDigits = tax.replace(/\D/g, '');
-    if(!taxDigits){
+    if(taxDigits && taxDigits.length !== 13){
       if(taxEl){ taxEl.classList.add('bad'); taxEl.focus(); }
-      kxToast(isPerson ? 'กรุณากรอกเลขบัตรประชาชน' : 'กรุณากรอกเลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี');
-      return;
-    }
-    if(taxDigits.length !== 13){
-      if(taxEl){ taxEl.classList.add('bad'); taxEl.focus(); }
-      kxToast((isPerson ? 'เลขบัตรประชาชน' : 'เลขทะเบียนนิติบุคคล') + 'ต้องมี 13 หลัก');
+      kxToast((isPerson ? 'เลขบัตรประชาชน' : 'เลขทะเบียนนิติบุคคล') + 'ต้องมี 13 หลัก (หรือเว้นว่างไว้ก่อนก็ได้)');
       return;
     }
     // a company is a separate entity from the person you speak to, so it needs
@@ -17024,7 +17028,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         email: mail.value.trim(), company_name: name.trim(),
         // an individual who left it blank is their own contact
         contact_name: contact.trim() || (isPerson ? name.trim() : ''),
-        phone: phone.trim(), tax_id: taxDigits,
+        phone: phone.trim(), tax_id: taxDigits || null,
         business_type: isPerson ? 'person' : 'company'
       }));
     }catch(e){}
@@ -17601,23 +17605,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     });
   }
 
-  // Persist as a data URL so it survives a reload, but only when it is small
-  // enough not to risk the localStorage quota; otherwise it lasts the session.
-  window.kxSetAvatar = function(file, objectUrl){
-    paint(objectUrl);
-    if(!file || file.size > 700 * 1024) return;
-    var fr = new FileReader();
-    fr.onload = function(){ try{ localStorage.setItem(KEY, fr.result); }catch(e){} };
-    fr.readAsDataURL(file);
-  };
-  window.kxClearAvatar = function(){
-    paint(null);
-    try{ localStorage.removeItem(KEY); }catch(e){}
-  };
+  /* Shows the picture you just chose, straight away, before it has been
+     uploaded. It used to also stash it in localStorage under one key for the
+     whole browser and repaint from that on every load — so the next account to
+     sign in here wore the previous one's face until its own row arrived, and
+     sometimes after. profiles.avatar_url is the picture; kxApplyAvatars paints
+     it. This is only the preview between choosing a file and saving it. */
+  window.kxSetAvatar = function(file, objectUrl){ paint(objectUrl); };
+  window.kxClearAvatar = function(){ paint(null); };
 
-  var saved = null;
-  try{ saved = localStorage.getItem(KEY); }catch(e){}
-  if(saved) paint(saved);
+  // and clear out the shared key any browser may still be holding
+  try{ localStorage.removeItem(KEY); }catch(e){}
   window.kxPaintAvatar = paint;
 })();
 
@@ -19609,18 +19607,33 @@ body.kx-auth .kx-burger{ display:none !important; }
         if(p.email && user.email && p.email.toLowerCase() === user.email.toLowerCase()) pending = p;
       }
     }catch(e){}
+    /* Arriving through Google or Facebook there is no signup form behind this,
+       so the provider's own details are used: it gave a name and usually a
+       picture, and starting someone off as the left-hand side of their email
+       address when their name is right there is a poor first impression. */
+    var meta = (user && user.user_metadata) || {};
+    var social = (meta.full_name || meta.name || '').trim();
+    var photo  = meta.avatar_url || meta.picture || null;
+
     var row = {
       id: user.id,
-      company_name: (pending && pending.company_name) || (user.email || '').split('@')[0],
-      contact_name: pending ? pending.contact_name : null,
+      company_name: (pending && pending.company_name) || social || (user.email || '').split('@')[0],
+      contact_name: pending ? pending.contact_name : (social || null),
       phone:        pending ? pending.phone        : null,
       tax_id:       pending ? pending.tax_id        : null,
+      avatar_url:   photo,
+      email:        user.email || null,
       business_type: (pending && pending.business_type) || 'company'
     };
     var ins = await sb.from('profiles').insert(row).select().single();
     if(pending){ try{ localStorage.removeItem('kx.pendingProfile'); }catch(e){} }
     if(ins.error){ console.error('profile insert failed', ins.error); window.kxCurrentUser = row; return row; }
     window.kxCurrentUser = ins.data;
+    // the same three the existing-row branch runs, so a first sign-in lands in
+    // the same state as every one after it
+    if(window.kxApplyAvatars) window.kxApplyAvatars();
+    if(window.kxProfileFromRow) window.kxProfileFromRow(ins.data);
+    if(window.kxSyncEntity) window.kxSyncEntity(ins.data.business_type);
     return ins.data;
   };
 
@@ -19758,11 +19771,31 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxToast('เข้าสู่ระบบสำเร็จ');
     navigateTo('page-feed');
   };
-  // Google/Facebook need their OAuth apps registered in the Supabase dashboard first
-  // (Authentication → Providers). Faking success here would sign nobody in and then
-  // lie about it — say so instead.
-  window.authSocial = function(who){
-    kxToast('เข้าสู่ระบบด้วย ' + who + ' ยังไม่เปิดใช้งาน — ใช้อีเมลด้านบนไปก่อนนะครับ');
+  /* ---- เข้าสู่ระบบด้วย Google / Facebook ----
+     signInWithOAuth hands off to the provider and comes back to the app with a
+     session, which onAuthStateChange picks up and boot() turns into a profile
+     row like any other sign-in — kxEnsureProfile fills company_name from
+     whatever the provider gave (full_name, name, or the address).
+
+     The provider still has to be switched on in the Supabase dashboard under
+     Authentication → Providers, with its client id and secret. Until then the
+     call comes back with "provider is not enabled", which is said plainly
+     rather than reported as a generic failure — the difference is the one
+     thing that tells you where to go and fix it. */
+  window.authSocial = async function(who){
+    var provider = String(who).toLowerCase();
+    var res = await sb.auth.signInWithOAuth({
+      provider: provider,
+      options: { redirectTo: window.location.origin + window.location.pathname }
+    });
+    if(res.error){
+      console.error('authSocial failed', res.error);
+      var m = res.error.message || '';
+      kxToast(/not enabled|provider|unsupported/i.test(m)
+        ? 'ยังไม่ได้เปิดใช้งาน ' + who + ' — ต้องตั้งค่าใน Supabase (Authentication → Providers) ก่อน'
+        : 'เข้าสู่ระบบด้วย ' + who + ' ไม่สำเร็จ: ' + (m || 'กรุณาลองใหม่'));
+    }
+    // on success the browser leaves for the provider; nothing after this runs
   };
 
   /* ---- ลืมรหัสผ่าน ----
@@ -21785,7 +21818,14 @@ body.kx-auth .kx-burger{ display:none !important; }
      reload. */
   window.kxApplyAvatars = function(){
     var url = window.kxCurrentUser && window.kxCurrentUser.avatar_url;
+    /* kxSetAvatar's preview inserts its own <img class="kx-avimg"> into the
+       same chip. Two owners for one picture is how a chip ended up showing a
+       different face from the profile beside it — the row wins, so the preview
+       is cleared before this paints. */
+    Array.prototype.forEach.call(document.querySelectorAll('.avatar-chip .kx-avimg'), function(im){ im.remove(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.avatar-chip.has-photo'), function(c){ c.classList.remove('has-photo'); });
     Array.prototype.forEach.call(document.querySelectorAll('.avatar-chip .av-usericon, .avatar-chip .avatar'), function(el){
+      el.style.display = '';
       if(url){
         el.style.overflow = 'hidden';
         el.style.borderRadius = '50%';
