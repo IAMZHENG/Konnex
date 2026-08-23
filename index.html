@@ -7438,16 +7438,47 @@ html, body{
    that each wrote 1180 for themselves. */
 @media (min-width:1025px){
   #page-company-profile .profile-layout,
+  #page-feed .layout,
   #page-rfq-offers .layout,
   #page-my-offers .layout,
   #page-my-bids .layout,
   #page-my-requests .layout,
+  #page-messages .layout,
   #page-notifications .layout,
   #page-saved .layout,
   #page-history .layout,
   #page-dashboard .layout,
   #page-settings .layout,
-  .page-layout{ max-width:1300px !important; }
+  #page-create-post .layout,
+  #page-company-profile .profile-layout,
+  .page-layout{
+    /* ===== The rail does not move between pages =====
+       Every page carries its own copy of the sidebar inside its own layout,
+       and those layouts had drifted apart: measured across eight pages the
+       card started at x=95, x=102 or x=162 and was 223px or 230px wide, so
+       walking through the app nudged the menu sideways under the cursor.
+       One width, one gutter, one outer bound — the right-hand side is the
+       part that changes. */
+    max-width:1300px !important;
+    padding-left:32px !important;
+    padding-right:32px !important;
+  }
+  .app-page .layout > div:first-child,
+  .page-layout > div:first-child,
+  #page-company-profile .profile-side-col{
+    width:230px !important; min-width:230px; max-width:230px;
+    top:82px !important;
+  }
+  /* The last 7px of drift was the scrollbar itself: a page taller than the
+     window has one and a short page does not, so the centred layout — and the
+     menu with it — stepped sideways depending on how much content was on the
+     right. The gutter is reserved whether or not it is in use. */
+  html{ scrollbar-gutter:stable; }
+  /* and it is the same list on every page: the upgrade panel appeared in the
+     rail on ค้นหางาน and ประกาศซื้อ only, which made those two the odd ones
+     out and gave them an inner scrollbar the others did not have */
+  .app-page .layout > div:first-child .upgrade-card,
+  .page-layout > div:first-child .upgrade-card{ display:none !important; }
 
   /* The frame widening was right; letting the cards take all of it was not. On
      these four the content column has no right-hand rail to stop it, so a row
@@ -11026,28 +11057,61 @@ html, body{
   </div>
 
 <script>
+  /* The menu is absolutely positioned inside the card, and the card is a fixed
+     190px with overflow:hidden — so it opened into the clipped region and the
+     button looked dead. position:fixed at the button's own rect escapes every
+     clipping ancestor; it is placed above the button when there is no room
+     below, which on the last row of a list is most of the time. */
   function toggleStatusMenu(btn){
     var menu = btn.parentElement.querySelector('.offer-status-menu');
     var open = menu.classList.contains('open');
     document.querySelectorAll('#page-my-offers .offer-status-menu.open').forEach(function(m){ m.classList.remove('open'); });
-    if(!open) menu.classList.add('open');
+    if(open) return;
+    menu.classList.add('open');
+    var r = btn.getBoundingClientRect();
+    var h = menu.offsetHeight || 130;
+    var below = window.innerHeight - r.bottom;
+    menu.style.position = 'fixed';
+    menu.style.top = (below > h + 12 ? r.bottom + 6 : Math.max(8, r.top - h - 6)) + 'px';
+    menu.style.left = Math.max(8, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 8)) + 'px';
+    menu.style.right = 'auto';
+    menu.style.zIndex = '1200';
   }
-  function setOfferStatus(item, status){
-    if(status==='closed' && !confirm('ปิดประกาศนี้ใช่หรือไม่? ผู้ที่สนใจจะไม่เห็นประกาศนี้อีก')){ var mnu=item.closest('.offer-status-menu'); if(mnu) mnu.classList.remove('open'); return; }
-    var card = item.closest('.offer-row, .offer-card');
-    var pill = card ? card.querySelector('.status-pill') : null;
-    var map = { active:['active-st','เปิดอยู่'], paused:['paused','พักไว้'], closed:['closed','ปิดแล้ว'] };
-    if(pill && map[status]){
-      pill.className = 'status-pill ' + map[status][0];
-      pill.innerHTML = '<span class="dot"></span>' + map[status][1];
+
+  /* And it only ever repainted the pill — posts.status was never written, so
+     the change was gone on the next reload. */
+  async function setOfferStatus(item, status){
+    var menu = item.closest('.offer-status-menu');
+    if(status === 'closed' && !confirm('ปิดประกาศนี้ใช่หรือไม่? ผู้ที่สนใจจะไม่เห็นประกาศนี้อีก')){
+      if(menu) menu.classList.remove('open');
+      return;
     }
-    var btn = item.closest('.offer-status-drop').querySelector('.offer-status-btn');
-    if(btn) btn.innerHTML = 'เปลี่ยนสถานะ ⌄';
-    item.closest('.offer-status-menu').classList.remove('open');
+    if(menu) menu.classList.remove('open');
+    var card = item.closest('.offer-row, .offer-card');
+    var postId = card && card.dataset.postId;
+    if(!postId || !window.kxSession) return;
+
+    var map = { active:['active-st','เปิดอยู่','open'], paused:['paused','พักไว้','paused'],
+                closed:['closed','ปิดแล้ว','closed'] };
+    if(!map[status]) return;
+
+    var res = await sb.from('posts').update({ status: map[status][2] }).eq('id', postId);
+    if(res.error){
+      console.error('setOfferStatus failed', res.error);
+      kxToast('เปลี่ยนสถานะไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    kxToast('เปลี่ยนสถานะเป็น “' + map[status][1] + '” แล้ว');
+    // reload rather than repaint: the tab counts and the filter follow from it
+    if(window.kxLoadMyPosts) await window.kxLoadMyPosts('offer');
   }
   document.addEventListener('click', function(e){
     if(!e.target.closest('.offer-status-drop')) document.querySelectorAll('#page-my-offers .offer-status-menu.open').forEach(function(m){ m.classList.remove('open'); });
   });
+  // a fixed menu does not travel with the page, so it closes rather than drifting
+  window.addEventListener('scroll', function(){
+    document.querySelectorAll('#page-my-offers .offer-status-menu.open').forEach(function(m){ m.classList.remove('open'); });
+  }, true);
   function switchOfferTab(el, mode){
     // scoped to this page: the unscoped version also cleared the active tab on
     // ต้องการซื้อ, so coming back to it found nothing selected
@@ -11745,7 +11809,9 @@ html, body{
 <div id="page-my-requests" class="app-page">
   <style>
     #page-my-requests .layout{ display:grid; grid-template-columns:230px minmax(0,1fr); gap:20px; max-width:1180px; margin:0 auto; padding:20px 32px; align-items:start; }
-    #page-my-requests .navbar{ display:flex; align-items:center; justify-content:space-between; padding-top:13px; padding-bottom:13px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
+    /* 12, like every other page — at 13 this navbar was a pixel taller and the
+       rail beneath it started a pixel lower than everywhere else */
+    #page-my-requests .navbar{ display:flex; align-items:center; justify-content:space-between; padding-top:12px; padding-bottom:12px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
     #page-my-requests .nav-left{ display:flex; align-items:center; gap:22px; flex:1; }
     #page-my-requests .nav-right{ display:flex; align-items:center; gap:18px; }
     #page-my-requests .logo{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:20px; color:var(--ink); text-decoration:none; }
@@ -16511,10 +16577,10 @@ body.kx-auth .kx-burger{ display:none !important; }
 .kx-waiting-banner{
   display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px;
   margin:0 0 14px; padding:11px 15px;
-  background:var(--card); border:1px solid #f2dcae; border-left:3px solid var(--amber);
+  background:var(--card); border:1px solid #f3bcbc; border-left:3px solid #c0392b;
   border-radius:10px; font-size:13px; color:var(--ink);
 }
-.kx-waiting-banner b{ color:#92610a; }
+.kx-waiting-banner b{ color:#c0392b; }
 .kx-waiting-banner span{ font-size:12px; color:var(--ink-faint); }
 /* คำขอราคา and รอตอบ are the two numbers this page exists to show, and both
    were 11.5px pills sitting in a row of 12.5px grey metadata — the view count
@@ -16532,10 +16598,11 @@ body.kx-auth .kx-burger{ display:none !important; }
   color:var(--blue-700); background:var(--blue-50); border:1px solid #c2d6ff;
 }
 #page-my-offers .offer-stats-row .quote-badge:hover{ background:#dae6ff; }
+/* red, not amber: this is the one that costs you a sale if it sits there */
 #page-my-offers .offer-stats-row .kx-waiting{
-  background:#fff4dd; border:1px solid #e6c274; color:#8a5a06;
+  background:#fdeaea; border:1px solid #f3bcbc; color:#c0392b;
 }
-#page-my-offers .offer-stats-row .kx-waiting:hover{ background:#ffe6b8; border-color:#d9ae52; }
+#page-my-offers .offer-stats-row .kx-waiting:hover{ background:#fbdcdc; border-color:#e79a9a; }
 /* the dot in front of รอตอบ, so it reads as a state rather than a count */
 #page-my-offers .offer-stats-row .kx-waiting::first-letter{ font-size:15px; }
 
@@ -16605,15 +16672,10 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-body > .files-sum{
   align-self:flex-start; margin:8px 0 0; max-width:100%;
 }
-/* ที่ส่ง now holds both kinds — a bid on someone's RFQ and a reply to a request
-   on your own listing — so each row says which it is, matching the ประเภท
-   filter above the list. */
-#page-my-bids .bid-meta .kx-origin{
-  display:inline-flex; align-items:center; gap:5px;
-  padding:2px 9px; border-radius:999px; font-weight:700; white-space:nowrap;
-}
-#page-my-bids .bid-meta .kx-origin.bid{ color:var(--blue-700); background:var(--blue-50); }
-#page-my-bids .bid-meta .kx-origin.reply{ color:#92610a; background:#fff4dd; }
+/* ที่ส่ง holds both kinds — a bid on someone's RFQ and a reply to a request on
+   your own listing — but the row already says which: ผู้ซื้อ / ผู้ขอราคา on the
+   name line, and the ประเภท filter sits over the list. A chip repeating it was
+   a third copy of the same fact. */
 
 /* ===== รูปบนการ์ดในลิสต์: เลื่อนดูได้ =====
    The sizing class is on this frame, so #page-my-offers .offer-thumb and its
@@ -21664,11 +21726,11 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<div class="bid-title">' + esc(post ? post.title : 'ประกาศนี้ถูกปิดแล้ว') + '</div>' +
         '<div class="bid-buyer"><span class="bid-buyer-av" style="background: var(--blue-600);overflow:hidden;">' +
           avatarInner(owner, who) + '</span>' + (isReply ? 'ผู้ขอราคา: ' : 'ผู้ซื้อ: ') + esc(who) + '</div>' +
+        // the chip that said which kind this was came off again: ผู้ขอราคา
+        // above it and the ประเภท filter over the list already say it twice
         '<div class="bid-meta">' +
-          '<span class="kx-origin ' + (isReply ? 'reply' : 'bid') + '">' +
-            (isReply ? '🏷️ ตอบคำขอ' : '🛒 เสนอราคา') + '</span>' +
-          (post && post.province ? '<span class="sep">|</span><span>📍 ' + esc(post.province) + '</span>' : '') +
-          '<span class="sep">|</span><span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
+          (post && post.province ? '<span>📍 ' + esc(post.province) + '</span><span class="sep">|</span>' : '') +
+          '<span>🕗 ' + fmtDateBE(q.created_at) + '</span></div>' +
         files +
         (q.note ? '<div class="bid-note">' + esc(q.note) + '</div>' : '') +
       '</div>' +
