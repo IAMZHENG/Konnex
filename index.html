@@ -14220,13 +14220,12 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .hero-card .tabs{ padding:0 20px; margin:0; }
 
 /* ภาพรวม is a two-column board. The six cards that answer "who is this account" —
-   เกี่ยวกับ, ติดต่อ, ข้อมูลส่วนตัว, รีวิว, การยืนยันตัวตน, ความเชี่ยวชาญ — pair up at the
-   top, and everything after them keeps the full width it had: ผลงานล่าสุด, ใบรับรอง
-   and the wall are lists, and a list reads worse in half a column.
+   เกี่ยวกับ, ติดต่อ, รีวิว, การยืนยันตัวตน, ความเชี่ยวชาญ, ใบรับรอง — pair up at the top,
+   and what is left keeps the full width it had: ผลงานล่าสุด and the wall are lists
+   of posts, and a post reads worse in half a column.
 
-   Ordering is done with order rather than by moving markup, because ข้อมูลบริษัท /
-   ข้อมูลส่วนตัว is injected at runtime by applyToProfile and lands next to เกี่ยวกับ
-   wherever that is.
+   Ordering is done with order rather than by moving markup, so the pairing does
+   not depend on where in the markup each card happens to sit.
 
    Scoped to ภาพรวม: the other tabs show a single card, and one card alone in a
    two-column grid would sit in half the page for no reason. pfTab keeps
@@ -14234,7 +14233,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .left[data-pf-tab="overview"]{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  /* not stretch: pairing a long รีวิว against a four-row ข้อมูลบริษัท would blow the
+  /* not stretch: pairing a long รีวิว against a two-line ความเชี่ยวชาญ would blow the
      short one up into a mostly empty card */
   align-items:start;
   gap:16px;
@@ -14243,17 +14242,17 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .left[data-pf-tab="overview"] > .card{ grid-column:1 / -1; order:9; }
 #page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type,
 #page-company-profile .left[data-pf-tab="overview"] > #pfContactCard,
-#page-company-profile .left[data-pf-tab="overview"] > #kxFactsCard,
 #page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard,
 #page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard,
-#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ grid-column:auto; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard,
+#page-company-profile .left[data-pf-tab="overview"] > #pfCertCard{ grid-column:auto; }
 
 #page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type{ order:1; } /* เกี่ยวกับ */
 #page-company-profile .left[data-pf-tab="overview"] > #pfContactCard{ order:2; }
-#page-company-profile .left[data-pf-tab="overview"] > #kxFactsCard{ order:3; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard{ order:4; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard{ order:5; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ order:6; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard{ order:3; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard{ order:4; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ order:5; }
+#page-company-profile .left[data-pf-tab="overview"] > #pfCertCard{ order:6; }
 #page-company-profile .left[data-pf-tab="overview"] > #pfRecentCard{ order:8; }
 
 /* one column on anything narrow — two half-width cards on a phone is neither */
@@ -14267,7 +14266,6 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .left > .card:first-of-type{ order:1; }   /* เกี่ยวกับ */
 #page-company-profile #pfRecentCard{ order:2; }                 /* ผลงานล่าสุด */
 #page-company-profile .left > .card:has(.contact-list){ order:3; }
-#page-company-profile #kxFactsCard{ order:4; }
 
 /* --- the wins preview on ภาพรวม --- */
 #page-company-profile #pfWinsPreview{ max-width:none; gap:14px; }
@@ -15704,10 +15702,8 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 .ep-addwork svg{ width:16px; height:16px; stroke:currentColor; stroke-width:2; fill:none; }
 
-/* company facts block on the public profile */
-.kx-facts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:14px; }
-.kx-fact-l{ font-size:14px; color:var(--ink-soft,#6b7280); }
-.kx-fact-v{ font-size:15px; font-weight:700; margin-top:2px; }
+/* .kx-facts / .kx-fact-l / .kx-fact-v styled the separate ข้อมูลบริษัท card, which
+   duplicated เกี่ยวกับ line for line and has gone; .info-item carries those facts */
 .kx-hero-tagline{ font-size:15px; opacity:.92; margin-top:2px; }
 
 /* service areas */
@@ -17693,40 +17689,19 @@ body.kx-auth .kx-burger{ display:none !important; }
       } else if(tl) tl.remove();
     }
 
-    // Company facts — ประเภทธุรกิจ / ปีที่ก่อตั้ง / จำนวนพนักงาน / ทุนจดทะเบียน were
-    // collected but had nowhere to land. Company accounts only.
-    var aboutCard = about ? about.closest('.card') : null;
-    if(aboutCard){
-      var facts = p.querySelector('#kxFactsCard');
-      var isCompany = (typeof kxEntity === 'function' ? kxEntity() : 'company') !== 'person';
-      var rows = (isCompany
-        ? [['ประเภทธุรกิจ', data.bizType], ['ปีที่ก่อตั้ง', data.founded],
-           ['จำนวนพนักงาน', data.employees], ['ทุนจดทะเบียน (บาท)', data.capital]]
-        : [['อาชีพ / ตำแหน่ง', data.occupation],
-           ['ประสบการณ์', data.experience ? data.experience + ' ปี' : '']]
-      ).filter(function(r){ return r[1]; });
-      if(rows.length){
-        if(!facts){
-          facts = document.createElement('div');
-          facts.className = 'card';
-          facts.id = 'kxFactsCard';
-          // it reads as part of ภาพรวม; say so rather than leaning on the default,
-          // and re-apply the tab because this card arrives after pfTab has run
-          facts.setAttribute('data-pf-sec', 'overview');
-          aboutCard.parentNode.insertBefore(facts, aboutCard.nextSibling);
-          if(window.pfApplyTab) window.pfApplyTab();
-        }
-        facts.innerHTML = '<h3>' + (isCompany ? 'ข้อมูลบริษัท' : 'ข้อมูลส่วนตัว') + '</h3><div class="kx-facts"></div>';
-        var host2 = facts.querySelector('.kx-facts');
-        rows.forEach(function(r){
-          var cell = document.createElement('div');
-          var l = document.createElement('div'); l.className = 'kx-fact-l'; l.textContent = r[0];
-          var v = document.createElement('div'); v.className = 'kx-fact-v'; v.textContent = r[1];
-          cell.appendChild(l); cell.appendChild(v);
-          host2.appendChild(cell);
-        });
-      } else if(facts) facts.remove();
-    }
+    /* ข้อมูลบริษัท / ข้อมูลส่วนตัว used to be built here as a second card. It listed
+       ประเภทธุรกิจ / ปีที่ก่อตั้ง / จำนวนพนักงาน / ทุนจดทะเบียน — every one of which
+       fillInfoList already puts on เกี่ยวกับ, so the two cards showed the same four
+       lines twice, side by side once the board paired them up.
+
+       เกี่ยวกับ is the one that stays, and not only because it came first:
+       fillInfoList reads the profiles row it was handed, while this built its
+       copy out of the localStorage cache, which goes stale the moment the
+       profile is edited anywhere else. One card, one source.
+
+       Anything left over from before this change is cleared out. */
+    var staleFacts = p.querySelector('#kxFactsCard');
+    if(staleFacts) staleFacts.remove();
 
     // The contact card has no address row, so the address surfaces in the hero meta
     // line instead — it sits between the rating and the response-time chip as the
@@ -21218,10 +21193,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       var el = document.getElementById(cid);
       if(el){ el.setAttribute('data-pf-hide', '1'); el.style.display = 'none'; }
     });
-    // applyToProfile builds this one from YOUR localStorage and leaves it in the
-    // page; without this it stays behind and shows your own company facts under
-    // someone else's name. It is rebuilt next time you view your own profile.
-    var ownFacts = mine ? null : document.getElementById('kxFactsCard');
+    // left over from the days when applyToProfile built a second facts card out of
+    // YOUR cache — it would sit under someone else's name until it was cleared
+    var ownFacts = document.getElementById('kxFactsCard');
     if(ownFacts) ownFacts.remove();
     if(window.kxApplyIcons) window.kxApplyIcons(p);
     window.scrollTo({ top:0 });
