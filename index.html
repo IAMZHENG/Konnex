@@ -8199,7 +8199,7 @@ html, body{
         <h1>งานของฉัน</h1>
         <button class="btn-create" onclick="newPost()">＋ โพสต์ประกาศ</button>
       </div>
-      <p class="page-sub">RFQ ที่คุณโพสต์เพื่อให้ผู้ขายเข้ามาเสนอราคา — เลือกผู้ชนะแล้วคุยต่อในแชท</p>
+      <p class="page-sub">RFQ ที่คุณโพสต์เพื่อให้ผู้ขายเข้ามาเสนอราคา — เปรียบเทียบแล้วคุยต่อในแชทได้เลย</p>
       <div class="myjob-tabs">
         <a href="#" onclick="navigateTo('page-rfq-offers');return false;" class="myjob-tab active">🛒 ต้องการซื้อ</a>
         <a href="#" onclick="navigateTo('page-my-offers');return false;" class="myjob-tab">🏷️ ประกาศขาย</a>
@@ -8337,10 +8337,6 @@ html, body{
     </div>
 
     <!-- DEAL CLOSED PANEL (hidden until a winner is selected) -->
-    <!-- What happened to this RFQ. Offered to the owner once the quotes are in;
-         answering is optional and there is no state in which the page insists. -->
-    <div class="kx-outcome" id="rfqOutcomePanel" style="display:none;"></div>
-
     <div class="deal-closed-card" id="dealClosedPanel" style="display:none;">
       <div class="deal-closed-head">🏆 เลือกผู้ให้บริการเรียบร้อย — เชื่อมต่อให้คุยกันต่อในแชท</div>
       <div class="winner-row">
@@ -8350,7 +8346,7 @@ html, body{
           <div class="winner-price">ราคาที่เสนอ <b id="winnerPrice">6,200</b> บาท/วัน</div>
         </div>
         <div class="winner-actions">
-          <button class="btn btn-primary" id="kxChatWinnerBtn" onclick="kxChatWithWinner()">💬 เริ่มแชทกับผู้ชนะ</button>
+          <button class="btn btn-primary" id="kxChatWinnerBtn" onclick="kxChatWithSeller()">💬 เริ่มแชท</button>
         </div>
       </div>
       <div class="deal-closed-note" id="dealClosedNote">Konnex ทำหน้าที่เฉพาะขั้นตอนขอใบเสนอราคา — ขั้นตอนต่อไป (ยืนยันรายละเอียด กำหนดส่งมอบ การชำระเงิน ฯลฯ) ให้ทั้งสองฝ่ายตกลงกันเองผ่านแชท</div>
@@ -8691,7 +8687,9 @@ html, body{
         <div class="tab active" onclick="pfTab('overview',this)">ภาพรวม</div>
         <div class="tab" id="pfReviewsTab" onclick="pfTab('reviews',this)">รีวิว (0)</div>
         <div class="tab" id="pfServicesTab" onclick="pfTab('services',this)">บริการของฉัน</div>
-        <div class="tab" onclick="pfTab('wins',this)">ผลงานสะสม</div>
+        <!-- ผลงานสะสม is gone with the winner: it listed the RFQs this account
+             had been chosen for, and nothing is chosen any more, so the tab could
+             only ever open onto an empty list. -->
       </div>
     </div>
 
@@ -8711,11 +8709,14 @@ html, body{
           </div>
         </div>
 
-        <!-- RECENT WORK — the profile leads with what they made -->
-        <div class="card" data-pf-sec="overview" id="pfRecentCard">
+        <!-- RECENT WORK — hidden with ผลงานสะสม, which is the same data: both were
+             built from the RFQs this account had been chosen for, and nothing is
+             chosen any more. Kept in the markup rather than deleted because the
+             answer may be to refill it from something else (งานที่เคยเสนอราคา, or a
+             portfolio the seller uploads) rather than to lose the section. -->
+        <div class="card" data-pf-sec="overview" id="pfRecentCard" data-pf-hide="1" style="display:none;">
           <div class="card-head">
             <h3>ผลงานล่าสุด</h3>
-            <a href="#" class="pf-seeall" onclick="pfTab('wins',document.querySelectorAll('#page-company-profile .tabs .tab')[3]);return false;">ดูทั้งหมด ›</a>
           </div>
           <div class="pf-wins-list" id="pfWinsPreview"></div>
         </div>
@@ -8738,7 +8739,7 @@ html, body{
         <div class="card" id="pfReviewsCard" data-pf-sec="overview reviews"></div>
 
         <!-- TRACK RECORD — filled by the system, not typed in -->
-        <div class="card" id="pfWinsCard" data-pf-sec="wins">
+        <div class="card" id="pfWinsCard" data-pf-sec="wins" data-pf-hide="1" style="display:none;">
           <div class="card-head">
             <h3>ผลงานสะสม</h3>
             <span class="pf-wins-src">
@@ -10172,11 +10173,9 @@ html, body{
       <p class="page-sub">ใบเสนอราคาทั้งหมดที่คุณเป็นผู้เสนอไปยังโพสต์ของผู้อื่น</p>
 
       <div class="status-tabs">
-        <div class="status-tab active" onclick="switchBidStatusTab(this,'all')"><span class="tab-ic">🧾</span>ทั้งหมด (893)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'pending')"><span class="tab-ic">⏳</span>รอผล (65)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'won')"><span class="tab-ic">✅</span>ชนะ (248)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'lost')"><span class="tab-ic">✕</span>ไม่ผ่าน (580)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'closed')"><span class="tab-ic">🔒</span>ปิดแล้ว (0)</div>
+        <div class="status-tab active" onclick="switchBidStatusTab(this,'all')"><span class="tab-ic">🧾</span>ทั้งหมด (0)</div>
+        <div class="status-tab" onclick="switchBidStatusTab(this,'live')"><span class="tab-ic">📬</span>ยังเปิดรับอยู่ (0)</div>
+        <div class="status-tab" onclick="switchBidStatusTab(this,'ended')"><span class="tab-ic">🔒</span>ปิดรับแล้ว (0)</div>
       </div>
 
       <div class="origin-tabs">
@@ -13108,7 +13107,9 @@ function renderDash(){
   var n1 = document.querySelector('#dashCard1 .dash-stat-num');
   var n2 = document.querySelector('#dashCard2 .dash-stat-num');
   if(n0) n0.textContent = DASH.newJobs.length;
-  if(n1) n1.textContent = DASH.myQuotes.filter(function(q){ return q.status === 'pending'; }).length;
+  // quotes sent to listings that are still taking them
+  if(n1) n1.textContent = DASH.myQuotes.filter(function(q){
+    return q.posts && q.posts.status === 'open'; }).length;
   if(n2) n2.textContent = DASH.myClosing.length;
 
   // งานใหม่ให้เสนอราคา
@@ -13137,20 +13138,18 @@ function renderDash(){
   if(l1){
     l1.innerHTML = DASH.myQuotes.length ? DASH.myQuotes.slice(0, 5).map(function(q){
       var p = q.posts || {};
-      var tag = q.status === 'won' ? ['win','ชนะ'] : q.status === 'lost' ? ['lost','ไม่ผ่าน']
-              : q.status === 'closed' ? ['lost','ปิดแล้ว'] : ['wait','รอผล'];
-      var side = q.status === 'won'
-        ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo(\'page-messages\')">💬 คุยต่อ</button>'
-        : q.status === 'lost'
-          ? '<div class="dash-pill">ไม่ได้รับเลือก</div>'
-          : '<div class="dash-pill wait">รอผู้ซื้อเลือก</div>';
+      // the listing's state, not a verdict on the quote — there is no verdict
+      var live = p.status === 'open';
+      var tag  = live ? ['wait','ส่งแล้ว'] : ['lost','ปิดรับแล้ว'];
+      var side = live
+        ? '<div class="dash-pill wait">ยังเปิดรับอยู่</div>'
+        : '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();navigateTo(\'page-messages\')">💬 คุยกับผู้ซื้อ</button>';
       return '<div class="dash-row"' + (p.id ? ' onclick="kxOpenPost(\'' + p.id + '\',\'rfq\')"' : '') + '>' +
         '<div class="dash-tag ' + tag[0] + '">' + tag[1] + '</div>' +
         '<div class="dash-row-body">' +
           '<div class="dash-row-title">' + dashEsc(p.title || 'ประกาศนี้ถูกปิดแล้ว') +
             ' — เสนอราคา ' + dashMoney(q.price) + ' บาท</div>' +
-          '<div class="dash-row-meta"><span>🕗 ส่งเมื่อ ' + dashAgo(q.created_at) + '</span>' +
-            (q.status === 'won' ? '<span>🏆 ได้รับเลือกแล้ว</span>' : '') + '</div>' +
+          '<div class="dash-row-meta"><span>🕗 ส่งเมื่อ ' + dashAgo(q.created_at) + '</span></div>' +
         '</div>' +
         '<div class="dash-row-side">' + side + '</div></div>';
     }).join('') : dashEmpty('คุณยังไม่ได้ส่งใบเสนอราคา',
@@ -13193,7 +13192,7 @@ window.kxLoadDashboard = async function(){
 
   // what I have already bid on — so งานใหม่ can exclude it
   var mine = await sb.from('quotes')
-    .select('id,post_id,price,status,created_at,posts(id,title,province)')
+    .select('id,post_id,price,status,created_at,posts(id,title,province,status)')
     .eq('bidder_id', me)
     .order('created_at', { ascending:false });
   if(mine.error){ console.error('kxLoadDashboard quotes failed', mine.error); return; }
@@ -14321,60 +14320,6 @@ body.kx-auth .kx-burger{ display:none !important; }
 /* inside a card the reviews panel needs no card chrome of its own */
 #page-company-profile .rv-panel{ border:none !important; padding:0 !important; margin-bottom:14px !important; }
 #page-company-profile .rv-card{ background:var(--bg) !important; }
-
-/* --- ผลการจัดซื้อ: the panel on the RFQ page and the chooser behind it --- */
-.kx-outcome{
-  border:1px solid var(--line); border-radius:14px; padding:14px 16px;
-  background:var(--card); margin:0 0 16px;
-}
-.kx-outcome.ask{ background:var(--blue-50); border-color:#dae6ff; }
-.kx-outcome.settled{ background:var(--bg); }
-.kx-outcome-head{ display:flex; align-items:flex-start; gap:12px; font-size:15px; line-height:1.6; }
-.kx-outcome-head > span:nth-child(2){ flex:1; min-width:0; }
-.kx-outcome-ic{ font-size:20px; line-height:1.3; flex:none; }
-.kx-outcome-sub{ display:block; font-size:14px; font-weight:400; color:var(--ink-soft); margin-top:2px; }
-.kx-outcome-note{
-  font-size:14px; color:var(--ink-soft); margin-top:10px; padding-top:10px;
-  border-top:1px solid var(--line); white-space:pre-wrap;
-}
-.kx-outcome-edit{
-  flex:none; background:#fff; border:1.5px solid var(--line); border-radius:9px;
-  padding:7px 14px; font-size:14px; font-weight:600; color:var(--ink);
-  cursor:pointer; font-family:inherit; white-space:nowrap;
-}
-.kx-outcome-edit:hover{ background:var(--bg); }
-
-.oc-opts{ display:flex; flex-direction:column; gap:9px; margin-bottom:16px; }
-.oc-opt{
-  display:flex; align-items:flex-start; gap:12px; width:100%; text-align:left;
-  background:#fff; border:1.5px solid var(--line); border-radius:12px;
-  padding:12px 14px; cursor:pointer; font-family:inherit; font-size:15px; color:var(--ink);
-}
-.oc-opt:hover{ background:var(--bg); }
-.oc-opt.on{ border-color:var(--blue-600); background:var(--blue-50); }
-.oc-opt.off{ opacity:.5; cursor:default; }
-.oc-opt > span:nth-child(2){ flex:1; min-width:0; }
-.oc-ic{ font-size:19px; line-height:1.25; flex:none; }
-.oc-sub{ display:block; font-size:13.5px; font-weight:400; color:var(--ink-soft); margin-top:2px; }
-.oc-label{ display:block; font-size:14px; font-weight:600; color:var(--ink); margin:0 0 6px; }
-.oc-field{
-  width:100%; box-sizing:border-box; border:1.5px solid var(--line); border-radius:10px;
-  padding:10px 13px; font-size:15px; font-family:inherit; color:var(--ink);
-  background:#fff; outline:none; margin-bottom:14px;
-}
-.oc-hint{ font-size:13px; color:var(--ink-faint); margin:-10px 0 14px; line-height:1.6; }
-.oc-actions{ display:flex; gap:9px; justify-content:flex-end; flex-wrap:wrap; }
-.oc-btn{
-  border-radius:10px; padding:10px 18px; font-size:15px; font-weight:600;
-  cursor:pointer; font-family:inherit; border:1.5px solid var(--line); background:#fff; color:var(--ink);
-}
-.oc-btn.primary{ background:var(--blue-600); border-color:var(--blue-600); color:#fff; }
-.oc-btn.primary:disabled{ opacity:.5; cursor:default; }
-@media (max-width: 520px){
-  .kx-outcome-head{ flex-wrap:wrap; }
-  .kx-outcome-edit{ flex:1 0 100%; margin-top:4px; }
-  .oc-actions .oc-btn{ flex:1; }
-}
 
 /* --- Connections: the count in the hero strip, and the list behind it --- */
 #page-company-profile .hero-statstrip .conn-pend{
@@ -20569,17 +20514,18 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   // the greyed-out เลือก explains itself rather than doing nothing at all
   window.kxPickHint = function(el){
-    if(window.kxToast) kxToast(el.getAttribute('data-hint') || 'ยังเลือกผู้ชนะไม่ได้');
+    if(window.kxToast) kxToast(el.getAttribute('data-hint') || '');
   };
 
+  /* A quote card carries no verdict. Konnex collects quotes so the buyer can
+     compare them and decide in their own purchasing process — it does not run
+     an auction, so there is no winner to mark and nothing here that ranks one
+     supplier above another. What the card shows is the offer itself: who, how
+     much, how that sits against the other prices, and the attachments. */
   function quoteCardHTML(q, isOwner, decided, canPick, avg, pickHint){
     var bidder = q.profiles || {};
     var name = esc(bidder.company_name || 'ผู้เสนอราคา');
     var open = bidder.id ? 'event.stopPropagation();kxViewProfile(\'' + bidder.id + '\')' : '';
-    var pill = q.status === 'won'
-      ? '<span class="kx-qpill won">🏆 ผู้ชนะ</span>'
-      : q.status === 'lost' ? '<span class="kx-qpill lost">ไม่ผ่าน</span>'
-      : q.status === 'closed' ? '<span class="kx-qpill lost">ปิดแล้ว</span>' : '';
 
     // where this price sits against the others on the same post — the one
     // comparison the owner is on this page to make
@@ -20593,18 +20539,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
 
     var files = q.quote_attachments || [];
-    /* Only the post's owner picks a winner, only once the auction has actually
-       ended, and only while nothing is decided yet. Before the deadline the
-       button still stands in its place, greyed out — an owner who cannot find
-       it at all has no way to tell whether it is missing, broken, or simply not
-       due yet, so it stays put and says which. */
-    var pickBtn = '';
-    if(isOwner && !decided){
-      pickBtn = canPick
-        ? '<button class="btn-choose" onclick="kxPickWinner(\'' + q.id + '\',\'' + name.replace(/'/g, '&#39;') + '\',' + q.price + ')">✓ เลือก</button>'
-        : '<button class="btn-choose is-off" data-hint="' + esc(pickHint || '') + '"' +
-          ' title="' + esc(pickHint || '') + '" onclick="kxPickHint(this)">✓ เลือก</button>';
-    }
+    // the owner's action on a quote is to talk to whoever sent it, not to rank it
+    var pickBtn = (isOwner && bidder.id)
+      ? '<button class="btn-view" onclick="event.stopPropagation();kxStartChat(\'' + bidder.id + '\',\'' +
+        (window.kxCurrentDetailPostId || '') + '\')">💬 คุยกับผู้เสนอ</button>'
+      : '';
     var fileBtn = files.length
       ? '<button class="btn-view" onclick="openFilesList(this)">📎 ไฟล์แนบ (' + files.length + ')' +
           '<span class="files-data" style="display:none">' + files.map(function(f){
@@ -20615,12 +20554,12 @@ body.kx-auth .kx-burger{ display:none !important; }
           }).join('') + '</span></button>'
       : '';
 
-    return '<div class="offer-card kx-q' + (q.status === 'won' ? ' won' : q.status === 'lost' ? ' lost' : '') + '">' +
+    return '<div class="offer-card kx-q">' +
       '<div class="offer-av"' + (open ? ' style="cursor:pointer;overflow:hidden" title="ดูโปรไฟล์" onclick="' + open + '"' : ' style="overflow:hidden"') + '>' +
         avatarInner(bidder, name) + '</div>' +
       '<div class="offer-main">' +
         '<div class="offer-name-row"><span' + (open ? ' style="cursor:pointer" title="ดูโปรไฟล์" onclick="' + open + '"' : '') + '>' +
-          name + '</span>' + pill + '</div>' +
+          name + '</span></div>' +
         '<div class="offer-loc">' + esc(bidder.province || 'ไม่ระบุจังหวัด') + ' · ' + relTime(q.created_at) + '</div>' +
         quoteStatsHTML(bidder) +
         (q.note ? '<div class="kx-qnote">' + esc(q.note) + '</div>' : '') +
@@ -20634,16 +20573,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     '</div>';
   }
 
-  /* Choosing a winner is three writes that have to agree with each other: the
-     chosen quote becomes 'won', every other quote on the post becomes 'lost',
-     and the post itself closes so no further bids can arrive. If any of them
-     fails the page reloads from the database rather than keeping whatever
-     half-applied state the DOM is showing. */
-  /* ปิดรับข้อเสนอก่อนกำหนด. Closing the post is what unlocks เลือก — canPick is
-     `isClosed || isExpired` — so this is the deliberate version of what an
-     owner used to have to do by editing the deadline.
+  /* ปิดรับข้อเสนอก่อนกำหนด — the deliberate version of what an owner used to have
+     to do by editing the deadline, for when they have the quotes they need.
 
-     It ends the auction early for everyone who had not bid yet, which is the
+     It ends the RFQ early for everyone who had not quoted yet, which is the
      one thing วันสิ้นสุดการรับข้อเสนอ promises them, so the confirmation says
      that plainly rather than asking a bare "are you sure". */
   window.kxCloseBidding = async function(postId){
@@ -20651,7 +20584,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(!confirm('ปิดรับข้อเสนอตอนนี้ใช่หรือไม่?\n\n' +
                 '• ผู้ขายรายอื่นจะเสนอราคาเข้ามาไม่ได้อีก แม้ยังไม่ถึงวันสิ้นสุด\n' +
                 '• ใบเสนอราคาที่ได้รับแล้วยังอยู่ครบ นำไปเปรียบเทียบต่อได้\n' +
-                '• ไม่ต้องเลือกผู้ชนะก็ได้ — บันทึกผลทีหลัง หรือไม่บันทึกเลยก็ได้\n' +
                 '• เปิดรับใหม่ได้โดยแก้ไขประกาศ')) return;
     var res = await sb.from('posts').update({ status:'closed' }).eq('id', postId);
     if(res.error){
@@ -20659,205 +20591,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       kxToast('ปิดรับข้อเสนอไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
       return;
     }
-    kxToast('ปิดรับข้อเสนอแล้ว — เลือกผู้ชนะได้เลย');
-    await kxLoadPostDetail(postId, 'rfq');
-  };
-
-  /* ---------------------------------------------------------------------
-     What happened to this RFQ.
-
-     Konnex does not decide purchasing, it gathers quotes so someone else can.
-     So the end of an RFQ is not "who won" but "what did you do with these",
-     and every answer including no answer at all is a real one:
-
-       awarded    ordered here, from one of the quotes
-       external   used the quotes, bought outside Konnex
-       undecided  parked on purpose
-       cancelled  not buying
-       (nothing)  none of Konnex's business
-
-     Only 'awarded' and 'external' name a supplier, and 'external' asks because
-     buying elsewhere from a supplier found here is still that supplier's work —
-     it is what lets them be reviewed and counted, and it is the one number that
-     tells the platform whether it created any business at all.
-     --------------------------------------------------------------------- */
-  var OUTCOMES = {
-    awarded:   { ic: '🏆', label: 'เลือกผู้เสนอราคา',            sub: 'สั่งซื้อกับรายนี้ผ่าน Konnex' },
-    external:  { ic: '📋', label: 'นำไปดำเนินการจัดซื้อภายนอก', sub: 'ใช้ใบเสนอราคาเป็นข้อมูลประกอบ' },
-    undecided: { ic: '🔄', label: 'ยังไม่ตัดสินใจ',              sub: 'เก็บไว้ก่อน กลับมาดูทีหลังได้' },
-    cancelled: { ic: '❌', label: 'ยกเลิกการจัดซื้อ',            sub: 'ไม่ได้ซื้อ' }
-  };
-  window.kxOutcomeLabel = function(k){ return OUTCOMES[k] || null; };
-
-  window.kxRenderOutcome = function(post, isOwner){
-    var panel = document.getElementById('rfqOutcomePanel');
-    if(!panel) return;
-    var quotes = post.quotes || [];
-
-    // a settled outcome is worth showing to everyone; the chooser is the owner's
-    if(post.outcome && post.outcome !== 'undecided'){
-      var o = OUTCOMES[post.outcome];
-      var who = null;
-      if(post.outcome_supplier_id){
-        var q = quotes.filter(function(x){ return x.bidder_id === post.outcome_supplier_id; })[0];
-        who = q && q.profiles && q.profiles.company_name;
-      }
-      panel.className = 'kx-outcome settled';
-      panel.innerHTML =
-        '<div class="kx-outcome-head"><span class="kx-outcome-ic">' + o.ic + '</span>' +
-          '<span><b>' + esc(o.label) + '</b>' +
-            (who ? ' — ' + esc(who) : '') +
-            '<span class="kx-outcome-sub">' + esc(o.sub) + '</span></span>' +
-          (isOwner ? '<button type="button" class="kx-outcome-edit" onclick="kxOpenOutcome()">แก้ไข</button>' : '') +
-        '</div>' +
-        (post.outcome_note ? '<div class="kx-outcome-note">' + esc(post.outcome_note) + '</div>' : '');
-      panel.style.display = '';
-      return;
-    }
-
-    // nothing recorded yet — offer it, to the owner, once there is something to
-    // decide about. Never to a visitor, and never before a quote has arrived.
-    if(!isOwner || !quotes.length){ panel.style.display = 'none'; return; }
-    var parked = post.outcome === 'undecided';
-    panel.className = 'kx-outcome ask';
-    panel.innerHTML =
-      '<div class="kx-outcome-head"><span class="kx-outcome-ic">' + (parked ? '🔄' : '📥') + '</span>' +
-        '<span><b>' + (parked ? 'เก็บไว้ก่อน' : 'ได้ใบเสนอราคาแล้ว ' + quotes.length + ' เจ้า') + '</b>' +
-          '<span class="kx-outcome-sub">' +
-            'บันทึกผลได้ถ้าต้องการ — ไม่บันทึกก็ได้ ไม่ต้องเลือกผู้ชนะก็ปิดได้' +
-          '</span></span>' +
-        '<button type="button" class="kx-outcome-edit" onclick="kxOpenOutcome()">บันทึกผล</button>' +
-      '</div>';
-    panel.style.display = '';
-  };
-
-  window.kxOpenOutcome = function(){
-    var post = window.kxCurrentDetailPost;
-    if(!post) return;
-    var quotes = post.quotes || [];
-    var box = document.getElementById('outcomeBox');
-    var opts = Object.keys(OUTCOMES).map(function(k){
-      var o = OUTCOMES[k];
-      // awarded needs someone to award to
-      var off = (k === 'awarded' && !quotes.length);
-      return '<button type="button" class="oc-opt' + (post.outcome === k ? ' on' : '') + (off ? ' off' : '') + '"' +
-        (off ? ' disabled' : ' onclick="kxPickOutcome(\'' + k + '\')"') + ' data-oc="' + k + '">' +
-        '<span class="oc-ic">' + o.ic + '</span>' +
-        '<span><b>' + esc(o.label) + '</b><span class="oc-sub">' + esc(o.sub) + '</span></span></button>';
-    }).join('');
-
-    var supplierOpts = '<option value="">— ไม่ระบุ —</option>' + quotes.map(function(q){
-      var n = (q.profiles && q.profiles.company_name) || 'ผู้เสนอราคา';
-      return '<option value="' + esc(q.bidder_id) + '"' +
-        (post.outcome_supplier_id === q.bidder_id ? ' selected' : '') + '>' +
-        esc(n) + ' — ' + money(q.price) + '</option>';
-    }).join('');
-
-    box.innerHTML =
-      '<div class="oc-opts">' + opts + '</div>' +
-      '<div id="ocSupplierWrap" style="display:none;">' +
-        '<label class="oc-label" id="ocSupplierLabel">ผู้ที่คุณสั่งซื้อด้วย</label>' +
-        '<select id="ocSupplier" class="oc-field">' + supplierOpts + '</select>' +
-        '<div class="oc-hint" id="ocSupplierHint"></div>' +
-      '</div>' +
-      '<label class="oc-label">หมายเหตุ (ถ้ามี)</label>' +
-      '<input type="text" id="ocNote" class="oc-field" maxlength="200" placeholder="เช่น เลขที่ PO, เหตุผลที่ยกเลิก" value="' +
-        esc(post.outcome_note || '') + '">' +
-      '<div class="oc-actions">' +
-        (post.outcome ? '<button type="button" class="oc-btn ghost" onclick="kxClearOutcome()">ล้างผลที่บันทึกไว้</button>' : '') +
-        '<button type="button" class="oc-btn ghost" onclick="kxCloseOutcome()">ปิด</button>' +
-        '<button type="button" class="oc-btn primary" id="ocSave" onclick="kxSaveOutcome()" disabled>บันทึก</button>' +
-      '</div>';
-    window.kxOutcomePick = post.outcome || null;
-    if(window.kxOutcomePick) kxPickOutcome(window.kxOutcomePick);
-    document.getElementById('outcomeModal').classList.add('open');
-  };
-  window.kxCloseOutcome = function(){
-    document.getElementById('outcomeModal').classList.remove('open');
-  };
-
-  window.kxPickOutcome = function(k){
-    window.kxOutcomePick = k;
-    document.querySelectorAll('#outcomeBox .oc-opt').forEach(function(b){
-      b.classList.toggle('on', b.getAttribute('data-oc') === k);
-    });
-    var wrap = document.getElementById('ocSupplierWrap');
-    var needs = (k === 'awarded' || k === 'external');
-    wrap.style.display = needs ? '' : 'none';
-    if(needs){
-      var lbl = document.getElementById('ocSupplierLabel');
-      var hint = document.getElementById('ocSupplierHint');
-      lbl.textContent = k === 'awarded' ? 'ผู้ที่คุณเลือก' : 'ผู้ที่คุณสั่งซื้อด้วย (ถ้ามี)';
-      hint.textContent = k === 'awarded'
-        ? 'จำเป็นต้องเลือก — เพราะการเลือกผู้เสนอราคาคือการบอกว่าเป็นใคร'
-        : 'ไม่บังคับ แต่ถ้าระบุ ผู้ขายรายนั้นจะได้รับเครดิตงานนี้ และคุณจะเขียนรีวิวเขาได้';
-    }
-    var save = document.getElementById('ocSave');
-    if(save) save.disabled = false;
-  };
-
-  window.kxSaveOutcome = async function(){
-    var post = window.kxCurrentDetailPost;
-    var k = window.kxOutcomePick;
-    if(!post || !k) return;
-    var supEl = document.getElementById('ocSupplier');
-    var supplier = (k === 'awarded' || k === 'external') ? (supEl && supEl.value) || null : null;
-    if(k === 'awarded' && !supplier){
-      kxToast('เลือกผู้เสนอราคาที่คุณเลือกก่อน');
-      return;
-    }
-    var note = (document.getElementById('ocNote').value || '').trim() || null;
-    var res = await sb.rpc('kx_set_outcome',
-      { pid: post.id, new_outcome: k, supplier: supplier, note: note });
-    if(res.error){
-      console.error('kxSaveOutcome failed', res.error);
-      kxToast(window.kxTableMissing(res.error)
-        ? 'ยังบันทึกผลไม่ได้ (ยังไม่ได้รัน rfq_outcome.sql)'
-        : 'บันทึกผลไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
-      return;
-    }
-    kxCloseOutcome();
-    kxToast('บันทึกผลแล้ว');
-    await kxLoadPostDetail(post.id, 'rfq');
-  };
-
-  window.kxClearOutcome = async function(){
-    var post = window.kxCurrentDetailPost;
-    if(!post) return;
-    var res = await sb.rpc('kx_set_outcome', { pid: post.id, new_outcome: null, supplier: null, note: null });
-    if(res.error){
-      console.error('kxClearOutcome failed', res.error);
-      kxToast('ล้างผลไม่สำเร็จ');
-      return;
-    }
-    kxCloseOutcome();
-    kxToast('ล้างผลที่บันทึกไว้แล้ว');
-    await kxLoadPostDetail(post.id, 'rfq');
-  };
-
-  window.kxPickWinner = async function(quoteId, name, price){
-    var postId = window.kxCurrentDetailPostId;
-    if(!postId) return;
-    if(!confirm('เลือก ' + name + ' ที่ราคา ' + Math.round(price).toLocaleString('en-US') +
-                ' บาท ใช่หรือไม่?\n\nประกาศนี้จะปิดรับข้อเสนอเพิ่มเติม และบันทึกผลเป็น “เลือกผู้เสนอราคา”')) return;
-    /* Straight to kx_set_outcome rather than the three writes this used to make.
-       Two paths that both mean "awarded" would drift apart: this one closed the
-       post and set won/lost but recorded no outcome, so an RFQ awarded from a
-       quote card and one awarded from the chooser ended up looking different in
-       the database. One fact, one function that writes it. */
-    var post = window.kxCurrentDetailPost;
-    var q = ((post && post.quotes) || []).filter(function(x){ return x.id === quoteId; })[0];
-    if(!q){ kxToast('ไม่พบใบเสนอราคานี้'); return; }
-    var res = await sb.rpc('kx_set_outcome',
-      { pid: postId, new_outcome: 'awarded', supplier: q.bidder_id, note: null });
-    if(res.error){
-      console.error('kxPickWinner failed', res.error);
-      kxToast(window.kxTableMissing(res.error)
-        ? 'ยังเลือกผู้เสนอราคาไม่ได้ (ยังไม่ได้รัน rfq_outcome.sql)'
-        : 'เลือกไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่อีกครั้ง'));
-    }else{
-      kxToast('บันทึกผลเรียบร้อย');
-    }
+    kxToast('ปิดรับข้อเสนอแล้ว — ใบเสนอราคาทั้งหมดยังอยู่ครบ');
     await kxLoadPostDetail(postId, 'rfq');
   };
 
@@ -20907,17 +20641,15 @@ body.kx-auth .kx-burger{ display:none !important; }
     var isClosed  = post.status !== 'open';
     var isExpired = !!post.deadline && new Date(post.deadline).getTime() <= Date.now();
     var canBid    = !isOwner && !isClosed && !isExpired;
-    var wonQuote  = quotes.filter(function(q){ return q.status === 'won'; })[0] || null;
-    var decided   = !!wonQuote;
-    // A winner can only be chosen once bidding is over — picking early would
-    // cut the auction short for everyone who hadn't bid yet, which is the
-    // whole thing วันสิ้นสุดการรับข้อเสนอ is promising them.
-    var canPick   = isClosed || isExpired;
+    // 'decided' and 'canPick' are gone with the winner. An RFQ is open or it is
+    // closed; what the buyer does with the quotes afterwards happens in their own
+    // purchasing process, and Konnex has no business claiming to know.
+    var decided   = false;
+    var canPick   = false;
 
     var statusTag = document.getElementById('rfqStatusTag');
     if(statusTag){
-      statusTag.textContent = decided ? '🏆 ได้ผู้ชนะแล้ว'
-        : isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
+      statusTag.textContent = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
         : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
         : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
     }
@@ -20963,7 +20695,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(offerListEl){
       // tell the owner why the เลือก button is greyed out, rather than leaving
       // them to guess whether it is broken
-      var pickHint = 'เลือกผู้ชนะได้เมื่อหมดเวลารับข้อเสนอ (' + fmtDateBE(post.deadline) + ')';
+      var pickHint = '';
       /* And a way out of waiting. An owner who has the offers they need had no
          way to choose before the deadline except editing the post's date, which
          is a strange thing to have to work out. Closing early is offered here,
@@ -20985,22 +20717,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
     var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
 
-    if(window.kxRenderOutcome) window.kxRenderOutcome(post, isOwner);
-
+    // the winner panel announced a winner; there is no longer such a thing
     var closedPanel = document.getElementById('dealClosedPanel');
-    if(closedPanel){
-      if(wonQuote){
-        window.kxWinnerProfileId = wonQuote.bidder_id || null;
-        var wn = (wonQuote.profiles && wonQuote.profiles.company_name) || 'ผู้ชนะ';
-        var wnEl = document.getElementById('winnerName');   if(wnEl) wnEl.textContent = wn;
-        var wpEl = document.getElementById('winnerPrice');  if(wpEl) wpEl.textContent = Math.round(wonQuote.price).toLocaleString('en-US');
-        var waEl = document.getElementById('winnerAv');
-        if(waEl){ waEl.style.overflow = 'hidden'; waEl.innerHTML = avatarInner(wonQuote.profiles, wn); }
-        var wpr = closedPanel.querySelector('.winner-price');
-        if(wpr) wpr.innerHTML = 'ราคาที่เสนอ <b id="winnerPrice">' + Math.round(wonQuote.price).toLocaleString('en-US') + '</b> บาท';
-        closedPanel.style.display = 'block';
-      } else { closedPanel.style.display = 'none'; window.kxWinnerProfileId = null; }
-    }
+    if(closedPanel) closedPanel.style.display = 'none';
+    window.kxWinnerProfileId = null;
 
     var actionRow = document.getElementById('rfqActionRow');
     if(actionRow){
@@ -21009,16 +20729,14 @@ body.kx-auth .kx-burger{ display:none !important; }
       };
       actionRow.style.display = '';
       if(isOwner){
-        actionRow.innerHTML = note(decided ? '📌 ประกาศของคุณ — เลือกผู้ชนะแล้ว'
-          : isClosed ? '📌 ประกาศของคุณ — ปิดรับข้อเสนอแล้ว'
+        actionRow.innerHTML = note(isClosed ? '📌 ประกาศของคุณ — ปิดรับข้อเสนอแล้ว'
           : isExpired ? '📌 ประกาศของคุณ — หมดเขตรับข้อเสนอแล้ว'
           : '📌 นี่คือประกาศของคุณ — รอผู้ให้บริการเข้ามาเสนอราคา');
       }else{
         var chat = '<button class="btn btn-outline" onclick="kxStartChat(\'' + post.owner_id + '\',\'' + post.id + '\')">💬 สอบถามรายละเอียด</button>';
         actionRow.innerHTML = canBid
           ? chat + '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>'
-          : chat + note(decided ? '🏆 ประกาศนี้ได้ผู้ชนะแล้ว'
-              : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
+          : chat + note(isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }
     }
     window.kxCurrentDetailPostId    = post.id;
@@ -21232,7 +20950,11 @@ body.kx-auth .kx-burger{ display:none !important; }
      showing this page's worked example on someone else's profile. */
   // pfServicesCard / pfReviewsCard / pfVerifyCard have left this list — they read
   // real tables now and render their own empty state for visitors too
-  var GUEST_HIDDEN = ['pfRecentCard'];
+  /* Was ['pfRecentCard'] — that card was the owner's own track record, so it was
+     hidden from visitors and restored for the owner. It is hidden from everyone
+     now (nothing can fill it), and leaving it in this list made the owner path
+     strip the data-pf-hide that keeps it down. Nothing else was ever guest-only. */
+  var GUEST_HIDDEN = [];
   var kxProfileNavIntent = false;
 
   /* The hero and the two unbuilt tabs, for whoever's profile is on screen.
@@ -21296,10 +21018,12 @@ body.kx-auth .kx-burger{ display:none !important; }
         .then(function(r){
           if(r.error){ strip.style.display = 'none'; return; }
           var sent = r.data ? r.data.length : 0;
-          var won  = r.data ? r.data.filter(function(q){ return q.status === 'won'; }).length : 0;
+          // งานสำเร็จ counted quotes marked 'won'. Konnex no longer declares a
+          // winner, so there is nothing behind that number and it is left off
+          // rather than shown as a permanent zero.
           strip.innerHTML =
             '<div class="hss"><div class="hss-num">' + sent + '</div><div class="hss-lbl">ใบเสนอที่ส่ง</div></div>' +
-            '<div class="hss"><div class="hss-num green">' + won + '</div><div class="hss-lbl">งานสำเร็จ</div></div>' +
+
             '<div class="hss"><div class="hss-num">' + (pr.rating_count || 0) + '</div><div class="hss-lbl">รีวิว</div></div>' +
             // filled in by kxLoadConnectionCount, which has to ask the database
             '<div class="hss" id="pfConnStat" style="display:none;"></div>';
@@ -21331,8 +21055,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       else if(!solo && BACK[t]) h.textContent = BACK[t];
     });
 
-    var recent = document.getElementById('pfRecentCard');
-    if(recent && window.pfApplyTab) window.pfApplyTab();
+    if(window.pfApplyTab) window.pfApplyTab();
 
     /* Last, because the two cards above are rebuilt from their original heading
        markup — which brings เขียนรีวิว and เพิ่มบริการ back with it. */
@@ -21523,12 +21246,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.scrollTo({ top:0 });
   };
 
-  // The two "message this person" buttons that live in static markup and so
-  // can't carry the id in their onclick — they read whichever post is open.
-  window.kxChatWithWinner = function(){
-    if(!window.kxWinnerProfileId){ kxToast('ยังไม่มีผู้ชนะสำหรับงานนี้'); return; }
-    kxStartChat(window.kxWinnerProfileId, window.kxCurrentDetailPostId);
-  };
+  // "message this person" from static markup, which can't carry the id in its
+  // onclick — it reads whichever post is open. (kxChatWithWinner went with the
+  // winner panel; the way to reach a bidder now is the button on their quote.)
   window.kxChatWithSeller = function(){
     if(!window.kxCurrentDetailOwnerId){ kxToast('ไม่พบเจ้าของประกาศ'); return; }
     kxStartChat(window.kxCurrentDetailOwnerId, window.kxCurrentDetailPostId);
@@ -21662,14 +21382,18 @@ body.kx-auth .kx-burger{ display:none !important; }
     // the person on the card is the one who asked
     var isReply = q.origin === 'offer';
     var who = owner.company_name || (isReply ? 'ผู้ขอราคา' : 'เจ้าของประกาศ');
-    /* 'closed' is not 'lost'. The RFQ ended and nobody was chosen — telling a
-       seller they lost a competition that never concluded is simply untrue. */
-    var pillMap = { pending:['pending','รอผล'], won:['won','ชนะ'], lost:['lost','ไม่ผ่าน'],
-                    closed:['closed','ปิดแล้ว ไม่ได้เลือกใคร'], answered:['won','ตอบแล้ว'] };
-    var pill = pillMap[q.status] || pillMap.pending;
+    /* A quote you sent has no verdict — Konnex is not judging it, and nobody
+       ever declares a winner. What the seller can usefully know is whether the
+       listing is still taking quotes, so the pill says that instead. 'รอผล'
+       claimed a result was coming; none is. */
+    var stillOpen = !!post && post.status === 'open';
+    var pill = (q.origin === 'offer')
+      ? ['won', 'ตอบแล้ว']                                  // a reply you sent to a request
+      : stillOpen ? ['pending', 'ส่งแล้ว'] : ['closed', 'ปิดรับแล้ว'];
     // the same summary pill the feed card uses, instead of a chip per file
     var files = filesSummaryHTML(q.quote_attachments);
-    return '<div class="bid-row" data-status="' + esc(q.status) + '" data-origin="' + (isReply ? 'offer' : 'rfq') + '"' +
+    return '<div class="bid-row" data-status="' + (isReply ? 'answered' : stillOpen ? 'live' : 'ended') + '"' +
+        ' data-origin="' + (isReply ? 'offer' : 'rfq') + '"' +
         (post ? ' style="cursor:pointer;" onclick="kxOpenPost(\'' + post.id + '\',\'' + (isReply ? 'offer' : 'rfq') + '\')"' : '') + '>' +
       cardThumbHTML(images, 'bid-thumb') +
       '<div class="bid-body">' +
@@ -21786,10 +21510,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxApplyIcons) window.kxApplyIcons(list);
 
     // the status tabs count real rows now instead of the demo totals
-    var counts = { all:rows.length, pending:0, won:0, lost:0, closed:0, answered:0 };
-    rows.forEach(function(q){ if(counts[q.status] != null) counts[q.status]++; });
+    /* Counted off the listing, not off the quote: a quote has no verdict now,
+       so what there is to count is whether the RFQ it went to is still taking
+       quotes. A reply to a คำขอราคา is neither — it is already answered. */
+    var counts = { all:rows.length, live:0, ended:0, answered:0 };
+    rows.forEach(function(q){
+      var k = q.origin === 'offer' ? 'answered'
+            : (q.posts && q.posts.status === 'open') ? 'live' : 'ended';
+      counts[k]++;
+    });
     var tabs = document.querySelectorAll('#page-my-bids .status-tab');
-    var labels = [['ทั้งหมด','all'],['รอผล','pending'],['ชนะ','won'],['ไม่ผ่าน','lost'],['ปิดแล้ว','closed']];
+    var labels = [['ทั้งหมด','all'],['ยังเปิดรับอยู่','live'],['ปิดรับแล้ว','ended']];
     Array.prototype.forEach.call(tabs, function(tab, i){
       if(!labels[i]) return;
       var ic = tab.querySelector('.tab-ic');
@@ -22474,32 +22205,35 @@ body.kx-auth .kx-burger{ display:none !important; }
   /* Deals the two of you closed together — you own a post they won, or they own
      one you won. This is also exactly what the insert policy checks, so the
      picker can only ever offer something the database will accept. */
-  /* Deals the two of you closed together — a won quote, *or* a purchase the
-     buyer recorded as made from that supplier outside Konnex. The second half
-     matters now that an RFQ need not have a winner: without it, a buyer who
-     gathers quotes here and raises the PO in their own system could never
-     review the supplier they actually bought from, and the trust system would
-     go quiet exactly where real business happened. This mirrors kx_did_business
-     in database/rfq_outcome.sql, which is what the insert policy enforces. */
+  /* Who you may review.
+
+     This used to require a quote marked 'won' between the two of you. With no
+     winner ever declared, that condition can never be met again — every review
+     button on the site would be permanently dead, and the ratings on every
+     profile would freeze at whatever they are today.
+
+     What Konnex can still see honestly is that the two of you dealt with each
+     other on a specific listing: they sent you a quote on your RFQ, or you sent
+     them one on theirs. That is a real interaction with something to say about
+     it — how they quoted, how they answered questions, whether they turned up —
+     and it is per listing, so the unique index still allows one review each per
+     deal rather than an unlimited stream.
+
+     It is a weaker claim than "we did business" and the review form says so.
+     Mirrors kx_dealt_with in database/no_winner.sql, which the insert policy
+     enforces — the client cannot widen this on its own. */
   window.kxReviewableDeals = async function(otherId){
     if(!window.kxSession) return [];
     var me = window.kxSession.user.id;
-    var cols = 'id,title,outcome,outcome_supplier_id,quotes(bidder_id,status)';
+    var cols = 'id,title,quotes(bidder_id)';
     var mine   = await sb.from('posts').select(cols).eq('owner_id', me);
     var theirs = await sb.from('posts').select(cols).eq('owner_id', otherId);
-    // outcome columns arrive with rfq_outcome.sql; until then, quotes alone
-    if(mine.error || theirs.error){
-      cols = 'id,title,quotes(bidder_id,status)';
-      mine   = await sb.from('posts').select(cols).eq('owner_id', me);
-      theirs = await sb.from('posts').select(cols).eq('owner_id', otherId);
-    }
-    function dealtWith(p, supplierId){
-      if((p.quotes || []).some(function(q){ return q.status === 'won' && q.bidder_id === supplierId; })) return true;
-      return (p.outcome === 'awarded' || p.outcome === 'external') && p.outcome_supplier_id === supplierId;
+    function quotedOn(p, who){
+      return (p.quotes || []).some(function(q){ return q.bidder_id === who; });
     }
     var out = [];
-    (mine.data || []).forEach(function(p){ if(dealtWith(p, otherId)) out.push(p); });
-    (theirs.data || []).forEach(function(p){ if(dealtWith(p, me)) out.push(p); });
+    (mine.data || []).forEach(function(p){ if(quotedOn(p, otherId)) out.push(p); });
+    (theirs.data || []).forEach(function(p){ if(quotedOn(p, me)) out.push(p); });
     return out;
   };
 
@@ -22677,16 +22411,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     <div class="modal-title">Connections</div>
     <div class="modal-sub" id="connModalSub">คนที่คุณเชื่อมต่อด้วย</div>
     <div id="connList" style="display:flex;flex-direction:column;gap:10px;max-height:min(60vh,460px);overflow-y:auto;margin-top:14px;padding-right:2px;"></div>
-  </div>
-</div>
-<!-- MODAL: what happened to this RFQ. A direct child of <body>, like the
-     connections one — a modal inside an .app-page opens into a hidden page. -->
-<div class="modal-overlay" id="outcomeModal">
-  <div class="modal-box">
-    <button class="modal-close" onclick="kxCloseOutcome()">✕</button>
-    <div class="modal-title">ผลการจัดซื้อ</div>
-    <div class="modal-sub">บันทึกไว้ว่าเกิดอะไรขึ้นกับใบเสนอราคาชุดนี้ — ไม่บันทึกก็ได้</div>
-    <div id="outcomeBox" style="margin-top:16px;"></div>
   </div>
 </div>
 </body></html>
