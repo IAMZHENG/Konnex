@@ -613,6 +613,239 @@
     });
   });
 
+  // ====================================================== ผลการจัดซื้อ (outcome) ===
+  describe('an RFQ does not have to have a winner', function () {
+    function post(over) {
+      var p = { id: 'rfq1', kind: 'rfq', owner_id: ME, title: 'งานทดสอบ', status: 'open',
+                outcome: null, outcome_supplier_id: null, outcome_note: null,
+                quotes: [
+                  { id: 'q1', price: 1000, bidder_id: OTHER, status: 'pending',
+                    profiles: { company_name: 'บจก. เอ' } },
+                  { id: 'q2', price: 1200, bidder_id: THIRD, status: 'pending',
+                    profiles: { company_name: 'ช่างบี' } }
+                ] };
+      for (var k in (over || {})) p[k] = over[k];
+      return p;
+    }
+    function panel(w) { return w.document.getElementById('rfqOutcomePanel'); }
+
+    it('offers to record an outcome once quotes are in — as an offer, not a demand', function (w) {
+      w.kxRenderOutcome(post(), true);
+      expect(panel(w).style.display).toBe('');
+      expect(panel(w).textContent).toContain('ไม่ต้องเลือกผู้ชนะ',
+        'the page must say out loud that not choosing is allowed');
+    });
+    it('says nothing at all before any quote arrives', function (w) {
+      w.kxRenderOutcome(post({ quotes: [] }), true);
+      expect(panel(w).style.display).toBe('none', 'nothing to decide about yet');
+    });
+    it('does not ask a visitor', function (w) {
+      w.kxRenderOutcome(post(), false);
+      expect(panel(w).style.display).toBe('none');
+    });
+    it('shows a recorded award with the supplier named', function (w) {
+      w.kxRenderOutcome(post({ outcome: 'awarded', outcome_supplier_id: OTHER, status: 'closed' }), true);
+      expect(panel(w).textContent).toContain('เลือกผู้เสนอราคา');
+      expect(panel(w).textContent).toContain('บจก. เอ');
+    });
+    it('shows an external purchase to everyone, not only the owner', function (w) {
+      w.kxRenderOutcome(post({ outcome: 'external', outcome_supplier_id: THIRD, status: 'closed' }), false);
+      expect(panel(w).style.display).toBe('');
+      expect(panel(w).textContent).toContain('จัดซื้อภายนอก');
+    });
+    it('keeps asking while the answer is "not decided yet"', function (w) {
+      w.kxRenderOutcome(post({ outcome: 'undecided' }), true);
+      expect(panel(w).textContent).toContain('เก็บไว้ก่อน');
+      expect(panel(w).textContent).toContain('บันทึกผล', 'parked is not settled — the way back stays open');
+    });
+    it('shows the note when there is one', function (w) {
+      w.kxRenderOutcome(post({ outcome: 'cancelled', outcome_note: 'งบถูกตัด' }), true);
+      expect(panel(w).textContent).toContain('งบถูกตัด');
+    });
+    it('escapes a supplier name that looks like markup', function (w) {
+      var p = post({ outcome: 'awarded', outcome_supplier_id: OTHER });
+      p.quotes[0].profiles.company_name = '<img onerror=x>';
+      w.kxRenderOutcome(p, true);
+      expect(panel(w).innerHTML).notToContain('<img onerror');
+    });
+  });
+
+  describe('the outcome chooser', function () {
+    function setup(w, over) {
+      w.kxCurrentDetailPost = { id: 'rfq1', owner_id: ME, outcome: null, outcome_supplier_id: null,
+        outcome_note: null,
+        quotes: [{ id: 'q1', price: 1000, bidder_id: OTHER, status: 'pending',
+                   profiles: { company_name: 'บจก. เอ' } }] };
+      for (var k in (over || {})) w.kxCurrentDetailPost[k] = over[k];
+      signIn(w);
+      w.kxOpenOutcome();
+    }
+    it('offers all four answers', function (w) {
+      setup(w);
+      var opts = w.document.querySelectorAll('#outcomeBox .oc-opt');
+      expect(opts.length).toBe(4, 'awarded, external, undecided, cancelled');
+    });
+    it('asks who only for the two answers that involve a supplier', function (w) {
+      setup(w);
+      w.kxPickOutcome('cancelled');
+      expect(w.document.getElementById('ocSupplierWrap').style.display).toBe('none');
+      w.kxPickOutcome('awarded');
+      expect(w.document.getElementById('ocSupplierWrap').style.display).toBe('');
+      w.kxPickOutcome('external');
+      expect(w.document.getElementById('ocSupplierWrap').style.display).toBe('',
+        'buying elsewhere from a supplier found here is still their work');
+    });
+    it('says the supplier is required for an award and optional for external', function (w) {
+      setup(w);
+      w.kxPickOutcome('awarded');
+      expect(w.document.getElementById('ocSupplierHint').textContent).toContain('จำเป็น');
+      w.kxPickOutcome('external');
+      expect(w.document.getElementById('ocSupplierHint').textContent).toContain('ไม่บังคับ');
+    });
+    it('refuses to save an award with nobody named', async function (w) {
+      setup(w);
+      var sb = plan(w, { _rpc: { kx_set_outcome: { data: null, error: null } } });
+      w.kxPickOutcome('awarded');
+      w.document.getElementById('ocSupplier').value = '';
+      await w.kxSaveOutcome();
+      restore(w);
+      expect(sb._calls.length).toBe(0, 'an award has to name someone — the function raises otherwise');
+    });
+    it('sends one call with everything the outcome means', async function (w) {
+      setup(w);
+      var sb = plan(w, { _rpc: { kx_set_outcome: { data: null, error: null } } });
+      w.kxPickOutcome('external');
+      w.document.getElementById('ocSupplier').value = OTHER;
+      w.document.getElementById('ocNote').value = 'PO-2569-001';
+      await w.kxSaveOutcome();
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_set_outcome'; })[0];
+      expect(call).toBeTruthy();
+      expect(call.args.new_outcome).toBe('external');
+      expect(call.args.supplier).toBe(OTHER);
+      expect(call.args.note).toBe('PO-2569-001');
+    });
+    it('does not send a supplier for an answer that has none', async function (w) {
+      setup(w);
+      var sb = plan(w, { _rpc: { kx_set_outcome: { data: null, error: null } } });
+      w.kxPickOutcome('cancelled');
+      await w.kxSaveOutcome();
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_set_outcome'; })[0];
+      expect(call.args.supplier).toBe(null);
+    });
+    it('clearing sends a null outcome, which is a real answer', async function (w) {
+      setup(w, { outcome: 'cancelled' });
+      var sb = plan(w, { _rpc: { kx_set_outcome: { data: null, error: null } } });
+      await w.kxClearOutcome();
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_set_outcome'; })[0];
+      expect(call.args.new_outcome).toBe(null, '"did not say" is allowed and is not the same as cancelled');
+    });
+    it('explains a missing migration instead of failing silently', async function (w) {
+      setup(w);
+      plan(w, { _rpc: { kx_set_outcome: { data: null, error: ERR.fnMissing } } });
+      w.kxPickOutcome('cancelled');
+      var said = null, realToast = w.kxToast;
+      w.kxToast = function (m) { said = m; };
+      await w.kxSaveOutcome();
+      w.kxToast = realToast;
+      restore(w);
+      expect(said).toContain('rfq_outcome.sql');
+    });
+  });
+
+  describe('kxPickWinner — the เลือก button writes the same fact as the chooser', function () {
+    it('goes through kx_set_outcome rather than editing rows itself', async function (w) {
+      w.kxCurrentDetailPostId = 'rfq1';
+      w.kxCurrentDetailPost = { id: 'rfq1', owner_id: ME,
+        quotes: [{ id: 'q1', price: 1000, bidder_id: OTHER, status: 'pending',
+                   profiles: { company_name: 'บจก. เอ' } }] };
+      var sb = plan(w, { _rpc: { kx_set_outcome: { data: null, error: null } },
+                         posts: { _: { data: null, error: null } } });
+      signIn(w);
+      var realConfirm = w.confirm; w.confirm = function () { return true; };
+      await w.kxPickWinner('q1', 'บจก. เอ', 1000);
+      w.confirm = realConfirm;
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_set_outcome'; })[0];
+      expect(call).toBeTruthy('two ways to say "awarded" would drift apart');
+      expect(call.args.new_outcome).toBe('awarded');
+      expect(call.args.supplier).toBe(OTHER, 'the supplier is the bidder, not the quote id');
+      expect(sb._writes.length).toBe(0, 'no direct row edits — the function owns that');
+    });
+  });
+
+  describe('a quote that ended without an award is not a loss', function () {
+    it('is reachable on the seller list, not folded into ทั้งหมด', function (w) {
+      var tabs = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-my-bids .status-tab'),
+        function (t) { return t.getAttribute('onclick') || ''; }).join(' ');
+      expect(tabs).toContain("'closed'", 'a quote nobody was chosen over needs its own filter');
+    });
+    it('counts closed quotes so the tab does not read (undefined)', async function (w) {
+      signIn(w);
+      plan(w, { quotes: { _: { data: [
+        { id: 'q1', price: 1, status: 'closed', created_at: '2026-08-24T00:00:00Z',
+          quote_attachments: [], posts: { id: 'p1', title: 'งาน', province: 'ชลบุรี',
+            deadline: null, post_images: [], profiles: { company_name: 'บ.' } } }
+      ], error: null } } });
+      await w.kxLoadMyBids();
+      restore(w);
+      var tabs = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-my-bids .status-tab'),
+        function (t) { return t.textContent; }).join(' ');
+      expect(tabs).notToContain('undefined');
+      expect(tabs).toContain('ปิดแล้ว (1)');
+    });
+    it('is styled apart from won', function (w) {
+      var el = w.document.createElement('span');
+      el.className = 'status-pill closed';
+      w.document.getElementById('page-my-bids').appendChild(el);
+      var g = w.getComputedStyle(el);
+      expect(g.backgroundColor).notToContain('rgb(21, 128, 61)', 'closed is not a win');
+      el.remove();
+    });
+  });
+
+  describe('kxReviewableDeals — who you may review', function () {
+    function plans(w, minePosts, theirPosts) {
+      var i = 0;
+      return plan(w, { posts: { select: function () {
+        return { data: (i++ === 0) ? minePosts : theirPosts, error: null };
+      } } });
+    }
+    it('counts a won quote', async function (w) {
+      signIn(w);
+      plans(w, [{ id: 'p1', title: 'งาน', quotes: [{ bidder_id: OTHER, status: 'won' }] }], []);
+      var deals = await w.kxReviewableDeals(OTHER);
+      restore(w);
+      expect(deals.length).toBe(1);
+    });
+    it('counts a purchase made outside Konnex from that supplier', async function (w) {
+      signIn(w);
+      plans(w, [{ id: 'p1', title: 'งาน', outcome: 'external', outcome_supplier_id: OTHER, quotes: [] }], []);
+      var deals = await w.kxReviewableDeals(OTHER);
+      restore(w);
+      expect(deals.length).toBe(1,
+        'gathering quotes here and raising the PO elsewhere is still business between the two of you');
+    });
+    it('does not count a cancelled purchase', async function (w) {
+      signIn(w);
+      plans(w, [{ id: 'p1', title: 'งาน', outcome: 'cancelled', outcome_supplier_id: null, quotes: [] }], []);
+      var deals = await w.kxReviewableDeals(OTHER);
+      restore(w);
+      expect(deals.length).toBe(0, 'nobody bought anything');
+    });
+    it('does not count merely having quoted', async function (w) {
+      signIn(w);
+      plans(w, [{ id: 'p1', title: 'งาน', outcome: null, quotes: [{ bidder_id: OTHER, status: 'pending' }] }], []);
+      var deals = await w.kxReviewableDeals(OTHER);
+      restore(w);
+      expect(deals.length).toBe(0, 'a review has to be earned by a deal, not by showing up');
+    });
+  });
+
   // ============================================================== the sidebar ===
   describe('renderSidebars — the rail', function () {
     function items(w) {
