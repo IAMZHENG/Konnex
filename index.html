@@ -8206,14 +8206,12 @@ html, body{
       </div>
 
       <div class="status-tabs">
-        <div class="status-tab active" onclick="switchTab(this)"><span class="tab-ic">📣</span>เปิดรับ (5)</div>
-        <div class="status-tab" onclick="switchTab(this)"><span class="tab-ic">🤝</span>พิจารณา (3)</div>
-        <div class="status-tab" onclick="switchTab(this)"><span class="tab-ic">✅</span>เสร็จสิ้น (8)</div>
+        <div class="status-tab active" onclick="switchTab(this)"><span class="tab-ic">📣</span>เปิดรับ (0)</div>
+        <div class="status-tab" onclick="switchTab(this)"><span class="tab-ic">✅</span>เสร็จสิ้น (0)</div>
       </div>
 
       <div class="filter-row">
         <div class="search-rfq">🔍 <input type="text" placeholder="ค้นหา RFQ"></div>
-        <div class="select-chip">สถานะทั้งหมด ⌄</div>
         <div class="select-chip">ล่าสุดก่อน ⌄</div>
       </div>
 
@@ -18717,33 +18715,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     });
   }
 
-  function wireRfqStatus(){
-    var chips = document.querySelectorAll('#page-rfq-offers .select-chip');
-    var chip = chips[0];
-    if(!chip || chip.dataset.wired) return;
-    chip.dataset.wired = '1';
-    chip.dataset.value = 'all';
-    chip.setAttribute('role', 'button');
-    chip.setAttribute('tabindex', '0');
-    chip.addEventListener('click', function(){
-      chipMenu(chip, [
-        {value:'all',    label:'สถานะทั้งหมด'},
-        {value:'เปิดรับ', label:'เปิดรับ'},
-        {value:'ปิดแล้ว', label:'ปิดแล้ว'}
-      ], function(v){
-        var shown = 0;
-        document.querySelectorAll('#page-rfq-offers .rfq-card').forEach(function(c){
-          var col = c.querySelector('.rfq-status-col');
-          var st = col ? (col.textContent || '').trim().split(/\s+/)[0] : '';
-          var ok = (v === 'all') || st === v;
-          c.style.display = ok ? '' : 'none';
-          if(ok) shown++;
-        });
-        var empty = document.querySelector('#page-rfq-offers .kx-empty');
-        if(empty) empty.style.display = shown ? 'none' : '';
-      });
-    });
-  }
+  /* wireRfqStatus used to live here — a "สถานะทั้งหมด" dropdown with the same
+     three-way open/closed choice the status-tab strip above it already gives,
+     driven by a second, unrelated code path (it read a card's status text
+     rather than its bucket). Two controls answering the same question is the
+     kind of button the tab strip made unnecessary; removed rather than kept
+     in sync with it forever. */
 
   /* ---- settings ---- */
   var SET_KEYS = ['setName','setEmail','setPhone'];
@@ -19454,8 +19431,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   }
 
   function boot(){
-    wireRfqStatus();
-    wireSort('#page-rfq-offers .select-chip', 1, '#page-rfq-offers .rfq-list', '.rfq-card', null);
+    wireSort('#page-rfq-offers .select-chip', 0, '#page-rfq-offers .rfq-list', '.rfq-card', null);
     wireSort('#page-my-offers .select-chip', 0, '#page-my-offers #offerList', '.offer-row', '.offer-price-col');
     wireSort('#page-my-bids .select-chip', 0, '#page-my-bids #bidList', '.bid-row', '.price-num');
     wireTags();
@@ -21295,8 +21271,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
     var lockLabel = post.bid_type === 'open' ? '🔓 เปิดราคา' : '🔒 ปิดราคา';
-    var statusVal = post.status === 'open' ? 'active' : post.status;
-    var statusLabel = post.status === 'open' ? 'เปิดรับ' : post.status === 'paused' ? 'พักไว้' : 'ปิดแล้ว';
+    /* Same call rfqBucket makes, so a card's own label can never disagree with
+       the tab it gets filed under — a post whose deadline has quietly passed
+       reads ปิดรับแล้ว here even if nobody has touched its status in the
+       database yet. */
+    var cs = rfqCardStatus(post);
+    var statusVal = cs.done ? 'closed' : 'active';
+    var statusLabel = cs.label;
     return '<div class="rfq-card" data-status="' + esc(statusVal) + '" data-post-id="' + post.id + '"' +
         ' onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
       cardThumbHTML(images, 'rfq-thumb') +
@@ -21648,27 +21629,31 @@ body.kx-auth .kx-burger{ display:none !important; }
       '<span>ดูรายการที่มีเครื่องหมาย “รอตอบ” ด้านล่าง</span>';
   }
 
-  /* The three tabs on งานของฉัน were เปิดรับ (5) · พิจารณา (3) · เสร็จสิ้น (8)
-     written into the markup, and switchTab only moved the highlight — so an
-     account with no posts at all was told it had sixteen, and clicking a tab
-     filtered nothing.
+  /* งานของฉัน used to carry a third tab, พิจารณา — "bidding over, waiting for the
+     owner to choose a winner". Konnex no longer picks winners, so there is
+     nothing left to wait on: a post's whole life is just whether it is still
+     taking quotes or not, and that is decided the moment its deadline passes
+     (or the owner closes it early). Two buckets, not three.
 
-     The three states are the post's own life: still taking offers, bidding
-     over and waiting for the owner to choose, and decided. "พิจารณา" is where
-     a post lands the moment its deadline passes, which is also exactly when
-     the เลือก button unlocks. */
+     rfqCardStatus is the one place both facts come from — the tab a post
+     files under and the label printed on its own card — so the two can never
+     disagree with each other. */
   function rfqBucket(p){
-    if(p.status === 'closed') return 'done';
-    if(p.status === 'paused') return 'review';
-    var over = !!p.deadline && new Date(p.deadline).getTime() <= Date.now();
-    return over ? 'review' : 'open';
+    return rfqCardStatus(p).done ? 'done' : 'open';
   }
+  function rfqCardStatus(p){
+    var over = !!p.deadline && new Date(p.deadline).getTime() <= Date.now();
+    var done = p.status === 'closed' || p.status === 'paused' || over;
+    return { done: done, label: done ? 'ปิดรับแล้ว' : 'เปิดรับ' };
+  }
+  window.rfqBucket = rfqBucket;
+  window.rfqCardStatus = rfqCardStatus;
   function kxPaintRfqTabs(rows){
     var tabs = document.querySelectorAll('#page-rfq-offers .status-tabs .status-tab');
     if(!tabs.length) return;
-    var keys = ['open', 'review', 'done'];
-    var labels = ['เปิดรับ', 'พิจารณา', 'เสร็จสิ้น'];
-    var counts = { open:0, review:0, done:0 };
+    var keys = ['open', 'done'];
+    var labels = ['เปิดรับ', 'เสร็จสิ้น'];
+    var counts = { open:0, done:0 };
     (rows || []).forEach(function(p){ counts[rfqBucket(p)]++; });
     Array.prototype.forEach.call(tabs, function(tab, i){
       if(!keys[i]) return;

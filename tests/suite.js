@@ -735,6 +735,49 @@
     });
   });
 
+  // ==================================================== งานของฉัน has two states ===
+  describe('rfqBucket — a post is either still taking quotes or it is not', function () {
+    function post(over) {
+      var p = { id: 'p1', status: 'open', deadline: null };
+      for (var k in (over || {})) p[k] = over[k];
+      return p;
+    }
+    it('has only two buckets — the third, พิจารณา, went with the winner', function (w) {
+      var tabs = w.document.querySelectorAll('#page-rfq-offers .status-tabs .status-tab');
+      expect(tabs.length).toBe(2);
+      var labels = Array.prototype.map.call(tabs, function (t) { return t.textContent; }).join(' ');
+      expect(labels).notToContain('พิจารณา',
+        'that tab meant "deadline passed, waiting on a winner" — nothing waits any more');
+    });
+    it('buckets by deadline, not only by the status column', function (w) {
+      var future = new Date(Date.now() + 86400000).toISOString();
+      var past = new Date(Date.now() - 86400000).toISOString();
+      expect(w.rfqBucket(post({ status: 'open', deadline: future }))).toBe('open');
+      expect(w.rfqBucket(post({ status: 'open', deadline: past }))).toBe('done',
+        'a deadline that has quietly passed closes the post even if nobody updated its status');
+    });
+    it('a manual close counts as done regardless of the deadline', function (w) {
+      var future = new Date(Date.now() + 86400000).toISOString();
+      expect(w.rfqBucket(post({ status: 'closed', deadline: future }))).toBe('done');
+    });
+    it('the card label and the tab bucket always agree — one function decides both', function (w) {
+      var past = new Date(Date.now() - 86400000).toISOString();
+      var p = post({ status: 'open', deadline: past });
+      var cs = w.rfqCardStatus(p);
+      expect(cs.done).toBe(true);
+      expect(cs.label).toBe('ปิดรับแล้ว');
+      expect(w.rfqBucket(p)).toBe('done');
+    });
+    it('has no duplicate status dropdown — the tab strip is the one control for this', function (w) {
+      var chips = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-rfq-offers .select-chip'),
+        function (c) { return c.textContent.trim(); });
+      expect(chips).notToContain('สถานะทั้งหมด',
+        'it duplicated the tab strip through a separate, unsynced code path');
+      expect(chips).toContain('ล่าสุดก่อน', 'the sort chip is still there');
+    });
+  });
+
   // ==================================================== ผลงานที่ผ่านมา (portfolio) ===
   describe('the seller writes their own track record', function () {
     function withRows(w, rows, err) {
