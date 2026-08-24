@@ -8336,22 +8336,6 @@ html, body{
       </div>
     </div>
 
-    <!-- DEAL CLOSED PANEL (hidden until a winner is selected) -->
-    <div class="deal-closed-card" id="dealClosedPanel" style="display:none;">
-      <div class="deal-closed-head">🏆 เลือกผู้ให้บริการเรียบร้อย — เชื่อมต่อให้คุยกันต่อในแชท</div>
-      <div class="winner-row">
-        <div class="winner-av" id="winnerAv">S</div>
-        <div class="winner-info">
-          <div class="winner-name" id="winnerName"></div>
-          <div class="winner-price">ราคาที่เสนอ <b id="winnerPrice">6,200</b> บาท/วัน</div>
-        </div>
-        <div class="winner-actions">
-          <button class="btn btn-primary" id="kxChatWinnerBtn" onclick="kxChatWithSeller()">💬 เริ่มแชท</button>
-        </div>
-      </div>
-      <div class="deal-closed-note" id="dealClosedNote">Konnex ทำหน้าที่เฉพาะขั้นตอนขอใบเสนอราคา — ขั้นตอนต่อไป (ยืนยันรายละเอียด กำหนดส่งมอบ การชำระเงิน ฯลฯ) ให้ทั้งสองฝ่ายตกลงกันเองผ่านแชท</div>
-    </div>
-
     <!-- COMPARE OFFERS -->
 
     <div class="card" id="rfqQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
@@ -8379,22 +8363,6 @@ html, body{
     <div class="load-more-offers">⌄ ดูข้อเสนออีก 4 ราย</div>
     </div>
   </div>
-  </div>
-
-  <!-- MODAL: CONFIRM WINNER SELECTION -->
-  <div class="modal-overlay" id="confirmWinnerModal">
-    <div class="modal-box">
-      <button class="modal-close" onclick="closeConfirmModal()">✕</button>
-      <div class="modal-title">ยืนยันการเลือกผู้ให้บริการ</div>
-      <p style="font-size:15px;color:var(--ink-soft);line-height:1.7;margin:0 0 20px;">
-        คุณกำลังจะเลือก <b id="confirmWinnerName" style="color:var(--ink);">-</b> เป็นผู้ให้บริการสำหรับงานนี้ ที่ราคา <b id="confirmWinnerPrice" style="color:var(--ink);">-</b> บาท/วัน<br><br>
-        เมื่อยืนยันแล้ว RFQ นี้จะปิดรับข้อเสนอเพิ่มเติม และระบบจะพาคุณไปเริ่มพูดคุยกับผู้ให้บริการรายนี้
-      </p>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-outline" style="flex:1;justify-content:center;" onclick="closeConfirmModal()">ยกเลิก</button>
-        <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="confirmSelectWinner()">✓ ยืนยันการเลือก</button>
-      </div>
-    </div>
   </div>
 
   <!-- MODAL: SUBMIT OFFER -->
@@ -8425,7 +8393,6 @@ html, body{
   function openModal(){ document.getElementById('offerModal').classList.add('open'); }
   function closeModal(){ document.getElementById('offerModal').classList.remove('open'); }
 
-  var pendingWinner = null;
   function revealSealed(){
     var list = document.getElementById('offerList');
     if(list) list.classList.remove('sealed');
@@ -8452,35 +8419,8 @@ html, body{
       if(t===0) revealSealed();
     }, 1000);
   })();
-  function selectWinner(name, price, initials, avColor){
-    pendingWinner = { name: name, price: price, initials: initials, avColor: avColor };
-    document.getElementById('confirmWinnerName').innerText = name;
-    document.getElementById('confirmWinnerPrice').innerText = price;
-    document.getElementById('confirmWinnerModal').classList.add('open');
-  }
-  function closeConfirmModal(){
-    document.getElementById('confirmWinnerModal').classList.remove('open');
-  }
-  function confirmSelectWinner(){
-    if(!pendingWinner) return;
-    document.getElementById('winnerName').innerText = pendingWinner.name;
-    document.getElementById('winnerPrice').innerText = pendingWinner.price;
-    document.getElementById('winnerAv').innerText = pendingWinner.initials;
-    document.getElementById('winnerAv').style.background = pendingWinner.avColor;
-
-    document.getElementById('compareOffersSection').style.display = 'none';
-    document.getElementById('dealClosedPanel').style.display = 'block';
-    document.getElementById('rfqStatusTag').innerHTML = '🏆 ได้ผู้ชนะแล้ว';
-    document.getElementById('rfqActionRow').style.display = 'none';
-
-    closeConfirmModal();
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
   document.getElementById('offerModal').addEventListener('click', e=>{
     if(e.target.id === 'offerModal') closeModal();
-  });
-  document.getElementById('confirmWinnerModal').addEventListener('click', e=>{
-    if(e.target.id === 'confirmWinnerModal') closeConfirmModal();
   });
   let offerFiles = [];
   function offerEsc(s){
@@ -16782,7 +16722,6 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   function init(){
     wrap('openModal', function(){ mount('offerModal', 'bid', '.btn-submit'); });
-    wrap('selectWinner', function(){ mount('confirmWinnerModal', 'winner', '.modal-actions, .pf-actions'); });
   }
   if(document.readyState !== 'loading') init();
   else document.addEventListener('DOMContentLoaded', init);
@@ -20716,11 +20655,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var loadMore = root.querySelector('.load-more-offers'); if(loadMore) loadMore.style.display = 'none';
     var compareSection = document.getElementById('compareOffersSection'); if(compareSection) compareSection.style.display = '';
-
-    // the winner panel announced a winner; there is no longer such a thing
-    var closedPanel = document.getElementById('dealClosedPanel');
-    if(closedPanel) closedPanel.style.display = 'none';
-    window.kxWinnerProfileId = null;
 
     var actionRow = document.getElementById('rfqActionRow');
     if(actionRow){
