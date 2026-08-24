@@ -6,50 +6,24 @@
 -- winner to declare, no loser to label, and nothing for the platform to record
 -- about a decision it never sees.
 --
--- Run this once in the Supabase SQL editor, after rfq_outcome.sql. Safe to
--- re-run.
-
-
--- ---------------------------------------------------------------------------
--- The outcome columns and the function that wrote them.
+-- Run this once in the Supabase SQL editor. Safe to re-run.
 --
--- Dropped rather than left in place unused: a column nobody writes is a trap
--- for whoever reads this schema next, and `outcome` sitting next to `status`
--- would read as though it still means something.
--- ---------------------------------------------------------------------------
-drop function if exists kx_set_outcome(uuid, text, uuid, text);
-drop function if exists kx_did_business(uuid, uuid, uuid);
-drop index if exists posts_outcome_idx;
-alter table posts drop column if exists outcome;
-alter table posts drop column if exists outcome_at;
-alter table posts drop column if exists outcome_note;
-alter table posts drop column if exists outcome_supplier_id;
+-- ORDER MATTERS HERE. An earlier version of this file dropped kx_did_business
+-- before replacing the review policy that calls it. Postgres refuses to drop a
+-- function an active policy depends on, and the SQL editor runs the file as one
+-- transaction — so that single error rolled the whole thing back and left the
+-- database exactly as it was, with no sign anything had failed except that
+-- nothing had changed. The replacement goes in first now, and only then is the
+-- old one dropped.
 
 
 -- ---------------------------------------------------------------------------
--- quotes.status: a quote has no verdict any more.
+-- 1. Reviews first, because the policy is what pins the old function in place.
 --
--- Existing rows are settled back to 'pending', which is now the only value it
--- ever holds — nothing writes 'won' or 'lost', and the two labels would
--- otherwise sit in the database as claims about competitions that are no
--- longer run. The column stays because dropping it would break the embeds that
--- select it; the check constraint is narrowed so nothing can start writing
--- verdicts again by accident.
--- ---------------------------------------------------------------------------
-update quotes set status = 'pending' where status <> 'pending';
-
-alter table quotes drop constraint if exists quotes_status_check;
-alter table quotes add constraint quotes_status_check
-  check (status in ('pending'));
-
-
--- ---------------------------------------------------------------------------
--- Reviews.
---
--- The insert policy required a 'won' quote between the two parties. Nothing can
--- ever be 'won' again, so left alone it would silently kill every review on the
--- platform — no error, no empty state, just a button that always says "เขียน
--- รีวิวได้เมื่อทำงานร่วมกันจบแล้ว" and never opens.
+-- The insert policy required a quote with status 'won' between the two parties.
+-- Nothing can ever be 'won' again, so left alone it would silently kill every
+-- review on the platform — no error, no empty state, just a button that always
+-- says "เขียนรีวิวได้เมื่อทำงานร่วมกันจบแล้ว" and never opens.
 --
 -- What is still true and checkable is that the two of you dealt with each other
 -- on a specific listing: one of you owns it, the other quoted on it. That is a
@@ -85,7 +59,39 @@ create policy "reviewers write their own reviews" on reviews for insert
 
 
 -- ---------------------------------------------------------------------------
--- wins_count and its trigger.
+-- 2. Now the outcome machinery can go — nothing depends on it any more.
+--
+-- The columns are dropped rather than left in place unused: a column nobody
+-- writes is a trap for whoever reads this schema next, and `outcome` sitting
+-- beside `status` would read as though it still meant something.
+-- ---------------------------------------------------------------------------
+drop function if exists kx_set_outcome(uuid, text, uuid, text);
+drop function if exists kx_did_business(uuid, uuid, uuid);
+drop index if exists posts_outcome_idx;
+alter table posts drop column if exists outcome;
+alter table posts drop column if exists outcome_at;
+alter table posts drop column if exists outcome_note;
+alter table posts drop column if exists outcome_supplier_id;
+
+
+-- ---------------------------------------------------------------------------
+-- 3. quotes.status: a quote has no verdict any more.
+--
+-- Existing rows are settled back to 'pending', which is now the only value it
+-- ever holds. 'won' and 'lost' would otherwise sit in the database as claims
+-- about competitions that are no longer run. The column stays because the
+-- embeds select it; the check is narrowed so nothing can start writing verdicts
+-- again by accident.
+-- ---------------------------------------------------------------------------
+update quotes set status = 'pending' where status <> 'pending';
+
+alter table quotes drop constraint if exists quotes_status_check;
+alter table quotes add constraint quotes_status_check
+  check (status in ('pending'));
+
+
+-- ---------------------------------------------------------------------------
+-- 4. wins_count and its trigger.
 --
 -- "งานสำเร็จ" counted quotes marked 'won'. Nothing is marked 'won' any more, so
 -- the number can only ever be zero and the trigger has nothing to fire on. Both

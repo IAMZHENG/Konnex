@@ -8304,7 +8304,7 @@ html, body{
     <!-- HEADER -->
     <div class="header-card">
       <div class="tag-row">
-        <span class="head-tag closed" id="rfqStatusTag">🔒 ปิดประมูล</span>
+        <span class="head-tag closed" id="rfqStatusTag">ปิดรับข้อเสนอแล้ว</span>
       </div>
       <div class="header-top">
         <div class="header-info">
@@ -8350,8 +8350,8 @@ html, body{
     <div class="sealed-banner" id="sealedBanner">
       <div class="sealed-ic">🔒</div>
       <div class="sealed-body">
-        <div class="sealed-title">ประมูลแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้</div>
-        <div class="sealed-sub">ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย 6,500 ฿/วัน</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลาประมูล</div>
+        <div class="sealed-title">เสนอราคาแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้</div>
+        <div class="sealed-sub">ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย 6,500 ฿/วัน</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลาเสนอราคา</div>
       </div>
       <div class="sealed-count"><span class="sealed-count-lbl">เปิดเผยใน</span><b id="sealedCountdown">04:23:11</b></div>
       <button class="sealed-reveal" onclick="revealSealed()">จำลองหมดเวลา ▸ เปิดเผยราคา</button>
@@ -8401,7 +8401,7 @@ html, body{
       b.style.background = 'linear-gradient(100deg,#ecfdf3,#f2fbf5)';
       b.style.borderColor = '#bfe6cf';
       b.querySelector('.sealed-ic').textContent = '🔓';
-      b.querySelector('.sealed-title').textContent = 'หมดเวลาประมูล — เปิดเผยราคาทุกเจ้าแล้ว';
+      b.querySelector('.sealed-title').textContent = 'หมดเวลาเสนอราคา — เปิดเผยราคาทุกเจ้าแล้ว';
       b.querySelector('.sealed-sub').innerHTML = 'ตอนนี้คุณเห็นราคาของผู้เสนอทุกรายและเลือกผู้ให้บริการได้';
       var c = b.querySelector('.sealed-count'); if(c) c.style.display = 'none';
       var r = b.querySelector('.sealed-reveal'); if(r) r.style.display = 'none';
@@ -8648,6 +8648,11 @@ html, body{
           <div class="info-list" id="pfInfoList">
           </div>
         </div>
+
+        <!-- ผลงานที่ผ่านมา — written by the seller (database/portfolio.sql).
+             kxLoadPortfolio fills it; it starts hidden so an account with none
+             does not show an empty card to visitors. -->
+        <div class="card" data-pf-sec="overview" id="pfWorkCard" data-pf-hide="1" style="display:none;"></div>
 
         <!-- RECENT WORK — hidden with ผลงานสะสม, which is the same data: both were
              built from the RFQs this account had been chosen for, and nothing is
@@ -9780,14 +9785,14 @@ html, body{
           <div style="font-size:13px;color:#565b6e;margin-top:6px;">ไม่ระบุก็ได้ — ใส่ไว้ช่วยให้ผู้ขายเสนอราคาได้ตรงกว่า และจะแสดงบนหน้าประกาศ</div>
         </div>
 
-        <div id="cpBidStep"><div style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">2</span><span style="font-size:18px;font-weight:700;color:var(--ink);">เลือกประเภทการประมูล <span style="color:var(--red)">*</span></span></div>
+        <div id="cpBidStep"><div style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">2</span><span style="font-size:18px;font-weight:700;color:var(--ink);">เลือกประเภทการเสนอราคา <span style="color:var(--red)">*</span></span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;">
           <label style="position:relative;border:2px solid var(--blue-600);background:var(--blue-50);border-radius:14px;padding:16px;cursor:pointer;"><input type="radio" name="cpBid" checked="" style="accent-color:var(--blue-700);">
-            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#eaf1ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--blue-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">ประมูลแบบปิด (ปิดราคา)</span><span style="font-size:12px;font-weight:600;color:#fff;background: var(--blue-600);padding:2px 9px;border-radius:999px;">แนะนำ</span></div>
+            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#eaf1ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--blue-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">เสนอราคาแบบปิด (ปิดราคา)</span><span style="font-size:12px;font-weight:600;color:#fff;background: var(--blue-600);padding:2px 9px;border-radius:999px;">แนะนำ</span></div>
             <div style="font-size:14px;color:var(--ink-soft);line-height:1.55;padding-left:2px;">ผู้ให้บริการไม่เห็นราคาของรายอื่น เหมาะกับงานที่ต้องการความเป็นส่วนตัว</div>
           </label>
           <label style="position:relative;border:2px solid var(--line);background:#fff;border-radius:14px;padding:16px;cursor:pointer;"><input type="radio" name="cpBid" style="accent-color:var(--blue-700);">
-            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#ecfdf3;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">ประมูลแบบเปิด (เปิดราคา)</span></div>
+            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#ecfdf3;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">เสนอราคาแบบเปิด (เปิดราคา)</span></div>
             <div style="font-size:14px;color:var(--ink-soft);line-height:1.55;padding-left:2px;">ผู้ให้บริการเห็นราคาแบบเรียลไทม์ เหมาะกับงานทั่วไป</div>
           </label>
         </div>
@@ -14202,7 +14207,9 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard{ order:4; }
 #page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ order:5; }
 #page-company-profile .left[data-pf-tab="overview"] > #pfCertCard{ order:6; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfRecentCard{ order:8; }
+/* full width, like the wall: a portfolio is a list of jobs, and it sits above
+   the posts because it is what a buyer reads before deciding to ask for a price */
+#page-company-profile .left[data-pf-tab="overview"] > #pfWorkCard{ order:8; }
 
 /* one column on anything narrow — two half-width cards on a phone is neither */
 @media (max-width: 900px){
@@ -14260,6 +14267,47 @@ body.kx-auth .kx-burger{ display:none !important; }
 /* inside a card the reviews panel needs no card chrome of its own */
 #page-company-profile .rv-panel{ border:none !important; padding:0 !important; margin-bottom:14px !important; }
 #page-company-profile .rv-card{ background:var(--bg) !important; }
+
+/* --- ผลงานที่ผ่านมา — the seller's own track record --- */
+.pw-grid{ display:flex; flex-direction:column; gap:12px; }
+.pw{
+  display:flex; gap:12px; align-items:flex-start; position:relative;
+  border:1px solid var(--line); border-radius:12px; padding:11px 12px; background:var(--card);
+}
+.pw-img{
+  width:74px; height:74px; flex:none; border-radius:9px; object-fit:cover; background:var(--bg);
+}
+.pw-body{ flex:1; min-width:0; }
+.pw-title{ font-size:15px; font-weight:600; color:var(--ink); line-height:1.5; }
+.pw-sub{ font-size:14px; color:var(--blue-700); margin-top:2px; }
+.pw-detail{ font-size:14px; color:var(--ink-soft); line-height:1.6; margin-top:5px; white-space:pre-wrap; }
+/* said plainly, because a portfolio is a claim and a review is evidence —
+   a buyer weighing the two deserves to know which is which */
+.pw-note{
+  font-size:13px; color:var(--ink-faint); margin-top:11px; padding-top:10px;
+  border-top:1px solid var(--line); line-height:1.6;
+}
+.pw-label{ display:block; font-size:14px; font-weight:600; color:var(--ink); margin:0 0 6px; }
+.pw-field{
+  width:100%; box-sizing:border-box; border:1.5px solid var(--line); border-radius:10px;
+  padding:10px 13px; font-size:15px; font-family:inherit; color:var(--ink);
+  background:#fff; outline:none; margin-bottom:14px; resize:vertical;
+}
+.pw-row2{ display:grid; grid-template-columns:2fr 1fr; gap:12px; }
+.pw-hint{ font-size:13px; color:var(--ink-faint); margin:-8px 0 14px; line-height:1.6; }
+.pw-actions{ display:flex; gap:9px; justify-content:flex-end; flex-wrap:wrap; }
+/* the two buttons the work modal borrows from the shared set */
+.oc-btn{
+  border-radius:10px; padding:10px 18px; font-size:15px; font-weight:600;
+  cursor:pointer; font-family:inherit; border:1.5px solid var(--line);
+  background:#fff; color:var(--ink);
+}
+.oc-btn.primary{ background:var(--blue-600); border-color:var(--blue-600); color:#fff; }
+.oc-btn.primary:disabled{ opacity:.55; cursor:default; }
+@media (max-width: 520px){
+  .pw-row2{ grid-template-columns:minmax(0,1fr); }
+  .pw-actions .oc-btn{ flex:1; }
+}
 
 /* --- Connections: the count in the hero strip, and the list behind it --- */
 #page-company-profile .hero-statstrip .conn-pend{
@@ -16666,7 +16714,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   /* This panel is a promise, so it has to describe the post in front of you.
      It used to say "ราคาของคุณถูกปิดไว้ ... เปิดพร้อมกันทุกรายใน 04:16:14" on
-     every listing including ประมูลแบบเปิด, where the price is on show the
+     every listing including เสนอราคาแบบเปิด, where the price is on show the
      moment it is sent — a bidder was told their number was private and then it
      was not. It also claimed every bidder is identity-verified, which nothing
      in the app enforces. */
@@ -16675,12 +16723,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     var when = untilWhen();
     if(kind === 'bid'){
       if(isSealed()){
-        rows.push(row(LOCK, 'ประมูลแบบปิด — ราคาของคุณถูกซ่อนไว้ ผู้เสนอรายอื่นไม่เห็น' +
+        rows.push(row(LOCK, 'เสนอราคาแบบปิด — ราคาของคุณถูกซ่อนไว้ ผู้เสนอรายอื่นไม่เห็น' +
           (when ? ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ (<b>' + when + '</b>)'
                 : ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ'), true));
       }else{
-        rows.push(row(LOCK, 'ประมูลแบบเปิด — <b>ราคาที่คุณเสนอจะแสดงให้ผู้ซื้อเห็นทันที</b>' +
-          ' หากต้องการให้ราคาเป็นความลับ ให้เลือกงานที่เป็นประมูลแบบปิด'));
+        rows.push(row(LOCK, 'เสนอราคาแบบเปิด — <b>ราคาที่คุณเสนอจะแสดงให้ผู้ซื้อเห็นทันที</b>' +
+          ' หากต้องการให้ราคาเป็นความลับ ให้เลือกงานที่เป็นเสนอราคาแบบปิด'));
       }
       rows.push(row(SCALE, 'ผู้เสนอทุกรายเห็นรายละเอียดงานชุดเดียวกัน <b>ลำดับการแสดงผลซื้อไม่ได้</b>'));
       rows.push(row(SHIELD, 'ไฟล์ใบเสนอราคาที่คุณแนบ เห็นได้เฉพาะคุณกับผู้ซื้อเท่านั้น'));
@@ -20590,13 +20638,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(statusTag){
       statusTag.textContent = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
         : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
-        : (post.bid_type === 'open' ? '🔓 ประมูลแบบเปิด' : '🔒 ประมูลแบบปิด');
+        : (post.bid_type === 'open' ? '🔓 เสนอราคาแบบเปิด' : '🔒 เสนอราคาแบบปิด');
     }
 
     renderQa('rfqQaBlock', post, isOwner);
 
     /* Sealed bidding, honoured. The page has always promised that on a
-       ประมูลแบบปิด every bidder's price is revealed at the same moment when
+       เสนอราคาแบบปิด every bidder's price is revealed at the same moment when
        the clock runs out — and then the list showed each price the moment it
        arrived. The individual numbers are covered until bidding is over; the
        average, which is what a sealed auction does publish, stays. */
@@ -20612,7 +20660,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         var bSub   = banner.querySelector('.sealed-sub');
         var bCount = banner.querySelector('.sealed-count');
         var bBtn   = banner.querySelector('.sealed-reveal');
-        if(bTitle) bTitle.textContent = 'ประมูลแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้';
+        if(bTitle) bTitle.textContent = 'เสนอราคาแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้';
         if(bSub) bSub.innerHTML = 'ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย ' + esc(money(avgPrice)) +
           '</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลารับข้อเสนอ (' + esc(fmtDateBE(post.deadline)) + ')';
         // the demo's countdown and its "จำลองหมดเวลา" button have nothing real
@@ -20969,6 +21017,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     // these read their own tables now
     if(window.kxLoadReviews)       window.kxLoadReviews(pr.id, mine);
     if(window.kxLoadServices)      window.kxLoadServices(pr.id, mine);
+    if(window.kxLoadPortfolio)     window.kxLoadPortfolio(pr.id, mine);
     if(window.kxRenderVerify)      window.kxRenderVerify(pr, mine);
     if(window.kxLoadProfileWall)   window.kxLoadProfileWall(pr.id, mine, pr);
 
@@ -22043,6 +22092,137 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxLoadNotifications) window.kxLoadNotifications();
   };
 
+  /* ---------- ผลงานที่ผ่านมา ----------
+     ผลงานสะสม used to be generated from the RFQs this account had won. Konnex
+     picks no winners, so that list can never fill again — and generating it was
+     the wrong idea regardless, because most of a supplier's work happened before
+     Konnex or outside it. The seller writes this one.
+
+     Which makes it a claim rather than a record, and the card says so out loud.
+     A buyer weighing it should know it is not the same kind of evidence as a
+     review or a verified identity, both of which sit beside it. */
+  window.kxLoadPortfolio = async function(profileId, isOwner){
+    var card = document.getElementById('pfWorkCard');
+    if(!card || !profileId) return;
+    var res = await sb.from('portfolio')
+      .select('id,title,buyer_name,detail,year,image_url,sort')
+      .eq('profile_id', profileId)
+      .order('sort', { ascending:true }).order('created_at', { ascending:false });
+    if(res.error){
+      // portfolio.sql not run yet — the card says so to its owner and hides
+      // from everyone else rather than looking like an empty portfolio
+      console.error('kxLoadPortfolio failed', res.error);
+      if(isOwner && window.kxTableMissing(res.error)){
+        card.innerHTML = '<div class="card-head"><h3>ผลงานที่ผ่านมา</h3></div>' +
+          '<div style="padding:18px 4px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
+          'ยังใช้ไม่ได้<br><span style="font-size:13px;">ยังไม่ได้รัน database/portfolio.sql</span></div>';
+        pfMarkHidden(card, false);
+      }else{
+        pfMarkHidden(card, true);
+      }
+      return;
+    }
+    var rows = res.data || [];
+    card.innerHTML =
+      '<div class="card-head"><h3>ผลงานที่ผ่านมา</h3>' +
+        (isOwner ? '<button type="button" class="pf-seeall" onclick="kxOpenWork()">＋ เพิ่มผลงาน</button>' : '') +
+      '</div>' +
+      (rows.length
+        ? '<div class="pw-grid">' + rows.map(function(r){
+            var sub = [r.buyer_name, r.year].filter(Boolean).join(' · ');
+            return '<div class="pw" data-id="' + esc(r.id) + '">' +
+              (r.image_url ? '<img class="pw-img" src="' + esc(r.image_url) + '" alt="">' : '') +
+              (isOwner ? '<button type="button" class="svc-del" title="ลบผลงานนี้" aria-label="ลบผลงานนี้" ' +
+                         'onclick="kxDeleteWork(\'' + esc(r.id) + '\')">🗑</button>' : '') +
+              '<div class="pw-body">' +
+                '<div class="pw-title">' + esc(r.title) + '</div>' +
+                (sub ? '<div class="pw-sub">' + esc(sub) + '</div>' : '') +
+                (r.detail ? '<div class="pw-detail">' + esc(r.detail) + '</div>' : '') +
+              '</div></div>';
+          }).join('') + '</div>' +
+          '<div class="pw-note">ข้อมูลนี้ผู้ให้บริการกรอกเอง Konnex ไม่ได้ตรวจสอบ</div>'
+        : '<div style="padding:18px 4px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
+          (isOwner ? 'ยังไม่มีผลงาน — กด “＋ เพิ่มผลงาน” เพื่อเล่าว่าเคยขายอะไรให้ใครมาบ้าง'
+                   : 'ยังไม่ได้เพิ่มผลงาน') + '</div>');
+    // a visitor looking at an empty portfolio learns nothing; the owner needs
+    // the empty card, because it is the one that carries the add button
+    pfMarkHidden(card, !rows.length && !isOwner);
+  };
+
+  window.kxOpenWork = function(){
+    var box = document.getElementById('workBox');
+    box.innerHTML =
+      '<label class="pw-label">ขายอะไร / ทำอะไร <span style="color:var(--red)">*</span></label>' +
+      '<input type="text" id="pwTitle" class="pw-field" maxlength="120" placeholder="เช่น ผลิตชิ้นส่วน CNC 5,000 ชิ้น">' +
+      '<div class="pw-row2">' +
+        '<div><label class="pw-label">ขายให้ใคร</label>' +
+          '<input type="text" id="pwBuyer" class="pw-field" maxlength="120" placeholder="เช่น บจก. ไทยพรีซิชั่น"></div>' +
+        '<div><label class="pw-label">ปี</label>' +
+          '<input type="text" id="pwYear" class="pw-field" inputmode="numeric" maxlength="4" placeholder="2566"></div>' +
+      '</div>' +
+      '<div class="pw-hint">ชื่อลูกค้าไม่บังคับ — ถ้าเป็นความลับตามสัญญา เว้นว่างไว้ได้</div>' +
+      '<label class="pw-label">รายละเอียด</label>' +
+      '<textarea id="pwDetail" class="pw-field" rows="3" maxlength="500" ' +
+        'placeholder="เช่น วัสดุ ความแม่นยำ ระยะเวลาส่งมอบ"></textarea>' +
+      '<label class="pw-label">รูปผลงาน</label>' +
+      '<input type="file" id="pwImage" accept="image/*" class="pw-field">' +
+      '<div class="pw-actions">' +
+        '<button type="button" class="oc-btn ghost" onclick="kxCloseWork()">ยกเลิก</button>' +
+        '<button type="button" class="oc-btn primary" id="pwSave" onclick="kxSaveWork()">บันทึก</button>' +
+      '</div>';
+    document.getElementById('workModal').classList.add('open');
+  };
+  window.kxCloseWork = function(){
+    document.getElementById('workModal').classList.remove('open');
+  };
+
+  window.kxSaveWork = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    var title = (document.getElementById('pwTitle').value || '').trim();
+    if(!title){ kxToast('กรอกว่าขายอะไรหรือทำอะไรก่อน'); return; }
+    var btn = document.getElementById('pwSave');
+    btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+
+    var url = null;
+    var f = document.getElementById('pwImage').files[0];
+    if(f && window.kxUploadFile){
+      try{
+        // through kxImageFile like every other upload: phone photos arrive as
+        // multi-megabyte HEIC, and the canvas pass normalises both
+        var norm = window.kxImageFile ? await window.kxImageFile(URL.createObjectURL(f), f.name) : f;
+        url = await window.kxUploadFile('post-images', norm || f);
+      }catch(e){ console.error('portfolio image upload failed', e); }
+    }
+    var yr = parseInt((document.getElementById('pwYear').value || '').replace(/\D/g, ''), 10);
+    var res = await sb.from('portfolio').insert({
+      profile_id: window.kxSession.user.id,
+      title: title,
+      buyer_name: (document.getElementById('pwBuyer').value || '').trim() || null,
+      detail: (document.getElementById('pwDetail').value || '').trim() || null,
+      year: isNaN(yr) ? null : yr,
+      image_url: url
+    });
+    btn.disabled = false; btn.textContent = 'บันทึก';
+    if(res.error){
+      console.error('kxSaveWork failed', res.error);
+      kxToast(window.kxTableMissing(res.error)
+        ? 'ยังเพิ่มผลงานไม่ได้ (ยังไม่ได้รัน portfolio.sql)'
+        : 'บันทึกไม่สำเร็จ กรุณาลองใหม่');
+      return;
+    }
+    kxCloseWork();
+    kxToast('เพิ่มผลงานแล้ว');
+    kxLoadPortfolio(window.kxSession.user.id, true);
+  };
+
+  window.kxDeleteWork = async function(id){
+    if(!confirm('ลบผลงานนี้ออกจากโปรไฟล์?')) return;
+    var res = await sb.from('portfolio').delete().eq('id', id);
+    if(res.error){ console.error('kxDeleteWork failed', res.error); kxToast('ลบไม่สำเร็จ'); return; }
+    kxToast('ลบผลงานแล้ว');
+    kxLoadPortfolio(window.kxSession.user.id, true);
+  };
+
   // ---------- บริการของฉัน ----------
   window.kxLoadServices = async function(profileId, isOwner){
     var card = document.getElementById('pfServicesCard');
@@ -22345,6 +22525,16 @@ body.kx-auth .kx-burger{ display:none !important; }
     <div class="modal-title">Connections</div>
     <div class="modal-sub" id="connModalSub">คนที่คุณเชื่อมต่อด้วย</div>
     <div id="connList" style="display:flex;flex-direction:column;gap:10px;max-height:min(60vh,460px);overflow-y:auto;margin-top:14px;padding-right:2px;"></div>
+  </div>
+</div>
+<!-- MODAL: add a piece of past work. A direct child of <body> — a modal inside
+     an .app-page opens into a hidden page. -->
+<div class="modal-overlay" id="workModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="kxCloseWork()">✕</button>
+    <div class="modal-title">เพิ่มผลงาน</div>
+    <div class="modal-sub">เคยขายอะไรให้ใครมาบ้าง — ผู้ซื้อใช้ตรงนี้ตัดสินใจว่าจะขอราคาจากคุณไหม</div>
+    <div id="workBox" style="margin-top:16px;"></div>
   </div>
 </div>
 </body></html>

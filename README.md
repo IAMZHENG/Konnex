@@ -491,7 +491,7 @@ chroma *and* better contrast than before:
 | family | fill | chroma | text | contrast |
 |---|---|---|---|---|
 | green — verified, won, sent, received | `#ecfdf3` → `#bbf7d0` | 17 → 60 | `#116635` | 4.76 → 5.82 |
-| orange — ปิดประมูล, รอผล, ข้อเสนอขาย | `#fff4ec` → `#fed7aa` | 19 → 84 | `#9a3412` | 4.78 → 5.40 |
+| orange — ปิดรับข้อเสนอ, รอผล, ข้อเสนอขาย | `#fff4ec` → `#fed7aa` | 19 → 84 | `#9a3412` | 4.78 → 5.40 |
 | blue — tags, quote counts, roles | `#e8f3fc` → `#bfdbfe` | 20 → 63 | `#0f52b0` | 4.76 → 5.18 |
 | amber — ยังไม่ได้ตอบ, รอราคา | `#fff7e6` → `#fde68a` | 25 → 115 | `#92400e` | 4.71 → 5.69 |
 | purple — category tag | `#f2eefe` → `#ddd6fe` | 16 → 40 | `#5b3fd4` | **3.97 → 4.87** |
@@ -532,7 +532,7 @@ The category filter's script is left in place but inert: `buildFeedCatMenu()` al
 guards on a missing element, and `currentFeedCatFilter` stays `'all'`, so
 `applyFeedFilters()` keeps passing every card — verified 6 of 6 still visible. The
 advanced-search grid reflows from six fields to five on its own (`repeat(3, 1fr)`), and
-the RFQ header keeps its remaining `ปิดประมูล` tag.
+the RFQ header keeps its remaining `ปิดรับข้อเสนอ` tag.
 
 ## พื้นที่ให้บริการ removed, reviews un-stacked, feed type filter dropped
 
@@ -2495,7 +2495,7 @@ the whole form stayed an RFQ form whichever you picked. It switches now:
 
 | | RFQ | Offer |
 | --- | --- | --- |
-| เลือกประเภทการประมูล | shown | hidden |
+| เลือกประเภทการเสนอราคา | shown | hidden |
 | วันสิ้นสุดการรับข้อเสนอ | shown | hidden — no incoming offers to stop accepting |
 | ราคาเริ่มต้น | — | **shown, required** |
 | description label | รายละเอียดงาน | รายละเอียดสินค้า / บริการ |

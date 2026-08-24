@@ -735,6 +735,139 @@
     });
   });
 
+  // ==================================================== ผลงานที่ผ่านมา (portfolio) ===
+  describe('the seller writes their own track record', function () {
+    function withRows(w, rows, err) {
+      return plan(w, { portfolio: { _: err ? { data: null, error: err } : { data: rows, error: null } } });
+    }
+    function card(w) { return w.document.getElementById('pfWorkCard'); }
+    var TWO = [
+      { id: 'w1', title: 'ผลิตชิ้นส่วน CNC', buyer_name: 'บจก. ไทยพรีซิชั่น',
+        detail: 'อลูมิเนียม 6061', year: 2566, image_url: null, sort: 0 },
+      { id: 'w2', title: 'งานกลึงเพลา', buyer_name: null, detail: null,
+        year: 2565, image_url: null, sort: 1 }
+    ];
+
+    it('lists what was sold, to whom, and when', async function (w) {
+      withRows(w, TWO); signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      var t = card(w).textContent;
+      expect(t).toContain('ผลิตชิ้นส่วน CNC');
+      expect(t).toContain('บจก. ไทยพรีซิชั่น');
+      expect(t).toContain('2566');
+    });
+    it('says it is unverified, because a claim is not a review', async function (w) {
+      withRows(w, TWO); signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      expect(card(w).textContent).toContain('Konnex ไม่ได้ตรวจสอบ',
+        'a buyer weighing this against a review deserves to know which is evidence');
+    });
+    it('gives the owner the add and delete controls, and a visitor neither', async function (w) {
+      withRows(w, TWO); signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      expect(card(w).querySelector('.pf-seeall')).toBeTruthy('owner can add');
+      expect(card(w).querySelectorAll('.svc-del').length).toBe(2, 'and delete each');
+      await w.kxLoadPortfolio(ME, false);
+      restore(w);
+      expect(card(w).querySelector('.pf-seeall')).toBeFalsy('a visitor edits nothing');
+      expect(card(w).querySelectorAll('.svc-del').length).toBe(0);
+    });
+    it('hides an empty portfolio from visitors but keeps it for the owner', async function (w) {
+      withRows(w, []); signIn(w);
+      await w.kxLoadPortfolio(ME, false);
+      expect(card(w).style.display).toBe('none', 'an empty card teaches a visitor nothing');
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      expect(card(w).style.display).toBe('', 'the owner needs it — it carries the add button');
+      expect(card(w).textContent).toContain('เพิ่มผลงาน');
+    });
+    it('names the missing migration instead of looking like an empty portfolio', async function (w) {
+      withRows(w, null, ERR.tableMissing); signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      expect(card(w).textContent).toContain('portfolio.sql');
+    });
+    it('hides the broken card from visitors rather than explaining our plumbing', async function (w) {
+      withRows(w, null, ERR.tableMissing); signIn(w);
+      await w.kxLoadPortfolio(ME, false);
+      restore(w);
+      expect(card(w).style.display).toBe('none');
+    });
+  });
+
+  describe('adding a piece of work', function () {
+    function open(w) { signIn(w); w.kxOpenWork(); }
+    it('refuses to save without saying what the work was', async function (w) {
+      open(w);
+      var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
+      w.document.getElementById('pwTitle').value = '';
+      await w.kxSaveWork();
+      restore(w);
+      expect(sb._writes.length).toBe(0, 'title is the one field that carries the entry');
+      expect(w.document.getElementById('workModal').classList.contains('open')).toBe(true,
+        'and the form stays open rather than losing what was typed');
+    });
+    it('writes the row under your own id', async function (w) {
+      open(w);
+      var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
+      w.document.getElementById('pwTitle').value = 'ผลิตชิ้นส่วน CNC';
+      w.document.getElementById('pwBuyer').value = 'บจก. ไทยพรีซิชั่น';
+      w.document.getElementById('pwYear').value = '2566';
+      await w.kxSaveWork();
+      restore(w);
+      var row = sb._writes[0].row;
+      expect(row.profile_id).toBe(ME, 'the policy refuses any other id anyway');
+      expect(row.title).toBe('ผลิตชิ้นส่วน CNC');
+      expect(row.year).toBe(2566);
+    });
+    it('keeps a year typed with words around it', async function (w) {
+      open(w);
+      var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
+      w.document.getElementById('pwTitle').value = 'x';
+      w.document.getElementById('pwYear').value = 'พ.ศ. 2565';
+      await w.kxSaveWork();
+      restore(w);
+      expect(sb._writes[0].row.year).toBe(2565);
+    });
+    it('stores a blank optional field as null, not as an empty string', async function (w) {
+      open(w);
+      var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
+      w.document.getElementById('pwTitle').value = 'y';
+      await w.kxSaveWork();
+      restore(w);
+      var row = sb._writes[0].row;
+      expect(row.buyer_name).toBe(null, 'a customer name is often under NDA — blank is a real answer');
+      expect(row.detail).toBe(null);
+      expect(row.year).toBe(null);
+    });
+    it('explains a missing migration rather than failing silently', async function (w) {
+      open(w);
+      plan(w, { portfolio: { _: { data: null, error: ERR.tableMissing } } });
+      w.document.getElementById('pwTitle').value = 'z';
+      var said = null, realToast = w.kxToast;
+      w.kxToast = function (m) { said = m; };
+      await w.kxSaveWork();
+      w.kxToast = realToast;
+      restore(w);
+      expect(said).toContain('portfolio.sql');
+    });
+  });
+
+  describe('Konnex says เสนอราคา, not ประมูล', function () {
+    it('has no ประมูล left anywhere on the page', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).notToContain('ประมูล',
+        'Konnex gathers quotes; it does not run an auction and picks no winner');
+    });
+    it('still names the two pricing modes', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain('เสนอราคาแบบปิด');
+      expect(html).toContain('เสนอราคาแบบเปิด');
+    });
+  });
+
   // ============================================================== the sidebar ===
   describe('renderSidebars — the rail', function () {
     function items(w) {
