@@ -14309,6 +14309,47 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .rv-panel{ border:none !important; padding:0 !important; margin-bottom:14px !important; }
 #page-company-profile .rv-card{ background:var(--bg) !important; }
 
+/* --- Connections: the count in the hero strip, and the list behind it --- */
+#page-company-profile .hero-statstrip .conn-pend{
+  display:inline-block; margin-left:5px; padding:0 6px; border-radius:999px;
+  background:var(--red,#ef4444); color:#fff; font-size:12px; font-weight:600;
+}
+.conn-head{
+  font-size:13px; font-weight:600; color:var(--ink-soft);
+  letter-spacing:.02em; margin:12px 0 2px;
+}
+.conn-head:first-child{ margin-top:0; }
+.conn-row{
+  display:flex; align-items:center; gap:12px;
+  padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--card);
+}
+.conn-av{
+  width:40px; height:40px; flex:none; border-radius:50%; overflow:hidden; cursor:pointer;
+  background:var(--blue-600); color:#fff; font-weight:600;
+  display:flex; align-items:center; justify-content:center;
+}
+.conn-av img{ width:100%; height:100%; object-fit:cover; }
+.conn-who{ flex:1; min-width:0; cursor:pointer; display:block; }
+.conn-name{
+  display:block; font-size:15px; font-weight:600; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.conn-sub{ display:block; font-size:13px; color:var(--ink-faint); margin-top:1px; }
+.conn-act{ display:flex; gap:7px; flex:none; }
+.conn-btn{
+  background:#fff; border:1.5px solid var(--line); border-radius:9px;
+  padding:7px 13px; font-size:14px; font-weight:600; color:var(--ink);
+  cursor:pointer; font-family:inherit; white-space:nowrap;
+}
+.conn-btn:hover{ background:var(--bg); }
+.conn-btn.primary{ background:var(--blue-600); border-color:var(--blue-600); color:#fff; }
+@media (max-width: 520px){
+  /* the two buttons need the width more than the name does */
+  .conn-row{ flex-wrap:wrap; }
+  .conn-act{ flex:1 0 100%; }
+  .conn-btn{ flex:1; }
+}
+
 /* the score, at the head of the รีวิว card */
 #page-company-profile .rv-score{
   display:flex; align-items:center; gap:11px;
@@ -21011,8 +21052,11 @@ body.kx-auth .kx-burger{ display:none !important; }
           strip.innerHTML =
             '<div class="hss"><div class="hss-num">' + sent + '</div><div class="hss-lbl">ใบเสนอที่ส่ง</div></div>' +
             '<div class="hss"><div class="hss-num green">' + won + '</div><div class="hss-lbl">งานสำเร็จ</div></div>' +
-            '<div class="hss"><div class="hss-num">' + (pr.rating_count || 0) + '</div><div class="hss-lbl">รีวิว</div></div>';
+            '<div class="hss"><div class="hss-num">' + (pr.rating_count || 0) + '</div><div class="hss-lbl">รีวิว</div></div>' +
+            // filled in by kxLoadConnectionCount, which has to ask the database
+            '<div class="hss" id="pfConnStat" style="display:none;"></div>';
           strip.style.display = '';
+          if(window.kxLoadConnectionCount) window.kxLoadConnectionCount(pr.id, mine);
         });
     }else if(strip) strip.style.display = 'none';
 
@@ -21860,6 +21904,142 @@ body.kx-auth .kx-burger{ display:none !important; }
     return res.data || null;
   }
 
+  /* The count in the hero strip.
+     kx_connection_count is SECURITY DEFINER, so it answers for anyone's profile —
+     the rows themselves are private to the two people in them, which is why the
+     list below only ever opens on your own. On your own profile the number is a
+     way in; on someone else's it is just a number. */
+  window.kxLoadConnectionCount = async function(profileId, mine){
+    var cell = document.getElementById('pfConnStat');
+    if(!cell || !profileId) return;
+    var res = await sb.rpc('kx_connection_count', { pid: profileId });
+    if(res.error){
+      // connections.sql not run — say nothing rather than show a wrong zero
+      cell.style.display = 'none';
+      return;
+    }
+    var n = res.data || 0;
+    var pending = 0;
+    if(mine && window.kxSession){
+      var pr2 = await sb.from('connections').select('requester_id')
+        .eq('addressee_id', window.kxSession.user.id).eq('status', 'pending');
+      if(!pr2.error) pending = (pr2.data || []).length;
+    }
+    cell.innerHTML =
+      '<div class="hss-num">' + n + '</div>' +
+      '<div class="hss-lbl">Connections' +
+        (pending ? ' <span class="conn-pend">' + pending + ' คำขอ</span>' : '') + '</div>';
+    cell.style.display = '';
+    if(mine){
+      cell.style.cursor = 'pointer';
+      cell.title = 'ดูรายชื่อ';
+      cell.onclick = function(){ window.kxOpenConnections(); };
+    }else{
+      cell.style.cursor = '';
+      cell.onclick = null;
+    }
+  };
+
+  window.kxCloseConnections = function(){
+    document.getElementById('connectionsModal').classList.remove('open');
+  };
+
+  /* The list. Two queries rather than an embed: `connections` has two foreign
+     keys to profiles and PostgREST cannot guess which one "the other person" is,
+     and which column that is flips row by row depending on who asked. So the ids
+     are collected first and the profiles fetched in one go. */
+  window.kxOpenConnections = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    var me = window.kxSession.user.id;
+    var box = document.getElementById('connList');
+    document.getElementById('connectionsModal').classList.add('open');
+    box.innerHTML = '<div style="padding:26px;text-align:center;color:var(--ink-faint);">กำลังโหลด...</div>';
+
+    var res = await sb.from('connections')
+      .select('requester_id,addressee_id,status,created_at')
+      .order('created_at', { ascending:false });
+    if(res.error){
+      box.innerHTML = '<div style="padding:26px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
+        (window.kxTableMissing(res.error)
+          ? 'ยังใช้ Connect ไม่ได้<br><span style="font-size:13px;">ยังไม่ได้รัน database/connections.sql</span>'
+          : 'โหลดรายชื่อไม่สำเร็จ') + '</div>';
+      return;
+    }
+    var rows = res.data || [];
+    var ids = rows.map(function(r){ return r.requester_id === me ? r.addressee_id : r.requester_id; });
+    var people = {};
+    if(ids.length){
+      var pf = await sb.from('profiles').select('id,company_name,avatar_url,province,business_type').in('id', ids);
+      (pf.data || []).forEach(function(p){ people[p.id] = p; });
+    }
+
+    // waiting on you first — those are the ones with something to do
+    var incoming = rows.filter(function(r){ return r.status === 'pending' && r.addressee_id === me; });
+    var outgoing = rows.filter(function(r){ return r.status === 'pending' && r.requester_id === me; });
+    var linked   = rows.filter(function(r){ return r.status === 'accepted'; });
+
+    function row(r, kind){
+      var otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
+      var pp = people[otherId] || {};
+      var name = pp.company_name || 'ผู้ใช้ Konnex';
+      var sub = [pp.business_type === 'person' ? 'บุคคลธรรมดา' : 'นิติบุคคล', pp.province]
+                  .filter(Boolean).join(' · ');
+      var av = pp.avatar_url
+        ? '<img src="' + esc(pp.avatar_url) + '" alt="">'
+        : esc(name.charAt(0).toUpperCase());
+      var act =
+        kind === 'incoming'
+          ? '<button type="button" class="conn-btn primary" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'accept\')">ตอบรับ</button>' +
+            '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ปฏิเสธ</button>'
+          : kind === 'outgoing'
+            ? '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ยกเลิกคำขอ</button>'
+            : '<button type="button" class="conn-btn" onclick="kxStartChat(\'' + esc(otherId) + '\', null);kxCloseConnections();">ส่งข้อความ</button>' +
+              '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ยกเลิก</button>';
+      return '<div class="conn-row">' +
+        '<span class="conn-av" onclick="kxCloseConnections();kxViewProfile(\'' + esc(otherId) + '\')">' + av + '</span>' +
+        '<span class="conn-who" onclick="kxCloseConnections();kxViewProfile(\'' + esc(otherId) + '\')">' +
+          '<span class="conn-name">' + esc(name) + '</span>' +
+          (sub ? '<span class="conn-sub">' + esc(sub) + '</span>' : '') +
+        '</span>' +
+        '<span class="conn-act">' + act + '</span>' +
+      '</div>';
+    }
+    function section(title, list, kind){
+      if(!list.length) return '';
+      return '<div class="conn-head">' + title + ' (' + list.length + ')</div>' +
+             list.map(function(r){ return row(r, kind); }).join('');
+    }
+
+    var html = section('คำขอที่รอคุณตอบรับ', incoming, 'incoming') +
+               section('คำขอที่คุณส่งไป', outgoing, 'outgoing') +
+               section('เชื่อมต่อแล้ว', linked, 'linked');
+    box.innerHTML = html || '<div style="padding:30px 20px;text-align:center;font-size:15px;' +
+      'color:var(--ink-faint);line-height:1.8;">ยังไม่มีการเชื่อมต่อ<br>' +
+      '<span style="font-size:13px;">เปิดโปรไฟล์คนอื่นแล้วกด “＋ Connect” เพื่อเริ่ม</span></div>';
+    if(window.kxApplyIcons) window.kxApplyIcons(box);
+  };
+
+  // accept / decline / cancel / disconnect — all identified by the pair, since
+  // that is the row's primary key whichever way round it was asked
+  window.kxConnAnswer = async function(requesterId, addresseeId, what){
+    var q = sb.from('connections');
+    var res = what === 'accept'
+      ? await q.update({ status:'accepted' }).eq('requester_id', requesterId).eq('addressee_id', addresseeId)
+      : await q.delete().eq('requester_id', requesterId).eq('addressee_id', addresseeId);
+    if(res.error){
+      console.error('kxConnAnswer failed', res.error);
+      kxToast('ทำรายการไม่สำเร็จ กรุณาลองใหม่');
+    }else{
+      kxToast(what === 'accept' ? 'เชื่อมต่อแล้ว' : 'ลบออกแล้ว');
+    }
+    await window.kxOpenConnections();
+    // the strip's number is now out of date
+    var vid = window.kxProfileViewingId || (window.kxSession && window.kxSession.user.id);
+    var mine = !!(window.kxSession && vid === window.kxSession.user.id);
+    if(window.kxLoadConnectionCount) window.kxLoadConnectionCount(vid, mine);
+    if(window.kxLoadNotifications) window.kxLoadNotifications();
+  };
+
   window.kxRenderConnect = async function(otherId){
     var btn = document.getElementById('pfConnectBtn');
     if(!btn || !otherId) return;
@@ -22198,4 +22378,15 @@ body.kx-auth .kx-burger{ display:none !important; }
   };
 })();
 </script>
+<!-- MODAL: CONNECTIONS — who you are connected with, and who is waiting.
+     A direct child of <body> on purpose: every .app-page is display:none unless
+     it is the active one, so a modal parked inside one opens into a hidden page. -->
+<div class="modal-overlay" id="connectionsModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="kxCloseConnections()">✕</button>
+    <div class="modal-title">Connections</div>
+    <div class="modal-sub">คนที่คุณเชื่อมต่อด้วย</div>
+    <div id="connList" style="display:flex;flex-direction:column;gap:10px;max-height:min(60vh,460px);overflow-y:auto;margin-top:14px;padding-right:2px;"></div>
+  </div>
+</div>
 </body></html>
