@@ -21930,14 +21930,11 @@ body.kx-auth .kx-burger{ display:none !important; }
       '<div class="hss-lbl">Connections' +
         (pending ? ' <span class="conn-pend">' + pending + ' คำขอ</span>' : '') + '</div>';
     cell.style.display = '';
-    if(mine){
-      cell.style.cursor = 'pointer';
-      cell.title = 'ดูรายชื่อ';
-      cell.onclick = function(){ window.kxOpenConnections(); };
-    }else{
-      cell.style.cursor = '';
-      cell.onclick = null;
-    }
+    // anyone's list opens — an accepted connection is public
+    // (database/connections_public.sql); only the pending half stays private
+    cell.style.cursor = 'pointer';
+    cell.title = 'ดูรายชื่อ';
+    cell.onclick = function(){ window.kxOpenConnections(profileId); };
   };
 
   window.kxCloseConnections = function(){
@@ -21948,16 +21945,27 @@ body.kx-auth .kx-burger{ display:none !important; }
      keys to profiles and PostgREST cannot guess which one "the other person" is,
      and which column that is flips row by row depending on who asked. So the ids
      are collected first and the profiles fetched in one go. */
-  window.kxOpenConnections = async function(){
+  window.kxOpenConnections = async function(profileId){
     if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
     var me = window.kxSession.user.id;
+    var whose = profileId || me;
+    var own = whose === me;
     var box = document.getElementById('connList');
     document.getElementById('connectionsModal').classList.add('open');
+    var subEl = document.getElementById('connModalSub');
+    if(subEl){
+      subEl.textContent = own ? 'คนที่คุณเชื่อมต่อด้วย'
+        : 'คนที่ ' + (window.kxProfileViewingName || 'ผู้ใช้รายนี้') + ' เชื่อมต่อด้วย';
+    }
     box.innerHTML = '<div style="padding:26px;text-align:center;color:var(--ink-faint);">กำลังโหลด...</div>';
 
-    var res = await sb.from('connections')
-      .select('requester_id,addressee_id,status,created_at')
-      .order('created_at', { ascending:false });
+    /* Someone else's list is filtered to accepted here as well as by the policy.
+       The policy is what makes it safe — this is what makes it correct: without
+       it, your own pending requests to *them* would come back in their list,
+       because you are allowed to see those. */
+    var q = sb.from('connections').select('requester_id,addressee_id,status,created_at');
+    if(!own) q = q.eq('status', 'accepted').or('requester_id.eq.' + whose + ',addressee_id.eq.' + whose);
+    var res = await q.order('created_at', { ascending:false });
     if(res.error){
       box.innerHTML = '<div style="padding:26px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
         (window.kxTableMissing(res.error)
@@ -21966,7 +21974,11 @@ body.kx-auth .kx-burger{ display:none !important; }
       return;
     }
     var rows = res.data || [];
-    var ids = rows.map(function(r){ return r.requester_id === me ? r.addressee_id : r.requester_id; });
+    /* "the other person" is relative to whose list this is, not to who is
+       reading it — on someone else's list the person opposite them is often
+       you, and reading it as `me` would name the wrong half of every row. */
+    function otherOf(r){ return r.requester_id === whose ? r.addressee_id : r.requester_id; }
+    var ids = rows.map(otherOf);
     var people = {};
     if(ids.length){
       var pf = await sb.from('profiles').select('id,company_name,avatar_url,province,business_type').in('id', ids);
@@ -21979,7 +21991,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var linked   = rows.filter(function(r){ return r.status === 'accepted'; });
 
     function row(r, kind){
-      var otherId = r.requester_id === me ? r.addressee_id : r.requester_id;
+      var otherId = otherOf(r);
       var pp = people[otherId] || {};
       var name = pp.company_name || 'ผู้ใช้ Konnex';
       var sub = [pp.business_type === 'person' ? 'บุคคลธรรมดา' : 'นิติบุคคล', pp.province]
@@ -21987,14 +21999,21 @@ body.kx-auth .kx-burger{ display:none !important; }
       var av = pp.avatar_url
         ? '<img src="' + esc(pp.avatar_url) + '" alt="">'
         : esc(name.charAt(0).toUpperCase());
-      var act =
-        kind === 'incoming'
-          ? '<button type="button" class="conn-btn primary" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'accept\')">ตอบรับ</button>' +
-            '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ปฏิเสธ</button>'
+      var pair = '\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\'';
+      /* Someone else's list is read-only: their connections are not yours to
+         cancel, and the policy would refuse it anyway — offering the button
+         would only ever produce an error. Yourself in their list is the one
+         row you could act on, and it would still be odd to do it from there. */
+      var act = !own
+        ? (otherId === me ? '' :
+           '<button type="button" class="conn-btn" onclick="kxCloseConnections();kxViewProfile(\'' + esc(otherId) + '\')">ดูโปรไฟล์</button>')
+        : kind === 'incoming'
+          ? '<button type="button" class="conn-btn primary" onclick="kxConnAnswer(' + pair + ',\'accept\')">ตอบรับ</button>' +
+            '<button type="button" class="conn-btn" onclick="kxConnAnswer(' + pair + ',\'remove\')">ปฏิเสธ</button>'
           : kind === 'outgoing'
-            ? '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ยกเลิกคำขอ</button>'
+            ? '<button type="button" class="conn-btn" onclick="kxConnAnswer(' + pair + ',\'remove\')">ยกเลิกคำขอ</button>'
             : '<button type="button" class="conn-btn" onclick="kxStartChat(\'' + esc(otherId) + '\', null);kxCloseConnections();">ส่งข้อความ</button>' +
-              '<button type="button" class="conn-btn" onclick="kxConnAnswer(\'' + esc(r.requester_id) + '\',\'' + esc(r.addressee_id) + '\',\'remove\')">ยกเลิก</button>';
+              '<button type="button" class="conn-btn" onclick="kxConnAnswer(' + pair + ',\'remove\')">ยกเลิก</button>';
       return '<div class="conn-row">' +
         '<span class="conn-av" onclick="kxCloseConnections();kxViewProfile(\'' + esc(otherId) + '\')">' + av + '</span>' +
         '<span class="conn-who" onclick="kxCloseConnections();kxViewProfile(\'' + esc(otherId) + '\')">' +
@@ -22010,12 +22029,16 @@ body.kx-auth .kx-burger{ display:none !important; }
              list.map(function(r){ return row(r, kind); }).join('');
     }
 
-    var html = section('คำขอที่รอคุณตอบรับ', incoming, 'incoming') +
-               section('คำขอที่คุณส่งไป', outgoing, 'outgoing') +
-               section('เชื่อมต่อแล้ว', linked, 'linked');
+    // no headings on someone else's list — there is only ever the one group
+    var html = own
+      ? section('คำขอที่รอคุณตอบรับ', incoming, 'incoming') +
+        section('คำขอที่คุณส่งไป', outgoing, 'outgoing') +
+        section('เชื่อมต่อแล้ว', linked, 'linked')
+      : linked.map(function(r){ return row(r, 'linked'); }).join('');
     box.innerHTML = html || '<div style="padding:30px 20px;text-align:center;font-size:15px;' +
-      'color:var(--ink-faint);line-height:1.8;">ยังไม่มีการเชื่อมต่อ<br>' +
-      '<span style="font-size:13px;">เปิดโปรไฟล์คนอื่นแล้วกด “＋ Connect” เพื่อเริ่ม</span></div>';
+      'color:var(--ink-faint);line-height:1.8;">' +
+      (own ? 'ยังไม่มีการเชื่อมต่อ<br><span style="font-size:13px;">เปิดโปรไฟล์คนอื่นแล้วกด “＋ Connect” เพื่อเริ่ม</span>'
+           : 'ยังไม่มีการเชื่อมต่อ') + '</div>';
     if(window.kxApplyIcons) window.kxApplyIcons(box);
   };
 
@@ -22385,7 +22408,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   <div class="modal-box">
     <button class="modal-close" onclick="kxCloseConnections()">✕</button>
     <div class="modal-title">Connections</div>
-    <div class="modal-sub">คนที่คุณเชื่อมต่อด้วย</div>
+    <div class="modal-sub" id="connModalSub">คนที่คุณเชื่อมต่อด้วย</div>
     <div id="connList" style="display:flex;flex-direction:column;gap:10px;max-height:min(60vh,460px);overflow-y:auto;margin-top:14px;padding-right:2px;"></div>
   </div>
 </div>

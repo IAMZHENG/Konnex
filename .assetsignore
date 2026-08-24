@@ -7,3 +7,4 @@ wrangler.toml
 README.md
 database/
 .claude/
+tests/
