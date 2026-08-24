@@ -8743,8 +8743,8 @@ html, body{
           <h3>ติดต่อบริษัท</h3>
           <div class="contact-list">
           </div>
-          <!-- ส่งข้อความ moved up to the hero row, beside Connect and ขอใบเสนอราคา.
-               Here it only ever opened the message list, on your own profile too. -->
+          <!-- ส่งข้อความ moved up to the hero row, beside Connect. Here it only ever
+               opened the message list, and it showed on your own profile too. -->
         </div>
 
         <div class="card" data-pf-sec="overview" id="pfVerifyCard">
@@ -20969,9 +20969,13 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(actions){
       actions.innerHTML = mine
         ? ''
-        : '<button class="btn btn-outline" id="pfConnectBtn" onclick="kxToggleConnect()">＋ Connect</button>' +
-          '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>' +
-          '<button class="btn btn-primary" onclick="openReqQuote()">📄 ขอใบเสนอราคา</button>';
+        /* ขอใบเสนอราคา has gone from here. A quote request always attaches to a
+           post — the modal it opened said so itself, and had to go and fetch the
+           seller's open offers just to give you one to pick. Asking from the post
+           you actually want a price on is both shorter and unambiguous, and that
+           button is on every offer's page. */
+        : '<button class="btn btn-primary" id="pfConnectBtn" onclick="kxToggleConnect()">＋ Connect</button>' +
+          '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>';
       actions.style.display = mine ? 'none' : '';
       // the button's label is whatever state the two of you are already in
       if(!mine && window.kxRenderConnect) window.kxRenderConnect(pr.id);
@@ -21174,24 +21178,44 @@ body.kx-auth .kx-burger{ display:none !important; }
       pfMarkHidden(contactCard, false);
     }
 
-    // ความเชี่ยวชาญ and ใบรับรอง: their own, or the card goes
+    /* ความเชี่ยวชาญ and ใบรับรอง: their own, or the card goes — except on your own
+       profile, where an empty card is exactly the one you need, because it is
+       what carries the ＋ เพิ่ม button. Hiding it left no way in from here. */
+    function pfEmptyLine(txt){
+      return '<div style="padding:18px 4px;text-align:center;font-size:15px;' +
+             'color:var(--ink-faint);line-height:1.7;">' + txt + '</div>';
+    }
+    function pfCardHead(title, section, label){
+      return '<div class="card-head"><h3>' + esc(title) + '</h3>' +
+        (mine ? '<button type="button" class="pf-seeall" onclick="kxEditProfileSection(\'' +
+                section + '\')">＋ ' + esc(label) + '</button>' : '') +
+        '</div>';
+    }
+
     var skillsCard = document.getElementById('pfSkillsCard');
     if(skillsCard){
-      var tagBox = skillsCard.querySelector('.tags');
       var sk = Array.isArray(pr.skills) ? pr.skills : [];
-      if(tagBox) tagBox.innerHTML = sk.map(function(s){ return '<span class="tag">' + esc(s) + '</span>'; }).join('');
-      pfMarkHidden(skillsCard, !sk.length);
+      skillsCard.innerHTML = pfCardHead('ความเชี่ยวชาญ', 'skills', 'เพิ่ม') +
+        (sk.length
+          ? '<div class="tags">' + sk.map(function(s){ return '<span class="tag">' + esc(s) + '</span>'; }).join('') + '</div>'
+          : pfEmptyLine(mine ? 'ยังไม่มีความเชี่ยวชาญ — กด “＋ เพิ่ม” เพื่อใส่แท็กแรก'
+                             : 'ยังไม่ได้ระบุความเชี่ยวชาญ'));
+      pfMarkHidden(skillsCard, !sk.length && !mine);
     }
+
     var certCard = document.getElementById('pfCertCard');
     if(certCard){
       var cs = Array.isArray(pr.certs) ? pr.certs.filter(function(c){ return c && (c.name || c.desc); }) : [];
-      Array.prototype.forEach.call(certCard.querySelectorAll('.cert-row'), function(r){ r.remove(); });
-      certCard.insertAdjacentHTML('beforeend', cs.map(function(c){
-        return '<div class="cert-row"><div class="cert-ic">🛡️</div>' +
-          '<div><div class="cert-title">' + esc(c.name || '') + '</div>' +
-          '<div class="cert-sub">' + esc(c.desc || '') + '</div></div></div>';
-      }).join(''));
-      pfMarkHidden(certCard, !cs.length);
+      certCard.innerHTML = pfCardHead('ใบรับรองและมาตรฐาน', 'certs', 'เพิ่ม') +
+        (cs.length
+          ? cs.map(function(c){
+              return '<div class="cert-row"><div class="cert-ic">🛡️</div>' +
+                '<div><div class="cert-title">' + esc(c.name || '') + '</div>' +
+                '<div class="cert-sub">' + esc(c.desc || '') + '</div></div></div>';
+            }).join('')
+          : pfEmptyLine(mine ? 'ยังไม่มีใบรับรอง — กด “＋ เพิ่ม” เพื่อใส่รายการแรก'
+                             : 'ยังไม่มีใบรับรองที่เพิ่มไว้'));
+      pfMarkHidden(certCard, !cs.length && !mine);
     }
 
     // ผลงานล่าสุด is yours to show, not a stranger's
@@ -21779,6 +21803,32 @@ body.kx-auth .kx-burger{ display:none !important; }
     return s;
   }
 
+  /* ＋ เพิ่ม on ความเชี่ยวชาญ / ใบรับรอง.
+     Both fields are already edited on แก้ไขโปรไฟล์, and that form is what writes
+     profiles.skills / profiles.certs. A second editor here would be a second way
+     to write the same two columns, so this opens the real one and puts the cursor
+     where the button promised — for ใบรับรอง that means adding the blank row too,
+     since an empty list has nothing to type into. */
+  window.kxEditProfileSection = function(section){
+    navigateTo('page-edit-profile');
+    setTimeout(function(){
+      var anchor, focusEl;
+      if(section === 'skills'){
+        focusEl = document.getElementById('pfSkillInput');
+        anchor  = document.getElementById('pfSkillBox');
+      }else{
+        if(window.kxAddCert) window.kxAddCert();
+        var rows = document.querySelectorAll('#pfCertList .ep-cert');
+        var last = rows[rows.length - 1];
+        focusEl = last ? last.querySelector('input') : null;
+        anchor  = document.getElementById('pfCertList');
+      }
+      var card = anchor && anchor.closest('.ep-card');
+      if(card) card.scrollIntoView({ behavior:'smooth', block:'center' });
+      if(focusEl) focusEl.focus({ preventScroll:true });
+    }, 120);
+  };
+
   /* ---------- Connect ----------
      A pair is one row, whichever way round it was asked (database/connections.sql),
      so the state is one lookup and the button reads it back out:
@@ -21818,22 +21868,27 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxConnState = { row: row, other: otherId };
     var me = window.kxSession.user.id;
     btn.disabled = false;
-    btn.classList.remove('btn-primary');
-    if(row === 'missing'){
+    /* Primary while the button is an action you would take, outline once it is
+       reporting a state you are already in — so the loud one is never just
+       telling you something. */
+    var primary = true;
+    if(!row || row === 'missing'){
       btn.textContent = '＋ Connect';
-    }else if(!row){
-      btn.textContent = '＋ Connect';
+      btn.title = 'ส่งคำขอเชื่อมต่อ';
     }else if(row.status === 'accepted'){
       btn.textContent = '✓ เชื่อมต่อแล้ว';
       btn.title = 'กดเพื่อยกเลิกการเชื่อมต่อ';
+      primary = false;
     }else if(row.requester_id === me){
       btn.textContent = '⏳ รอตอบรับ';
       btn.title = 'กดเพื่อยกเลิกคำขอ';
+      primary = false;
     }else{
       btn.textContent = '✓ ตอบรับคำขอ';
-      btn.classList.add('btn-primary');
       btn.title = 'ตอบรับคำขอเชื่อมต่อ';
     }
+    btn.classList.toggle('btn-primary', primary);
+    btn.classList.toggle('btn-outline', !primary);
   };
 
   window.kxToggleConnect = async function(){
