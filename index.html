@@ -5183,6 +5183,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     padding: 11px 15px;
     border-radius: 16px;
     font-size: 15px;
+    font-weight: 500;
     line-height: 1.6
     }
 #page-messages .bubble-row.in .bubble {
@@ -5547,6 +5548,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-notifications .notif-text {
     font-size: 15px;
+    font-weight: 500;
     line-height: 1.6
     }
 #page-notifications .notif-text b {
@@ -8691,8 +8693,9 @@ html, body{
         <!-- ABOUT -->
         <div class="card" data-pf-sec="overview">
           <h3>เกี่ยวกับบริษัท</h3>
-          <div class="about-text pf-clamped"></div>
-          <div class="see-more" role="button" tabindex="0" onclick="pfMore(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();pfMore(this);}">ดูเพิ่มเติม ⌄</div>
+          <!-- no clamp and no ดูเพิ่มเติม: an about paragraph is a few lines, and a
+               toggle to read the rest of them was a control that earned nothing -->
+          <div class="about-text"></div>
           <div class="info-list" id="pfInfoList">
           </div>
         </div>
@@ -8740,7 +8743,8 @@ html, body{
           <h3>ติดต่อบริษัท</h3>
           <div class="contact-list">
           </div>
-          <button class="btn btn-primary btn-block" onclick="navigateTo('page-messages')">ส่งข้อความ</button>
+          <!-- ส่งข้อความ moved up to the hero row, beside Connect and ขอใบเสนอราคา.
+               Here it only ever opened the message list, on your own profile too. -->
         </div>
 
         <div class="card" data-pf-sec="overview" id="pfVerifyCard">
@@ -8916,10 +8920,7 @@ html, body{
       tab.classList.add('active');
     });
   });
-  document.querySelector('.see-more').addEventListener('click', function(){
-    this.previousElementSibling.style.display =
-      this.previousElementSibling.style.webkitLineClamp ? 'block' : 'block';
-  });
+  // the ดูเพิ่มเติม toggle it bound to has gone, along with the clamp it undid
 
   // ===== Add services / portfolio / reviews =====
   var pfMode='svc', pfImg='', pfRating=5;
@@ -9956,7 +9957,9 @@ html, body{
     new_request:      ['blue',  '🧾'],
     request_answered: ['green', '✅'],
     new_question:     ['amber', '❓'],
-    question_answered:['amber', '💬']
+    question_answered:['amber', '💬'],
+    connect_request:  ['blue',  '🤝'],
+    connect_accepted: ['green', '🤝']
   };
 
   function notifEsc(s){
@@ -12992,17 +12995,11 @@ if('serviceWorker' in navigator && (location.protocol === 'https:' || location.h
         if(btn) btn.click();
       });
     });
-    // inject Settings link into every sidebar (before it, after ประวัติการเข้าชม)
-    document.querySelectorAll('.side-nav').forEach(function(nav){
-      if(nav.dataset.hasSettings) return;
-      nav.dataset.hasSettings = '1';
-      var a = document.createElement('a');
-      a.href = '#';
-      a.className = 'side-link' + (nav.closest('#page-settings') ? ' active' : '');
-      a.setAttribute('onclick', "navigateTo('page-settings');return false;");
-      a.innerHTML = '<span class="ic"><svg class="li-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.5 12a7.5 7.5 0 0 0-.14-1.42l2.06-1.6-2-3.46-2.43.98a7.5 7.5 0 0 0-2.45-1.42L14.2 2h-4l-.34 2.66a7.5 7.5 0 0 0-2.45 1.42l-2.43-.98-2 3.46 2.06 1.6A7.5 7.5 0 0 0 4.5 12c0 .48.05.96.14 1.42l-2.06 1.6 2 3.46 2.43-.98a7.5 7.5 0 0 0 2.45 1.42L10 22h4l.34-2.66a7.5 7.5 0 0 0 2.45-1.42l2.43.98 2-3.46-2.06-1.6c.09-.46.14-.94.14-1.42z"/></svg></span>ตั้งค่า';
-      nav.appendChild(a);
-    });
+    /* A block here used to append a ตั้งค่า link to every .side-nav. ตั้งค่า is an
+       entry in KX_NAV now, so it appended a second one — and it appended it after
+       the account row, since renderSidebars ends the rail with that. On a refresh
+       the rail read ...ประวัติการเข้าชม / ตั้งค่า / [บัญชีของฉัน] / ตั้งค่า until the
+       next navigation rebuilt it. */
     // fill Saved/History page sidebars by cloning a standard sidebar, and route bookmark/history links
     var srcNav = document.querySelector('#page-my-bids .side-nav') || document.querySelector('.side-nav:not([data-sh-nav])');
     document.querySelectorAll('[data-sh-nav]').forEach(function(n){
@@ -14314,17 +14311,17 @@ body.kx-auth .kx-burger{ display:none !important; }
 
 /* the score, at the head of the รีวิว card */
 #page-company-profile .rv-score{
-  display:flex; align-items:center; gap:14px;
-  padding:14px 16px; margin-bottom:2px;
+  display:flex; align-items:center; gap:11px;
+  padding:10px 13px; margin-bottom:2px;
   background:var(--bg); border:1px solid var(--line); border-radius:12px;
 }
 #page-company-profile .rv-score-num{
-  font-size:32px; font-weight:700; line-height:1; color:var(--ink);
+  font-size:22px; font-weight:700; line-height:1; color:var(--ink);
   font-variant-numeric:tabular-nums;
 }
 #page-company-profile .rv-score-side{ min-width:0; }
-#page-company-profile .rv-score-stars{ color:#f59e0b; font-size:16px; letter-spacing:2px; }
-#page-company-profile .rv-score-sub{ font-size:14px; color:var(--ink-soft); margin-top:3px; }
+#page-company-profile .rv-score-stars{ color:#f59e0b; font-size:14px; letter-spacing:1px; line-height:1.3; }
+#page-company-profile .rv-score-sub{ font-size:13px; color:var(--ink-soft); margin-top:2px; line-height:1.3; }
 
     }
     #page-company-profile .rv-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
@@ -15924,7 +15921,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-text .post-title,
 #page-company-profile .kx-wall .pc-text .post-title{ font-size:16px; font-weight:500; line-height:1.5; }
 #page-feed .pc-text .post-desc,
-#page-company-profile .kx-wall .pc-text .post-desc{ font-size:15px; font-weight:400; line-height:1.7; }
+#page-company-profile .kx-wall .pc-text .post-desc{ font-size:15px; font-weight:500; line-height:1.7; }
 
 #page-feed .pc-offers,
 #page-company-profile .kx-wall .pc-offers{ font-size:14px; font-weight:600; }
@@ -19112,6 +19109,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(existing.data){
       window.kxCurrentUser = existing.data;
       if(window.kxApplyAvatars) window.kxApplyAvatars();
+      /* The rail was drawn before this row arrived, so its account line still
+         read the "บัญชีของฉัน" placeholder — until the first navigation redrew
+         it. Redraw it here, when the name actually becomes known. */
+      if(window.renderSidebars){
+        window.renderSidebars((document.querySelector('.app-page.active') || {}).id);
+      }
       // the bell is on every page, so its count is loaded at sign-in rather
       // than only when the notifications page is opened
       if(window.kxLoadNotifications) window.kxLoadNotifications();
@@ -20966,9 +20969,12 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(actions){
       actions.innerHTML = mine
         ? ''
-        : '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>' +
+        : '<button class="btn btn-outline" id="pfConnectBtn" onclick="kxToggleConnect()">＋ Connect</button>' +
+          '<button class="btn btn-outline" onclick="kxStartChat(\'' + (pr.id||'') + '\', null)">💬 ส่งข้อความ</button>' +
           '<button class="btn btn-primary" onclick="openReqQuote()">📄 ขอใบเสนอราคา</button>';
       actions.style.display = mine ? 'none' : '';
+      // the button's label is whatever state the two of you are already in
+      if(!mine && window.kxRenderConnect) window.kxRenderConnect(pr.id);
     }
 
     var pill = p.querySelector('.hero-idblock .verified-pill');
@@ -21772,6 +21778,94 @@ body.kx-auth .kx-burger{ display:none !important; }
     for(var i = 1; i <= 5; i++) s += (i <= n ? '★' : '☆');
     return s;
   }
+
+  /* ---------- Connect ----------
+     A pair is one row, whichever way round it was asked (database/connections.sql),
+     so the state is one lookup and the button reads it back out:
+
+       nothing         ＋ Connect          → send a request
+       pending, mine   รอตอบรับ            → withdraw it
+       pending, theirs ✓ ตอบรับคำขอ         → accept
+       accepted        ✓ เชื่อมต่อแล้ว       → disconnect
+
+     Everything the button does is a single write; the row is re-read afterwards
+     rather than assumed, so the label can never claim a state the database
+     refused to move to. */
+  var kxConnState = null;   // { row, other } for the profile on screen
+
+  async function kxReadConnection(otherId){
+    if(!window.kxSession || !otherId) return null;
+    var me = window.kxSession.user.id;
+    var res = await sb.from('connections')
+      .select('requester_id,addressee_id,status')
+      .or('and(requester_id.eq.' + me + ',addressee_id.eq.' + otherId + '),' +
+          'and(requester_id.eq.' + otherId + ',addressee_id.eq.' + me + ')')
+      .maybeSingle();
+    if(res.error){
+      // connections.sql not run yet — the button says so rather than misfiring
+      if(window.kxTableMissing(res.error)) return 'missing';
+      console.error('kxReadConnection failed', res.error);
+      return null;
+    }
+    return res.data || null;
+  }
+
+  window.kxRenderConnect = async function(otherId){
+    var btn = document.getElementById('pfConnectBtn');
+    if(!btn || !otherId) return;
+    if(!window.kxSession){ btn.textContent = '＋ Connect'; return; }
+    var row = await kxReadConnection(otherId);
+    kxConnState = { row: row, other: otherId };
+    var me = window.kxSession.user.id;
+    btn.disabled = false;
+    btn.classList.remove('btn-primary');
+    if(row === 'missing'){
+      btn.textContent = '＋ Connect';
+    }else if(!row){
+      btn.textContent = '＋ Connect';
+    }else if(row.status === 'accepted'){
+      btn.textContent = '✓ เชื่อมต่อแล้ว';
+      btn.title = 'กดเพื่อยกเลิกการเชื่อมต่อ';
+    }else if(row.requester_id === me){
+      btn.textContent = '⏳ รอตอบรับ';
+      btn.title = 'กดเพื่อยกเลิกคำขอ';
+    }else{
+      btn.textContent = '✓ ตอบรับคำขอ';
+      btn.classList.add('btn-primary');
+      btn.title = 'ตอบรับคำขอเชื่อมต่อ';
+    }
+  };
+
+  window.kxToggleConnect = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    var st = kxConnState;
+    if(!st || !st.other) return;
+    var me = window.kxSession.user.id, other = st.other, row = st.row, res;
+
+    if(!row || row === 'missing'){
+      res = await sb.from('connections').insert({ requester_id: me, addressee_id: other });
+      if(!res.error) kxToast('ส่งคำขอเชื่อมต่อแล้ว');
+    }else if(row.status === 'pending' && row.addressee_id === me){
+      res = await sb.from('connections').update({ status: 'accepted' })
+        .eq('requester_id', row.requester_id).eq('addressee_id', row.addressee_id);
+      if(!res.error) kxToast('เชื่อมต่อแล้ว');
+    }else{
+      // withdrawing a request, declining one, and disconnecting are all this
+      res = await sb.from('connections').delete()
+        .eq('requester_id', row.requester_id).eq('addressee_id', row.addressee_id);
+      if(!res.error) kxToast(row.status === 'accepted' ? 'ยกเลิกการเชื่อมต่อแล้ว' : 'ยกเลิกคำขอแล้ว');
+    }
+
+    if(res && res.error){
+      console.error('kxToggleConnect failed', res.error);
+      kxToast(window.kxTableMissing(res.error)
+        ? 'ยังใช้ Connect ไม่ได้ (ยังไม่ได้รัน connections.sql)'
+        : 'ทำรายการไม่สำเร็จ กรุณาลองใหม่');
+    }
+    // read the state back rather than assume the write landed
+    await window.kxRenderConnect(other);
+    if(window.kxLoadNotifications) window.kxLoadNotifications();
+  };
 
   // ---------- บริการของฉัน ----------
   window.kxLoadServices = async function(profileId, isOwner){
