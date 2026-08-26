@@ -3446,7 +3446,8 @@ input[type="number"]:focus, textarea:focus, select:focus{
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 15px
+    font-size: 15px;
+    font-weight: 500
     }
 #page-company-profile .contact-ic {
     width: 36px;
@@ -7644,6 +7645,24 @@ html, body{
 /* 6c reorder: title leads */
 #page-rfq-offers .rfq-title{ margin:0 0 5px !important; }
 #page-my-offers .offer-title{ margin:0 0 5px !important; }
+
+/* ประกาศขาย and ต้องการซื้อ are the same card in two lists, so their type has to
+   be the same too. It had drifted: .offer-title carried no size or weight rule at
+   all and inherited 16/400 beside .rfq-title's explicit 16/600, which read as a
+   lighter, smaller heading on an otherwise identical row. The status pill was a
+   pixel down for no reason, and the price sat at 700 — above the 600 the rest of
+   the app's figures use. */
+#page-my-offers .offer-title{
+  font-size:16px !important; font-weight:600 !important; line-height:1.5;
+}
+#page-my-offers .status-pill{ font-size:15px !important; }
+/* Every boxed figure at one weight. They were split — 700 on ใบเสนอราคา and
+   ประกาศขาย, 600 on the count in ต้องการซื้อ's box — which is the same drift one
+   step further out, and 700 is above the weight the rest of the app's numbers
+   use. Fixing only ประกาศขาย would have traded one mismatch for another. */
+#page-my-offers .offer-price-col .price-num,
+#page-my-bids .bid-price-col .price-num,
+#page-my-requests .bid-price-col .price-num{ font-weight:600 !important; }
 #page-rfq-offers .rfq-id{ margin:0 0 8px !important; display:flex; align-items:center; gap:2px; }
 /* 4b calm — extend to RFQ / Offer list cards */
 #page-my-offers .offer-tag{ background:var(--bg) !important; border:1px solid #eef0f4 !important; color:var(--ink-soft) !important; font-weight:600 !important; }
@@ -10209,7 +10228,6 @@ html, body{
       <div class="status-tabs">
         <div class="status-tab active" onclick="switchOfferTab(this,'all')"><span class="tab-ic">📦</span>ทั้งหมด (36)</div>
         <div class="status-tab" onclick="switchOfferTab(this,'active')"><span class="tab-ic">🟢</span>เปิดอยู่ (24)</div>
-        <div class="status-tab" onclick="switchOfferTab(this,'paused')"><span class="tab-ic">⏸️</span>พักไว้ (7)</div>
         <div class="status-tab" onclick="switchOfferTab(this,'closed')"><span class="tab-ic">🔒</span>ปิดแล้ว (5)</div>
       </div>
 
@@ -13465,6 +13483,20 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-offer-detail .content{ grid-template-columns:minmax(0,1fr) !important; }
 #page-offer-detail .content > *:nth-child(2){ display:none !important; }
 
+/* ===== Both detail pages fill their column =====
+   `.wrap` asks for `max-width:900px; margin:0 auto`, which on a block parent means
+   "a 900px column, centred". Its parent is `.page-layout`, a grid — and auto
+   margins on a grid item switch off stretch, so instead of filling the track both
+   pages shrank to fit their own content. ประกาศขาย has less in it than ต้องการซื้อ,
+   so it collapsed further (446px against 559px) and read as a different, narrower
+   layout when it is meant to be the same one. `width:100%` restores what the
+   max-width was always describing, and puts the two pages on the same measure. */
+#page-rfq-detail .wrap,
+#page-offer-detail .wrap{ width:100%; max-width:900px; }
+
+/* the figure at the app's weight for figures, like every other price */
+#page-offer-detail .offer-price-num{ font-weight:600; }
+
 /* ===== Signup: personal vs juristic entity ===== */
 .au-entity{ display:grid; gap:10px; margin-bottom:14px; }
 @media (min-width: 420px){ .au-entity{ grid-template-columns:1fr 1fr; } }
@@ -14141,10 +14173,13 @@ body.kx-auth .kx-burger{ display:none !important; }
   font-size:24px; font-weight:700; color:var(--ink); margin:0 0 4px;
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;
 }
+/* The lines that describe the account — tagline, the ★/📍/industry meta row, the
+   count strip and the contact rows — sat at 400 while everything around them was
+   600. At 400 they read as captions rather than as the profile's own content. */
 #page-company-profile .kx-hero-tagline{
-  font-size:15px; line-height:1.6; color:#565b6e; margin:0 0 6px;
+  font-size:15px; font-weight:500; line-height:1.6; color:#565b6e; margin:0 0 6px;
 }
-#page-company-profile .hero-meta-line{ font-size:14px; color:#565b6e; }
+#page-company-profile .hero-meta-line{ font-size:14px; font-weight:500; color:#565b6e; }
 #page-company-profile .hero-actions{ display:flex; gap:10px; margin-bottom:14px; }
 #page-company-profile .hero-actions .btn{ flex:1 1 0; justify-content:center; }
 
@@ -14160,7 +14195,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   flex:none !important; text-align:left !important;
 }
 #page-company-profile .hero-statstrip .hss-num{ font-size:16px; font-weight:700; color:var(--ink); }
-#page-company-profile .hero-statstrip .hss-lbl{ font-size:14px; color:#565b6e; }
+#page-company-profile .hero-statstrip .hss-lbl{ font-size:14px; font-weight:500; color:#565b6e; }
 
 /* the tab strip lives inside the header card, which no longer has padding of its own */
 #page-company-profile .hero-card .tabs{ padding:0 20px; margin:0; }
@@ -21298,7 +21333,8 @@ body.kx-auth .kx-burger{ display:none !important; }
     // the public counter, so this agrees with the feed card and the detail page
     var reqs = post.request_count != null ? post.request_count : (post.quote_requests || []).length;
     var statusVal = post.status === 'open' ? 'active' : post.status;
-    var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['paused', 'พักไว้'], closed: ['closed', 'ปิดแล้ว'] };
+    // paused is gone as a choice; a row still holding it reads as ปิดแล้ว
+    var pillMap = { active: ['active-st', 'เปิดอยู่'], paused: ['closed', 'ปิดแล้ว'], closed: ['closed', 'ปิดแล้ว'] };
     var pill = pillMap[statusVal] || pillMap.active;
     return '<div class="offer-row" data-status="' + statusVal + '" data-post-id="' + post.id + '"' +
         ' onclick="kxOpenPost(\'' + post.id + '\',\'offer\')">' +
@@ -21319,7 +21355,6 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button>' +
           '<div class="offer-status-menu">' +
             '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'active\')"><span class="osm-dot g"></span>เปิดอยู่</div>' +
-            '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'paused\')"><span class="osm-dot a"></span>พักไว้</div>' +
             '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'closed\')"><span class="osm-dot c"></span>ปิดแล้ว</div>' +
           '</div></div></div>' +
       '</div>' +
@@ -21516,9 +21551,12 @@ body.kx-auth .kx-burger{ display:none !important; }
   function kxPaintOfferTabs(rows){
     var tabs = document.querySelectorAll('#page-my-offers .status-tabs .status-tab');
     if(!tabs.length) return;
-    var c = { all:(rows||[]).length, open:0, paused:0, closed:0 };
-    (rows || []).forEach(function(p){ if(c[p.status] != null) c[p.status]++; });
-    var spec = [['ทั้งหมด', c.all], ['เปิดอยู่', c.open], ['พักไว้', c.paused], ['ปิดแล้ว', c.closed]];
+    var c = { all:(rows||[]).length, open:0, closed:0 };
+    (rows || []).forEach(function(p){ c[p.status === 'open' ? 'open' : 'closed']++; });
+    /* พักไว้ went with the tab: it was a third state nobody used, and a listing
+       is really only open to enquiries or not. A post already sitting at 'paused'
+       in the database still reads and filters as ปิดแล้ว. */
+    var spec = [['ทั้งหมด', c.all], ['เปิดอยู่', c.open], ['ปิดแล้ว', c.closed]];
     Array.prototype.forEach.call(tabs, function(tab, i){
       if(!spec[i]) return;
       var ic = tab.querySelector('.tab-ic');
