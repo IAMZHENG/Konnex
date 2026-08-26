@@ -10115,11 +10115,11 @@ html, body{
       </div>
       <p class="page-sub">ใบเสนอราคาทั้งหมดที่คุณเป็นผู้เสนอไปยังโพสต์ของผู้อื่น</p>
 
-      <div class="status-tabs">
-        <div class="status-tab active" onclick="switchBidStatusTab(this,'all')"><span class="tab-ic">🧾</span>ทั้งหมด (0)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'live')"><span class="tab-ic">📬</span>ยังเปิดรับอยู่ (0)</div>
-        <div class="status-tab" onclick="switchBidStatusTab(this,'ended')"><span class="tab-ic">🔒</span>ปิดรับแล้ว (0)</div>
-      </div>
+      <!-- The ทั้งหมด / ยังเปิดรับอยู่ / ปิดรับแล้ว strip lived here. Whether the
+           buyer's listing is still open changes nothing about the quote you
+           already sent — you cannot resend it, withdraw it, or act on it either
+           way — so the split gave the reader three tabs and no decision. Each
+           row still says ปิดรับแล้ว on its own where that is true. -->
 
       <div class="origin-tabs">
         <span class="origin-tabs-label">ประเภท:</span>
@@ -10140,20 +10140,14 @@ html, body{
   </div>
 
 <script>
-  var currentBidStatusFilter = 'all';
+  // ประเภท is the only filter left here; the open/closed strip above it was
+  // removed because it split the list on something the reader cannot act on.
   var currentBidOriginFilter = 'all';
   function applyBidFilters(){
     document.querySelectorAll('#page-my-bids .bid-row').forEach(function(row){
-      var statusOk = (currentBidStatusFilter === 'all' || row.dataset.status === currentBidStatusFilter);
       var originOk = (currentBidOriginFilter === 'all' || row.dataset.origin === currentBidOriginFilter);
-      row.style.display = (statusOk && originOk) ? 'flex' : 'none';
+      row.style.display = originOk ? 'flex' : 'none';
     });
-  }
-  function switchBidStatusTab(el, mode){
-    document.querySelectorAll('#page-my-bids .status-tab').forEach(t=>t.classList.remove('active'));
-    el.classList.add('active');
-    currentBidStatusFilter = mode;
-    applyBidFilters();
   }
   function switchBidOrigin(el, origin){
     document.querySelectorAll('#page-my-bids .origin-tab').forEach(t=>t.classList.remove('active'));
@@ -21473,23 +21467,8 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ค้นหางาน</button></div>';
     if(window.kxApplyIcons) window.kxApplyIcons(list);
 
-    // the status tabs count real rows now instead of the demo totals
-    /* Counted off the listing, not off the quote: a quote has no verdict now,
-       so what there is to count is whether the RFQ it went to is still taking
-       quotes. A reply to a คำขอราคา is neither — it is already answered. */
-    var counts = { all:rows.length, live:0, ended:0, answered:0 };
-    rows.forEach(function(q){
-      var k = q.origin === 'offer' ? 'answered'
-            : (q.posts && q.posts.status === 'open') ? 'live' : 'ended';
-      counts[k]++;
-    });
-    var tabs = document.querySelectorAll('#page-my-bids .status-tab');
-    var labels = [['ทั้งหมด','all'],['ยังเปิดรับอยู่','live'],['ปิดรับแล้ว','ended']];
-    Array.prototype.forEach.call(tabs, function(tab, i){
-      if(!labels[i]) return;
-      var ic = tab.querySelector('.tab-ic');
-      tab.innerHTML = (ic ? ic.outerHTML : '') + labels[i][0] + ' (' + counts[labels[i][1]] + ')';
-    });
+    // the open/closed tab strip these counts fed has been removed — each row
+    // carries its own ปิดรับแล้ว label, which is where that fact belongs
     var loadMore = document.querySelector('#page-my-bids .load-more');
     if(loadMore) loadMore.style.display = 'none';
     if(typeof applyBidFilters === 'function') applyBidFilters();

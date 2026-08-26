@@ -670,14 +670,18 @@
       expect(typeof w.kxPickWinner).toBe('undefined');
       expect(typeof w.kxSetOutcome).toBe('undefined');
     });
-    it('filters the seller list by whether the listing is still taking quotes', function (w) {
-      var tabs = Array.prototype.map.call(
-        w.document.querySelectorAll('#page-my-bids .status-tab'),
+    it('has no status tab strip at all on the seller list', function (w) {
+      /* Whether the buyer's listing is still open changes nothing about a quote
+         you already sent — you cannot resend it, withdraw it, or act on it
+         either way — so splitting the list on it was three tabs and no
+         decision. ประเภท stays, because that one names your own role. */
+      expect(w.document.querySelectorAll('#page-my-bids .status-tab').length).toBe(0);
+      expect(typeof w.switchBidStatusTab).toBe('undefined');
+      var origins = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-my-bids .origin-tab'),
         function (t) { return t.getAttribute('onclick') || ''; }).join(' ');
-      expect(tabs).toContain("'live'");
-      expect(tabs).toContain("'ended'");
-      expect(tabs).notToContain("'won'", 'nothing is won');
-      expect(tabs).notToContain("'lost'", 'and so nothing is lost either');
+      expect(origins).toContain("'rfq'", 'ประเภท is still the one filter here');
+      expect(origins).toContain("'offer'");
     });
     it('labels a quote by the listing state, not by a result', async function (w) {
       signIn(w);
@@ -698,21 +702,22 @@
       expect(text).notToContain('รอผล', 'no result is coming, so nothing is waiting for one');
       expect(text).notToContain('ไม่ผ่าน');
     });
-    it('counts the tabs off the listing, never reading (undefined)', async function (w) {
+    it('shows every quote, since nothing filters them by listing state now', async function (w) {
       signIn(w);
       plan(w, { quotes: { _: { data: [
         { id: 'q1', price: 1, status: 'pending', created_at: '2026-08-24T00:00:00Z',
           quote_attachments: [], posts: { id: 'p1', title: 'ยังเปิด', province: 'ชลบุรี',
-            status: 'open', deadline: null, post_images: [], profiles: { company_name: 'บ.' } } }
+            status: 'open', deadline: null, post_images: [], profiles: { company_name: 'บ.' } } },
+        { id: 'q2', price: 2, status: 'pending', created_at: '2026-08-24T00:00:00Z',
+          quote_attachments: [], posts: { id: 'p2', title: 'ปิดแล้ว', province: 'ชลบุรี',
+            status: 'closed', deadline: null, post_images: [], profiles: { company_name: 'บ.' } } }
       ], error: null } } });
       await w.kxLoadMyBids();
       restore(w);
-      var tabs = Array.prototype.map.call(
-        w.document.querySelectorAll('#page-my-bids .status-tab'),
-        function (t) { return t.textContent; }).join(' ');
-      expect(tabs).notToContain('undefined');
-      expect(tabs).toContain('ยังเปิดรับอยู่ (1)');
-      expect(tabs).toContain('ปิดรับแล้ว (0)');
+      var shown = Array.prototype.filter.call(
+        w.document.querySelectorAll('#page-my-bids .bid-row'),
+        function (r) { return r.style.display !== 'none'; });
+      expect(shown.length).toBe(2, 'removing the strip must not leave rows hidden by a stale filter');
     });
     it('hides the sections only a winner could have filled', function (w) {
       // ผลงานสะสม and ผลงานล่าสุด both listed the RFQs this account was chosen for
