@@ -8366,17 +8366,15 @@ html, body{
       <div class="compare-title">📊 เปรียบเทียบข้อเสนอที่ได้รับ</div>
       <div class="sort-select">เรียงตาม: ราคาต่ำ-สูง ⌄</div>
     </div>
-    <div class="compare-sub" id="rfqCompareSub">มีผู้เสนอราคาเข้ามา 7 ราย • เฉลี่ย 6,500 ฿/วัน</div>
+    <div class="compare-sub" id="rfqCompareSub"></div>
 
     <div class="sealed-banner" id="sealedBanner">
       <div class="sealed-ic">🔒</div>
       <div class="sealed-body">
         <div class="sealed-title">เสนอราคาแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้</div>
-        <div class="sealed-sub">ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย 6,500 ฿/วัน</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลาเสนอราคา</div>
+        <div class="sealed-sub"></div>
       </div>
-      <div class="sealed-count"><span class="sealed-count-lbl">เปิดเผยใน</span><b id="sealedCountdown">04:23:11</b></div>
-      <button class="sealed-reveal" onclick="revealSealed()">จำลองหมดเวลา ▸ เปิดเผยราคา</button>
-    </div>
+          </div>
 
     <div class="offer-list sealed" id="offerList">
     </div>
@@ -8414,32 +8412,10 @@ html, body{
   function openModal(){ document.getElementById('offerModal').classList.add('open'); }
   function closeModal(){ document.getElementById('offerModal').classList.remove('open'); }
 
-  function revealSealed(){
-    var list = document.getElementById('offerList');
-    if(list) list.classList.remove('sealed');
-    var b = document.getElementById('sealedBanner');
-    if(b){
-      b.style.background = 'linear-gradient(100deg,#ecfdf3,#f2fbf5)';
-      b.style.borderColor = '#bfe6cf';
-      b.querySelector('.sealed-ic').textContent = '🔓';
-      b.querySelector('.sealed-title').textContent = 'หมดเวลาเสนอราคา — เปิดเผยราคาทุกเจ้าแล้ว';
-      b.querySelector('.sealed-sub').innerHTML = 'ตอนนี้คุณเห็นราคาของผู้เสนอทุกรายและเลือกผู้ให้บริการได้';
-      var c = b.querySelector('.sealed-count'); if(c) c.style.display = 'none';
-      var r = b.querySelector('.sealed-reveal'); if(r) r.style.display = 'none';
-    }
-  }
-  (function(){
-    var el = document.getElementById('sealedCountdown');
-    if(!el) return;
-    var t = 4*3600 + 23*60 + 11;
-    setInterval(function(){
-      if(document.getElementById('offerList') && !document.getElementById('offerList').classList.contains('sealed')) return;
-      t = Math.max(0, t-1);
-      var h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
-      el.textContent = [h,m,s].map(function(n){return String(n).padStart(2,'0');}).join(':');
-      if(t===0) revealSealed();
-    }, 1000);
-  })();
+  /* revealSealed() and the countdown that drove it were the demo's own: a clock
+     started at a hardcoded 04:23:11 and a button that faked the reveal. Sealed
+     prices open when the deadline passes, which renderRfqDetail reads off the
+     post itself. */
   document.getElementById('offerModal').addEventListener('click', e=>{
     if(e.target.id === 'offerModal') closeModal();
   });
@@ -10868,55 +10844,18 @@ html, body{
             <span class="offer-cat-tag">📦 ข้อเสนอขาย</span>
             <span class="offer-status-tag">🟢 กำลังแสดง</span>
           </div>
-          <h1>รับผลิตงานโลหะแผ่นทุกชนิด</h1>
-          <div class="offer-meta-row">
-            <span>📍 สมุทรปราการ</span>
-            <span>👁️ 842 วิว</span>
-            <span>💬 23 ผู้สนใจ</span>
-          </div>
+          <h1></h1>
+          <div class="offer-meta-row"></div>
           <div class="offer-price-block">
-            <div class="offer-price-num">15,000 ฿</div>
+            <div class="offer-price-num"></div>
             <div class="offer-price-unit">เริ่มต้น / ขึ้นอยู่กับสเปคงาน</div>
           </div>
-          <div class="offer-desc">
-            รับผลิตงานโลหะแผ่นทุกชนิด ตัดเลเซอร์ พับ ม้วน เชื่อม ประกอบ รองรับงานเหล็ก สเตนเลส อลูมิเนียม มีทีมช่างมากประสบการณ์ พร้อมเครื่องจักรทันสมัย ส่งมอบตรงเวลา รับงานทั้งจำนวนน้อยและจำนวนมาก
-          </div>
+          <div class="offer-desc"></div>
           <div class="offer-action-row">
             <button class="btn btn-outline" id="kxOfferChatBtn" onclick="kxChatWithSeller()">💬 ส่งข้อความ</button>
             <button class="btn btn-primary" onclick="openQuoteModal()">🧾 ขอใบเสนอราคา</button>
           </div>
     <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
-      <div style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:4px;">❓ คำถามเกี่ยวกับงานนี้ <span style="color:var(--ink-faint);font-weight:600;">(2)</span></div>
-      <div style="display:flex;flex-direction:column;gap:16px;">
-        <div>
-          <div style="display:flex;gap:10px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">?</div>
-            <div style="flex:1;">
-              <div style="font-size:15px;color:var(--ink);"><b>ผู้ให้บริการ (ไม่ระบุชื่อ)</b> <span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· 10 นาทีที่แล้ว</span></div>
-              <div style="font-size:15px;color:var(--ink);margin-top:3px;">รับผลิตงานสแตนเลส 316 ไหมครับ? และงานหนา 5 mm ตัดเลเซอร์ได้หรือไม่</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">
-            <div style="width:32px;height:32px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">P</div>
-            <div style="flex:1;background:var(--blue-50);border:1px solid #dae6ff;border-radius:11px;padding:10px 13px;">
-              <div style="font-size:15px;color:var(--ink);"><b>Prime CNC Co., Ltd.</b> <span style="font-size:12px;font-weight:600;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span></div>
-              <div style="font-size:15px;color:var(--ink);margin-top:3px;">รับครับ สแตนเลส 316 ได้ ตัดเลเซอร์หนาได้ถึง 20 mm</div>
-            </div>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:#94a3b8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0;">?</div>
-          <div style="flex:1;">
-            <div style="font-size:15px;color:var(--ink);"><b>ผู้ให้บริการ (ไม่ระบุชื่อ)</b> <span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· 25 นาทีที่แล้ว</span></div>
-            <div style="font-size:15px;color:var(--ink);margin-top:3px;">มีขั้นต่ำการรับงานไหมครับ? งานจำนวนน้อยรับหรือเปล่า</div>
-            <div style="font-size:14px;color:var(--ink-soft);margin-top:5px;">⏳ รอเจ้าของประกาศตอบ</div>
-          </div>
-        </div>
-      </div>
-      <div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">
-        <input type="text" class="kx-askin" placeholder="ถามเรื่องสเปก/เงื่อนไขงาน..." style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);">
-        <button type="button" onclick="kxAskQuestion(this)" style="background: var(--blue-600);border:none;border-radius:10px;padding:11px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ถาม</button>
-      </div>
     </div>
         </div>
       </div>
@@ -10927,7 +10866,7 @@ html, body{
           <div class="seller-top">
             <div class="seller-av">P</div>
             <div>
-              <div class="seller-name">Prime CNC Co., Ltd.</div>
+              <div class="seller-name"></div>
               <div class="seller-verified">✓ Verified Company</div>
             </div>
           </div>

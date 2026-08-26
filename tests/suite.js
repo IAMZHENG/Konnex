@@ -937,6 +937,48 @@
 
   // ============================================================== the sidebar ===
   // ========================================= refreshing onto a page keeps its data ===
+  // ================================ no page ships with invented data in its markup ===
+  describe('nothing is baked into the markup', function () {
+    /* The prototype wrote a worked example straight into the page — a seller
+       called Prime CNC, 842 views, a 15,000 ฿ price, two questions with answers.
+       Every renderer replaces its own block once a real row loads, so these only
+       ever showed in the gap before that: click onto a page and someone else's
+       numbers were there first. This sweeps every page with nothing loaded and
+       fails on anything that reads as fabricated, so it cannot come back. */
+    var pages = ['page-feed', 'page-rfq-offers', 'page-my-offers', 'page-my-bids',
+                 'page-my-requests', 'page-dashboard', 'page-messages', 'page-notifications',
+                 'page-saved', 'page-history', 'page-company-profile',
+                 'page-rfq-detail', 'page-offer-detail'];
+    // thousands separators, view/interest counts, star ratings, and the demo cast
+    var FABRICATED = /\d{1,3},\d{3}|Prime CNC|ไทยพรีซิชั่น|Apex|สแตนเลส 316|บุญมี|\b\d+ วิว\b|\b\d+ ผู้สนใจ\b|★\s*[\d.]+/;
+
+    it('no page shows invented content before its data arrives', async function (w) {
+      signIn(w);
+      // every table answers empty, so anything on screen came from the markup
+      plan(w, {});
+      var offenders = [];
+      for (var i = 0; i < pages.length; i++) {
+        await w.navigateTo(pages[i]);
+        await new Promise(function (r) { setTimeout(r, 120); });
+        var page = w.document.getElementById(pages[i]);
+        if (!page) continue;
+        var nodes = page.querySelectorAll('*');
+        for (var j = 0; j < nodes.length; j++) {
+          var e = nodes[j];
+          if (e.children.length) continue;                       // leaves only
+          if (!e.offsetParent) continue;                         // and only what shows
+          if (e.closest('.kx-empty')) continue;                  // empty states are meant to be there
+          if (/^(INPUT|TEXTAREA|OPTION|SELECT)$/.test(e.tagName)) continue;  // placeholders are fine
+          var t = (e.textContent || '').trim();
+          if (t && t.length <= 90 && FABRICATED.test(t)) offenders.push(pages[i] + ': ' + t.slice(0, 50));
+        }
+      }
+      restore(w);
+      expect(offenders.slice(0, 6)).toEqual([],
+        'a page must be empty until its own data loads, never pre-filled with an example');
+    });
+  });
+
   describe('a page you refresh onto still loads', function () {
     /* The bug: the hash router navigates before getSession() resolves, so every
        loader hooked to navigateTo runs while kxSession is still null and returns
