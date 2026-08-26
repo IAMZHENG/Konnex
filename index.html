@@ -8325,31 +8325,21 @@ html, body{
     <!-- HEADER -->
     <div class="header-card">
       <div class="tag-row">
-        <span class="head-tag closed" id="rfqStatusTag">ปิดรับข้อเสนอแล้ว</span>
+        <span class="head-tag closed" id="rfqStatusTag"></span>
       </div>
       <div class="header-top">
         <div class="header-info">
-          <h1>หาเช่ารถเครน 25 ตัน พร้อมคนขับ</h1>
-          <div class="meta-row">
-            <span>📍 กรุงเทพฯ, บางแค</span>
-            <span>🕗 เหลือ 5 วัน</span>
-            <span>💰 งบประมาณ 5,000 - 8,000 ฿/วัน</span>
-          </div>
+          <h1></h1>
+          <div class="meta-row"></div>
         </div>
-        <img class="header-thumb" src="assets/img/header-thumb-1.jpg">
+        <img class="header-thumb" alt="" style="display:none">
       </div>
       <!-- the post's pictures, laid out the same way the feed lays them out -->
       <div id="rfqGallery"></div>
-      <div class="desc-text">
-        ต้องการเช่ารถเครน 25 ตัน พร้อมคนขับ ที่มีใบอนุญาตถูกต้อง สำหรับยกอุปกรณ์เครื่องจักรเข้าโรงงาน ต้องการคนขับที่มีประสบการณ์ สามารถทำงานวันเสาร์-อาทิตย์ได้ มีพื้นที่ทำงานกว้างปลอดภัย
-      </div>
-      <div class="rfq-attach">
-        <div class="rfq-attach-label"><svg class="kx-ico" viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-3px"><path d="M20 11.5 12 19a4.5 4.5 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.5 4.5l-8 8a1.5 1.5 0 0 1-2.5-2l7.5-7.5"></path></svg> ไฟล์แนบ (3)</div>
-        <div class="rfq-attach-grid">
-          <span class="file-chip pdf" onclick="openDocPreview(this)" data-ftype="pdf" data-fname="TOR ข้อกำหนดงาน.pdf" data-fsize="980 KB"><span class="fc-ic">PDF</span><span class="fc-name">TOR ข้อกำหนดงาน.pdf</span></span>
-          <span class="file-chip xls" onclick="openDocPreview(this)" data-ftype="xls" data-fname="ตารางกำหนดเวลา.xlsx" data-fsize="120 KB"><span class="fc-ic">X</span><span class="fc-name">ตารางกำหนดเวลา.xlsx</span></span>
-          <span class="file-chip pdf" onclick="openDocPreview(this)" data-ftype="pdf" data-fname="แบปลั้นหน้างาน.pdf" data-fsize="1.5 MB"><span class="fc-ic">PDF</span><span class="fc-name">แบปลั้นหน้างาน.pdf</span></span>
-        </div>
+      <div class="desc-text"></div>
+      <div class="rfq-attach" style="display:none">
+        <div class="rfq-attach-label"></div>
+        <div class="rfq-attach-grid"></div>
       </div>
       <div class="action-row" id="rfqActionRow">
         <button class="btn btn-outline" onclick="navigateTo('page-messages')">💬 สอบถามรายละเอียด</button>
@@ -20600,8 +20590,16 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(attach){
       if(docs.length){
         attach.style.display = '';
+        /* Writes the whole label rather than patching a number into whatever was
+           already there. It used to do `.replace(/\(\d+\)/, ...)` against the
+           markup's "ไฟล์แนบ (3)" — which meant the renderer depended on the demo
+           text being present, and the label came out blank the moment that text
+           was removed. The paperclip is chrome, so it lives here with it. */
         var label = attach.querySelector('.rfq-attach-label');
-        if(label) label.innerHTML = label.innerHTML.replace(/\(\d+\)/, '(' + docs.length + ')');
+        if(label) label.innerHTML =
+          '<svg class="kx-ico" viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:-3px">' +
+          '<path d="M20 11.5 12 19a4.5 4.5 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.5 4.5l-8 8a1.5 1.5 0 0 1-2.5-2l7.5-7.5"></path>' +
+          '</svg> ไฟล์แนบ (' + docs.length + ')';
         var grid = attach.querySelector('.rfq-attach-grid');
         if(grid) grid.innerHTML = docs.map(function(d){
           return '<a class="file-chip ' + d.file_kind + '" target="_blank" rel="noopener" href="' + esc(d.file_url) + '"' +

@@ -962,15 +962,19 @@
         await new Promise(function (r) { setTimeout(r, 120); });
         var page = w.document.getElementById(pages[i]);
         if (!page) continue;
-        var nodes = page.querySelectorAll('*');
-        for (var j = 0; j < nodes.length; j++) {
-          var e = nodes[j];
-          if (e.children.length) continue;                       // leaves only
-          if (!e.offsetParent) continue;                         // and only what shows
-          if (e.closest('.kx-empty')) continue;                  // empty states are meant to be there
-          if (/^(INPUT|TEXTAREA|OPTION|SELECT)$/.test(e.tagName)) continue;  // placeholders are fine
-          var t = (e.textContent || '').trim();
-          if (t && t.length <= 90 && FABRICATED.test(t)) offenders.push(pages[i] + ': ' + t.slice(0, 50));
+        /* Text nodes, not leaf elements. The first version of this walked
+           elements with no children — but every meta row holds an <svg> icon
+           after the icon pass, so those elements have children and were skipped.
+           A whole demo header sailed through it. A text node is the text. */
+        var walker = w.document.createTreeWalker(page, 4 /* SHOW_TEXT */);
+        var node;
+        while ((node = walker.nextNode())) {
+          var t = (node.nodeValue || '').trim();
+          if (!t || t.length > 110) continue;
+          var el = node.parentElement;
+          if (!el || !el.offsetParent) continue;                 // only what shows
+          if (el.closest('.kx-empty')) continue;                 // empty states are meant to be there
+          if (FABRICATED.test(t)) offenders.push(pages[i] + ': ' + t.slice(0, 50));
         }
       }
       restore(w);
