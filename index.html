@@ -7117,6 +7117,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-offer-detail .offer-desc {
     font-size: 15px;
+    font-weight: 500;
     color: var(--ink-soft);
     line-height: 1.8;
     margin-bottom: 20px
@@ -7600,7 +7601,7 @@ html, body{
 #page-my-bids .bid-note{
   margin-top:8px; padding:8px 11px; border-radius:9px;
   background:var(--bg); border:1px solid var(--line);
-  font-size:14px; color:#565b6e; line-height:1.55;
+  font-size:14px; font-weight:500; color:#565b6e; line-height:1.55;
 }
 #page-my-bids .bid-files{ display:flex; flex-wrap:wrap; gap:8px; margin-top:9px; }
 #page-my-bids .bid-file{ display:inline-flex; align-items:center; gap:5px; font-size:14px; font-weight:600; color:#565b6e; background:var(--bg,#f6f8fc); border:1px solid var(--line,#e6e7f0); border-radius:8px; padding:5px 10px; }
@@ -9962,6 +9963,14 @@ html, body{
   function notifTarget(n){
     if(n.kind === 'quote_won' || n.kind === 'quote_lost') return "navigateTo('page-my-bids')";
     if(n.kind === 'request_answered') return "navigateTo('page-my-requests')";
+    /* A connect notification is about a person, not a post. actor_id records who
+       (database/portfolio_v2.sql) — before that column existed the body text
+       named them and the click still fell through to the feed, which is the one
+       place the notification was not about. Guarded so a row from before the
+       backfill, or a kind that never sets it, still lands somewhere sensible. */
+    if((n.kind === 'connect_request' || n.kind === 'connect_accepted') && n.actor_id){
+      return "kxViewProfile('" + n.actor_id + "')";
+    }
     if(n.link_post_id){
       var kind = (n.kind === 'new_request') ? 'offer' : 'rfq';
       return "kxOpenPost('" + n.link_post_id + "','" + kind + "')";
@@ -10032,11 +10041,21 @@ html, body{
 
   window.kxLoadNotifications = async function(){
     if(!window.kxSession) return;
+    var cols = 'id,kind,body,link_post_id,is_read,created_at,actor_id';
     var res = await sb.from('notifications')
-      .select('id,kind,body,link_post_id,is_read,created_at')
+      .select(cols)
       .eq('profile_id', window.kxSession.user.id)
       .order('created_at', { ascending:false })
       .limit(100);
+    // actor_id arrives with portfolio_v2.sql; without it a connect notification
+    // just routes to the feed as it did before, rather than the page erroring out
+    if(res.error && /actor_id/i.test(res.error.message || '')){
+      res = await sb.from('notifications')
+        .select('id,kind,body,link_post_id,is_read,created_at')
+        .eq('profile_id', window.kxSession.user.id)
+        .order('created_at', { ascending:false })
+        .limit(100);
+    }
     if(res.error){
       console.error('kxLoadNotifications failed', res.error);
       if(/schema cache|does not exist/i.test(res.error.message || '')){
@@ -14295,19 +14314,29 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .rv-panel{ border:none !important; padding:0 !important; margin-bottom:14px !important; }
 #page-company-profile .rv-card{ background:var(--bg) !important; }
 
-/* --- ผลงานที่ผ่านมา — the seller's own track record --- */
-.pw-grid{ display:flex; flex-direction:column; gap:12px; }
+/* --- ผลงานที่ผ่านมา — the seller's own track record ---
+   A stacked card rather than a thumbnail beside a line of text: the photos are
+   the point of a portfolio, and at 74px square nobody could see what the work
+   actually was. Full-width gallery on top, title and detail under it. */
+.pw-grid{ display:flex; flex-direction:column; gap:16px; }
 .pw{
-  display:flex; gap:12px; align-items:flex-start; position:relative;
-  border:1px solid var(--line); border-radius:12px; padding:11px 12px; background:var(--card);
+  position:relative;
+  border:1px solid var(--line); border-radius:14px; padding:14px; background:var(--card);
 }
-.pw-img{
-  width:74px; height:74px; flex:none; border-radius:9px; object-fit:cover; background:var(--bg);
-}
-.pw-body{ flex:1; min-width:0; }
-.pw-title{ font-size:15px; font-weight:600; color:var(--ink); line-height:1.5; }
-.pw-sub{ font-size:14px; color:var(--blue-700); margin-top:2px; }
-.pw-detail{ font-size:14px; color:var(--ink-soft); line-height:1.6; margin-top:5px; white-space:pre-wrap; }
+.pw-gal{ margin-bottom:12px; }
+/* The shared gallery sizes itself to its container. A fixed min-height made the
+   cells portrait on a phone (195 wide by 303 tall) — an aspect ratio keeps them
+   the same shape at every width, which is what a photo of a machine wants. */
+.pw-gal .kx-gal{ border-radius:11px; overflow:hidden; }
+.pw-gal .kx-gcell{ aspect-ratio:4/3; min-height:0; }
+.pw-gal .kx-gimg{ width:100%; height:100%; object-fit:cover; }
+.pw-body{ min-width:0; }
+.pw-title{ font-size:16px; font-weight:600; color:var(--ink); line-height:1.5; }
+.pw-detail{ font-size:15px; font-weight:500; color:var(--ink-soft); line-height:1.7; margin-top:6px; white-space:pre-wrap; }
+/* the picked-but-not-yet-uploaded photos in the add form */
+.pw-thumbs{ display:flex; flex-wrap:wrap; gap:8px; margin:-6px 0 14px; }
+.pw-thumb{ width:64px; height:64px; border-radius:8px; overflow:hidden; background:var(--bg); flex:none; }
+.pw-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 /* said plainly, because a portfolio is a claim and a review is evidence —
    a buyer weighing the two deserves to know which is which */
 .pw-note{
@@ -14320,7 +14349,6 @@ body.kx-auth .kx-burger{ display:none !important; }
   padding:10px 13px; font-size:15px; font-family:inherit; color:var(--ink);
   background:#fff; outline:none; margin-bottom:14px; resize:vertical;
 }
-.pw-row2{ display:grid; grid-template-columns:2fr 1fr; gap:12px; }
 .pw-hint{ font-size:13px; color:var(--ink-faint); margin:-8px 0 14px; line-height:1.6; }
 .pw-actions{ display:flex; gap:9px; justify-content:flex-end; flex-wrap:wrap; }
 /* the two buttons the work modal borrows from the shared set */
@@ -14332,7 +14360,6 @@ body.kx-auth .kx-burger{ display:none !important; }
 .oc-btn.primary{ background:var(--blue-600); border-color:var(--blue-600); color:#fff; }
 .oc-btn.primary:disabled{ opacity:.55; cursor:default; }
 @media (max-width: 520px){
-  .pw-row2{ grid-template-columns:minmax(0,1fr); }
   .pw-actions .oc-btn{ flex:1; }
 }
 
@@ -15457,7 +15484,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .mr-quotedoc .mr-file{ max-width:100%; background:#fff; border-color:#c2d6ff; justify-content:center; }
 #page-my-requests .mr-quotedoc .mr-file:hover{ background:#fff; border-color:#0a5bff; }
 
-#page-my-requests .mr-note{ font-size:14px; color:var(--green,#15803d); margin-top:9px;
+#page-my-requests .mr-note{ font-size:14px; font-weight:500; color:var(--green,#15803d); margin-top:9px;
     background:var(--green-bg,#ecfdf3); border-radius:8px; padding:7px 11px; line-height:1.6; }
 
 #page-my-requests .bid-row{ cursor:pointer; }
@@ -22107,7 +22134,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var card = document.getElementById('pfWorkCard');
     if(!card || !profileId) return;
     var res = await sb.from('portfolio')
-      .select('id,title,buyer_name,detail,year,image_url,sort')
+      .select('id,title,detail,images,sort')
       .eq('profile_id', profileId)
       .order('sort', { ascending:true }).order('created_at', { ascending:false });
     if(res.error){
@@ -22131,14 +22158,19 @@ body.kx-auth .kx-burger{ display:none !important; }
       '</div>' +
       (rows.length
         ? '<div class="pw-grid">' + rows.map(function(r){
-            var sub = [r.buyer_name, r.year].filter(Boolean).join(' · ');
+            /* The photos go through the same gallery the feed uses: up to four
+               cells with the rest reachable behind +N, and every one of them
+               zoomable. A portfolio of one machine is rarely one photo. */
+            var imgs = (r.images || []).filter(Boolean).map(function(u, i){ return { url:u, sort:i }; });
+            // kxGalleryHTML, not galleryHTML — the builder lives in another
+            // script block and only its window export is in scope here
+            var gal = (imgs.length && window.kxGalleryHTML) ? window.kxGalleryHTML(imgs) : '';
             return '<div class="pw" data-id="' + esc(r.id) + '">' +
-              (r.image_url ? '<img class="pw-img" src="' + esc(r.image_url) + '" alt="">' : '') +
               (isOwner ? '<button type="button" class="svc-del" title="ลบผลงานนี้" aria-label="ลบผลงานนี้" ' +
                          'onclick="kxDeleteWork(\'' + esc(r.id) + '\')">🗑</button>' : '') +
+              (gal ? '<div class="pw-gal">' + gal + '</div>' : '') +
               '<div class="pw-body">' +
                 '<div class="pw-title">' + esc(r.title) + '</div>' +
-                (sub ? '<div class="pw-sub">' + esc(sub) + '</div>' : '') +
                 (r.detail ? '<div class="pw-detail">' + esc(r.detail) + '</div>' : '') +
               '</div></div>';
           }).join('') + '</div>' +
@@ -22154,25 +22186,33 @@ body.kx-auth .kx-burger{ display:none !important; }
   window.kxOpenWork = function(){
     var box = document.getElementById('workBox');
     box.innerHTML =
-      '<label class="pw-label">ขายอะไร / ทำอะไร <span style="color:var(--red)">*</span></label>' +
+      '<label class="pw-label">ชื่อผลงาน <span style="color:var(--red)">*</span></label>' +
       '<input type="text" id="pwTitle" class="pw-field" maxlength="120" placeholder="เช่น ผลิตชิ้นส่วน CNC 5,000 ชิ้น">' +
-      '<div class="pw-row2">' +
-        '<div><label class="pw-label">ขายให้ใคร</label>' +
-          '<input type="text" id="pwBuyer" class="pw-field" maxlength="120" placeholder="เช่น บจก. ไทยพรีซิชั่น"></div>' +
-        '<div><label class="pw-label">ปี</label>' +
-          '<input type="text" id="pwYear" class="pw-field" inputmode="numeric" maxlength="4" placeholder="2566"></div>' +
-      '</div>' +
-      '<div class="pw-hint">ชื่อลูกค้าไม่บังคับ — ถ้าเป็นความลับตามสัญญา เว้นว่างไว้ได้</div>' +
       '<label class="pw-label">รายละเอียด</label>' +
       '<textarea id="pwDetail" class="pw-field" rows="3" maxlength="500" ' +
         'placeholder="เช่น วัสดุ ความแม่นยำ ระยะเวลาส่งมอบ"></textarea>' +
       '<label class="pw-label">รูปผลงาน</label>' +
-      '<input type="file" id="pwImage" accept="image/*" class="pw-field">' +
+      '<input type="file" id="pwImage" accept="image/*" multiple class="pw-field" onchange="kxWorkPreview(this)">' +
+      '<div class="pw-hint" id="pwImgHint">เลือกได้หลายรูปพร้อมกัน</div>' +
+      '<div class="pw-thumbs" id="pwThumbs"></div>' +
       '<div class="pw-actions">' +
         '<button type="button" class="oc-btn ghost" onclick="kxCloseWork()">ยกเลิก</button>' +
         '<button type="button" class="oc-btn primary" id="pwSave" onclick="kxSaveWork()">บันทึก</button>' +
       '</div>';
     document.getElementById('workModal').classList.add('open');
+  };
+
+  // what was picked, before any of it is uploaded
+  window.kxWorkPreview = function(input){
+    var box = document.getElementById('pwThumbs');
+    var files = Array.prototype.slice.call(input.files || []);
+    box.innerHTML = files.map(function(f){
+      return '<span class="pw-thumb"><img src="' + URL.createObjectURL(f) + '" alt=""></span>';
+    }).join('');
+    var hint = document.getElementById('pwImgHint');
+    if(hint) hint.textContent = files.length
+      ? 'เลือกไว้ ' + files.length + ' รูป — เลือกใหม่จะแทนที่ทั้งหมด'
+      : 'เลือกได้หลายรูปพร้อมกัน';
   };
   window.kxCloseWork = function(){
     document.getElementById('workModal').classList.remove('open');
@@ -22181,28 +22221,31 @@ body.kx-auth .kx-burger{ display:none !important; }
   window.kxSaveWork = async function(){
     if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
     var title = (document.getElementById('pwTitle').value || '').trim();
-    if(!title){ kxToast('กรอกว่าขายอะไรหรือทำอะไรก่อน'); return; }
+    if(!title){ kxToast('กรอกชื่อผลงานก่อน'); return; }
     var btn = document.getElementById('pwSave');
     btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
 
-    var url = null;
-    var f = document.getElementById('pwImage').files[0];
-    if(f && window.kxUploadFile){
+    /* Uploaded one at a time and in order, so the array matches what was picked.
+       Each goes through kxImageFile like every other upload — phone photos
+       arrive as multi-megabyte HEIC, and the canvas pass normalises both. A
+       photo that fails is skipped rather than losing the whole entry. */
+    var files = Array.prototype.slice.call(document.getElementById('pwImage').files || []);
+    var urls = [];
+    for(var i = 0; i < files.length; i++){
+      if(!window.kxUploadFile) break;
+      btn.textContent = 'กำลังอัปโหลดรูป ' + (i + 1) + '/' + files.length + '...';
       try{
-        // through kxImageFile like every other upload: phone photos arrive as
-        // multi-megabyte HEIC, and the canvas pass normalises both
-        var norm = window.kxImageFile ? await window.kxImageFile(URL.createObjectURL(f), f.name) : f;
-        url = await window.kxUploadFile('post-images', norm || f);
+        var norm = window.kxImageFile
+          ? await window.kxImageFile(URL.createObjectURL(files[i]), files[i].name) : files[i];
+        urls.push(await window.kxUploadFile('post-images', norm || files[i]));
       }catch(e){ console.error('portfolio image upload failed', e); }
     }
-    var yr = parseInt((document.getElementById('pwYear').value || '').replace(/\D/g, ''), 10);
+    btn.textContent = 'กำลังบันทึก...';
     var res = await sb.from('portfolio').insert({
       profile_id: window.kxSession.user.id,
       title: title,
-      buyer_name: (document.getElementById('pwBuyer').value || '').trim() || null,
       detail: (document.getElementById('pwDetail').value || '').trim() || null,
-      year: isNaN(yr) ? null : yr,
-      image_url: url
+      images: urls
     });
     btn.disabled = false; btn.textContent = 'บันทึก';
     if(res.error){

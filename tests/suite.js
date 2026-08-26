@@ -790,20 +790,35 @@
     }
     function card(w) { return w.document.getElementById('pfWorkCard'); }
     var TWO = [
-      { id: 'w1', title: 'ผลิตชิ้นส่วน CNC', buyer_name: 'บจก. ไทยพรีซิชั่น',
-        detail: 'อลูมิเนียม 6061', year: 2566, image_url: null, sort: 0 },
-      { id: 'w2', title: 'งานกลึงเพลา', buyer_name: null, detail: null,
-        year: 2565, image_url: null, sort: 1 }
+      { id: 'w1', title: 'ผลิตชิ้นส่วน CNC', detail: 'อลูมิเนียม 6061', sort: 0,
+        images: ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg', 'e.jpg'] },
+      { id: 'w2', title: 'งานกลึงเพลา', detail: null, sort: 1, images: [] }
     ];
 
-    it('lists what was sold, to whom, and when', async function (w) {
+    it('lists the work and its detail', async function (w) {
       withRows(w, TWO); signIn(w);
       await w.kxLoadPortfolio(ME, true);
       restore(w);
       var t = card(w).textContent;
       expect(t).toContain('ผลิตชิ้นส่วน CNC');
-      expect(t).toContain('บจก. ไทยพรีซิชั่น');
-      expect(t).toContain('2566');
+      expect(t).toContain('อลูมิเนียม 6061');
+      expect(t).toContain('งานกลึงเพลา');
+    });
+    it('shows the photos through the shared gallery, overflow and all', async function (w) {
+      withRows(w, TWO); signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      var cells = card(w).querySelectorAll('.pw-gal .kx-gcell');
+      expect(cells.length).toBe(4, 'four cells max, like every other gallery in the app');
+      expect(card(w).textContent).toContain('+1', 'the fifth photo is still reachable');
+    });
+    it('renders an entry with no photos at all', async function (w) {
+      withRows(w, [{ id: 'w3', title: 'ไม่มีรูป', detail: null, sort: 0, images: [] }]);
+      signIn(w);
+      await w.kxLoadPortfolio(ME, true);
+      restore(w);
+      expect(card(w).textContent).toContain('ไม่มีรูป');
+      expect(card(w).querySelectorAll('.pw-gal').length).toBe(0, 'no empty frame');
     });
     it('says it is unverified, because a claim is not a review', async function (w) {
       withRows(w, TWO); signIn(w);
@@ -861,34 +876,38 @@
       open(w);
       var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
       w.document.getElementById('pwTitle').value = 'ผลิตชิ้นส่วน CNC';
-      w.document.getElementById('pwBuyer').value = 'บจก. ไทยพรีซิชั่น';
-      w.document.getElementById('pwYear').value = '2566';
+      w.document.getElementById('pwDetail').value = 'อลูมิเนียม 6061';
       await w.kxSaveWork();
       restore(w);
       var row = sb._writes[0].row;
       expect(row.profile_id).toBe(ME, 'the policy refuses any other id anyway');
       expect(row.title).toBe('ผลิตชิ้นส่วน CNC');
-      expect(row.year).toBe(2566);
+      expect(row.detail).toBe('อลูมิเนียม 6061');
     });
-    it('keeps a year typed with words around it', async function (w) {
+    it('asks only for a title, a detail and photos', function (w) {
       open(w);
-      var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
-      w.document.getElementById('pwTitle').value = 'x';
-      w.document.getElementById('pwYear').value = 'พ.ศ. 2565';
-      await w.kxSaveWork();
-      restore(w);
-      expect(sb._writes[0].row.year).toBe(2565);
+      var labels = Array.prototype.map.call(
+        w.document.querySelectorAll('#workBox .pw-label'), function (l) { return l.textContent.trim(); });
+      expect(labels.length).toBe(3, 'ขายให้ใคร and ปี came off the form');
+      expect(labels[0]).toContain('ชื่อผลงาน');
+      expect(w.document.getElementById('pwBuyer')).toBeFalsy();
+      expect(w.document.getElementById('pwYear')).toBeFalsy();
     });
-    it('stores a blank optional field as null, not as an empty string', async function (w) {
+    it('takes more than one photo', function (w) {
+      open(w);
+      expect(w.document.getElementById('pwImage').multiple).toBe(true,
+        'one machine is a wide shot, a close-up and the finished part');
+    });
+    it('stores a blank detail as null, and photos as an array', async function (w) {
       open(w);
       var sb = plan(w, { portfolio: { _: { data: [], error: null } } });
       w.document.getElementById('pwTitle').value = 'y';
       await w.kxSaveWork();
       restore(w);
       var row = sb._writes[0].row;
-      expect(row.buyer_name).toBe(null, 'a customer name is often under NDA — blank is a real answer');
-      expect(row.detail).toBe(null);
-      expect(row.year).toBe(null);
+      expect(row.detail).toBe(null, 'an empty string is not the same as nothing written');
+      expect(row.images).toEqual([], 'the column is text[], never null');
+      expect(row.buyer_name).toBe(undefined, 'the field is gone, so nothing may be sent for it');
     });
     it('explains a missing migration rather than failing silently', async function (w) {
       open(w);
