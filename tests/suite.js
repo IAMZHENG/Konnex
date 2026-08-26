@@ -936,6 +936,36 @@
   });
 
   // ============================================================== the sidebar ===
+  // ========================================= refreshing onto a page keeps its data ===
+  describe('a page you refresh onto still loads', function () {
+    /* The bug: the hash router navigates before getSession() resolves, so every
+       loader hooked to navigateTo runs while kxSession is still null and returns
+       immediately — the page came back empty and nothing asked again. boot() now
+       re-navigates once the session is real. These pin the two halves of that. */
+    it('every session-gated loader bails out when there is no session', async function (w) {
+      w.kxSession = null;
+      var sb = plan(w, { posts: { _: { data: [], error: null } },
+                         quotes: { _: { data: [], error: null } } });
+      await w.kxLoadMyPosts('rfq');
+      await w.kxLoadMyBids();
+      restore(w);
+      expect(sb._calls.length).toBe(0,
+        'they must not query as nobody — that is what made the page look empty');
+    });
+    it('re-navigating to the page you are on re-fires its loader', async function (w) {
+      signIn(w);
+      var seen = [];
+      var real = w.kxLoadMyPosts;
+      w.kxLoadMyPosts = function (kind) { seen.push(kind + ':' + (w.kxSession ? 'yes' : 'no')); };
+      await w.navigateTo('page-rfq-offers', true);
+      seen.length = 0;
+      await w.navigateTo('page-rfq-offers', true);
+      w.kxLoadMyPosts = real;
+      expect(seen).toEqual(['rfq:yes'],
+        'this is the mechanism boot() uses to recover a refreshed page');
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');
