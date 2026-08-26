@@ -8369,7 +8369,7 @@ html, body{
     <div class="offer-list sealed" id="offerList">
     </div>
 
-    <div class="load-more-offers">⌄ ดูข้อเสนออีก 4 ราย</div>
+    <div class="load-more-offers" style="display:none"></div>
     </div>
   </div>
   </div>
@@ -12763,12 +12763,21 @@ document.addEventListener('keydown', function(e){
 
 (function(){
   var validPages = ['page-auth','page-dashboard','page-my-requests','page-feed','page-rfq-offers','page-rfq-detail','page-company-profile','page-edit-profile','page-create-post','page-messages','page-notifications','page-my-bids','page-my-offers','page-offer-detail','page-settings','page-saved','page-history'];
-  var hash = window.location.hash.replace('#','');
-  var start = validPages.includes(hash) ? hash : 'page-auth';
+  // a detail hash carries its post: #page-rfq-detail/<uuid>. Take the page half.
+  function pageOf(h){ var i = h.indexOf('/'); return i < 0 ? h : h.slice(0, i); }
+  // captured before navigateTo, which replaces the hash with the bare page id
+  var rawHash = window.location.hash;
+  var start = validPages.includes(pageOf(rawHash.replace('#',''))) ? pageOf(rawHash.replace('#','')) : 'page-auth';
   navigateTo(start, true);
+  // put the post back in the URL, so boot() below can still see which one it was
+  if(rawHash.indexOf('/') > -1) history.replaceState(null, '', rawHash);
   window.addEventListener('hashchange', function(){
-    var h = window.location.hash.replace('#','');
-    if(validPages.includes(h)) navigateTo(h);
+    var raw = window.location.hash.replace('#','');
+    var h = pageOf(raw);
+    if(!validPages.includes(h)) return;
+    var post = window.kxPostFromHash && window.kxPostFromHash();
+    if(post && window.kxOpenPost) kxOpenPost(post.id, post.kind);
+    else navigateTo(h);
   });
 })();
 
@@ -19265,8 +19274,15 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(window.kxWarmInterest) window.kxWarmInterest();
       // fills the edit form and the rail's name from the row, not from a cache
       if(window.kxLoadProfile) window.kxLoadProfile();
+      var hashPost = window.kxPostFromHash && window.kxPostFromHash();
       if(activeId === 'page-auth'){
         navigateTo('page-feed');
+      }else if(hashPost){
+        /* Refreshed on a listing. The page was restored from the hash, but the
+           post it is about lives in the hash too and nothing had loaded it —
+           re-navigating alone would only redraw the same empty shell, because
+           detail pages have no loader hooked to navigateTo (they need an id). */
+        kxOpenPost(hashPost.id, hashPost.kind);
       }else if(activeId){
         /* Reload the page you refreshed onto.
            The hash router navigates before getSession() can have resolved, so
@@ -21225,10 +21241,32 @@ body.kx-auth .kx-burger{ display:none !important; }
     kxStartChat(window.kxCurrentDetailOwnerId, window.kxCurrentDetailPostId);
   };
 
+  /* The post's id goes in the URL.
+     Without it a detail page is not addressable: refreshing on one left the app
+     knowing which *page* to show but not which post, so it rendered an empty
+     shell — and there was nothing to recover from, because the id only ever
+     existed in the argument to this call. It also means a listing can now be
+     linked to and shared, which a marketplace rather needs.
+     Written after navigateTo, which replaces the hash with the bare page id. */
   window.kxOpenPost = function(id, kind){
     var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
     navigateTo(page);
+    if(id) history.replaceState(null, '', '#' + page + '/' + id);
     kxLoadPostDetail(id, kind);
+  };
+
+  /* Reads a detail page and its post out of the hash: #page-rfq-detail/<uuid>.
+     Returns null for every other hash, so callers can treat "no post in the
+     URL" as the ordinary case. */
+  window.kxPostFromHash = function(){
+    var h = (window.location.hash || '').replace('#', '');
+    var slash = h.indexOf('/');
+    if(slash < 0) return null;
+    var page = h.slice(0, slash), id = h.slice(slash + 1);
+    if(!id) return null;
+    if(page === 'page-rfq-detail')   return { page:page, id:id, kind:'rfq' };
+    if(page === 'page-offer-detail') return { page:page, id:id, kind:'offer' };
+    return null;
   };
 
   var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id,profiles!post_questions_asker_id_fkey(id,company_name,avatar_url))';

@@ -998,6 +998,31 @@
       expect(sb._calls.length).toBe(0,
         'they must not query as nobody — that is what made the page look empty');
     });
+    /* A detail page has no loader hooked to navigateTo — it needs a post id,
+       and that id only ever existed as an argument to kxOpenPost. So refreshing
+       on a listing restored the page and nothing else: an empty shell that
+       re-navigating could not fix. The id lives in the URL now. */
+    it('puts the post id in the URL so a listing is addressable', async function (w) {
+      signIn(w);
+      plan(w, { posts: { _: { data: null, error: null } } });
+      await w.kxOpenPost('POST-123', 'rfq');
+      restore(w);
+      expect(w.location.hash).toBe('#page-rfq-detail/POST-123');
+    });
+    it('reads a post back out of the URL, for both kinds', function (w) {
+      w.history.replaceState(null, '', '#page-rfq-detail/abc');
+      expect(w.kxPostFromHash()).toEqual({ page: 'page-rfq-detail', id: 'abc', kind: 'rfq' });
+      w.history.replaceState(null, '', '#page-offer-detail/xyz');
+      expect(w.kxPostFromHash()).toEqual({ page: 'page-offer-detail', id: 'xyz', kind: 'offer' });
+    });
+    it('treats an ordinary page as carrying no post', function (w) {
+      w.history.replaceState(null, '', '#page-feed');
+      expect(w.kxPostFromHash()).toBe(null, 'only detail pages carry an id');
+      w.history.replaceState(null, '', '#page-rfq-detail');
+      expect(w.kxPostFromHash()).toBe(null, 'a detail page without an id is not a post');
+      w.history.replaceState(null, '', '#page-rfq-detail/');
+      expect(w.kxPostFromHash()).toBe(null, 'nor is a trailing slash');
+    });
     it('re-navigating to the page you are on re-fires its loader', async function (w) {
       signIn(w);
       var seen = [];
