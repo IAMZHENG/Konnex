@@ -2430,18 +2430,22 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-size: 15px;
     flex-wrap: wrap
     }
-/* เจ้าของประกาศ — same weight and avatar size the rest of the app uses for a
-   person, and it opens their profile like every other name in the app does. */
-#page-rfq-detail .rfq-owner {
+/* เจ้าของประกาศ — one block, both detail pages. It sits directly under the
+   title and above the meta row, so who posted it is read before the details
+   of what they posted. Same weight and avatar size the rest of the app uses
+   for a person, and it opens their profile like every other name does. */
+#page-rfq-detail .post-owner,
+#page-offer-detail .post-owner {
     display: flex;
     align-items: center;
     gap: 9px;
-    margin-top: 14px;
+    margin: 10px 0 14px;
     cursor: pointer;
     width: fit-content;
     max-width: 100%;
     }
-#page-rfq-detail .rfq-owner-av {
+#page-rfq-detail .post-owner-av,
+#page-offer-detail .post-owner-av {
     width: 34px;
     height: 34px;
     border-radius: 10px;
@@ -2455,7 +2459,8 @@ input[type="number"]:focus, textarea:focus, select:focus{
     flex-shrink: 0;
     overflow: hidden;
     }
-#page-rfq-detail .rfq-owner-name {
+#page-rfq-detail .post-owner-name,
+#page-offer-detail .post-owner-name {
     font-size: 15px;
     font-weight: 600;
     color: var(--ink);
@@ -2463,7 +2468,8 @@ input[type="number"]:focus, textarea:focus, select:focus{
     text-overflow: ellipsis;
     white-space: nowrap;
     }
-#page-rfq-detail .rfq-owner:hover .rfq-owner-name { color: var(--blue-700); }
+#page-rfq-detail .post-owner:hover .post-owner-name,
+#page-offer-detail .post-owner:hover .post-owner-name { color: var(--blue-700); }
 #page-rfq-detail .meta-row span {
     display: flex;
     align-items: center;
@@ -8365,14 +8371,12 @@ html, body{
       <div class="header-top">
         <div class="header-info">
           <h1></h1>
-          <div class="meta-row"></div>
-          <!-- who posted it. The offer page has carried a seller block all
-               along; this page knew the owner (it already wires ส่งข้อความ to
-               them) but never showed you whose request you were reading. -->
-          <div class="rfq-owner" id="rfqOwner" style="display:none">
-            <span class="rfq-owner-av"></span>
-            <span class="rfq-owner-name"></span>
+          <!-- who posted it, before the details of what they posted -->
+          <div class="post-owner" id="rfqOwner" style="display:none">
+            <span class="post-owner-av"></span>
+            <span class="post-owner-name"></span>
           </div>
+          <div class="meta-row"></div>
         </div>
         <img class="header-thumb" alt="" style="display:none">
       </div>
@@ -10855,28 +10859,20 @@ html, body{
 
     <div class="content">
       <div>
-        <!-- GALLERY -->
-        <div id="offerGallerySlot"></div>
-        <div class="gallery-wrap">
-          <div class="gallery-track" id="offerGallery">
-            <img src="assets/img/offergallery-1.jpg">
-            <img src="assets/img/offergallery-3.jpg">
-            <img src="assets/img/offergallery-2.jpg">
-          </div>
-          <button class="gallery-nav prev" onclick="cycleGallery(-1)">‹</button>
-          <button class="gallery-nav next" onclick="cycleGallery(1)">›</button>
-          <div class="gallery-dots" id="offerGalleryDots">
-            <span class="dot active"></span><span class="dot"></span><span class="dot"></span>
-          </div>
-        </div>
-
-        <!-- HEADER -->
+        <!-- HEADER, then the pictures — the same order ต้องการซื้อ reads in.
+             The gallery used to open the page, so the title, the seller and
+             the price all sat below a screenful of photographs. -->
         <div class="offer-header-card">
           <div class="offer-tags-row">
             <span class="offer-cat-tag">📦 ข้อเสนอขาย</span>
             <span class="offer-status-tag">🟢 กำลังแสดง</span>
           </div>
           <h1></h1>
+          <!-- who posted it, before the details of what they posted -->
+          <div class="post-owner" id="offerOwner" style="display:none">
+            <span class="post-owner-av"></span>
+            <span class="post-owner-name"></span>
+          </div>
           <div class="offer-meta-row"></div>
           <div class="offer-price-block">
             <div class="offer-price-num"></div>
@@ -10887,8 +10883,20 @@ html, body{
             <button class="btn btn-outline" id="kxOfferChatBtn" onclick="kxChatWithSeller()">💬 ส่งข้อความ</button>
             <button class="btn btn-primary" onclick="openQuoteModal()">🧾 ขอใบเสนอราคา</button>
           </div>
-    <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
-    </div>
+        </div>
+
+        <!-- GALLERY -->
+        <div id="offerGallerySlot"></div>
+        <div class="gallery-wrap">
+          <div class="gallery-track" id="offerGallery"></div>
+          <button class="gallery-nav prev" onclick="cycleGallery(-1)">‹</button>
+          <button class="gallery-nav next" onclick="cycleGallery(1)">›</button>
+          <div class="gallery-dots" id="offerGalleryDots"></div>
+        </div>
+
+        <!-- the คำถามเกี่ยวกับงานนี้ block was nested inside the header card;
+             it carries its own card styling, so it stands on its own here -->
+        <div class="card" id="offerQaBlock" style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;margin-top:18px;">
         </div>
       </div>
 
@@ -20720,6 +20728,21 @@ body.kx-auth .kx-burger{ display:none !important; }
     await kxLoadPostDetail(postId, 'rfq');
   };
 
+  /* เจ้าของประกาศ — the picture and name of whoever posted this, on both
+     detail pages. Same markup, same block, so the two pages cannot drift. */
+  function paintPostOwner(elId, post){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    var owner = post.profiles || {};
+    var name  = owner.company_name || 'ผู้ใช้ Konnex';
+    el.querySelector('.post-owner-av').innerHTML = avatarInner(owner, name);
+    el.querySelector('.post-owner-name').textContent = name;
+    el.title = 'ดูโปรไฟล์ ' + name;
+    el.onclick = post.owner_id ? function(){ kxViewProfile(post.owner_id); } : null;
+    el.style.cursor = post.owner_id ? 'pointer' : 'default';
+    el.style.display = 'flex';
+  }
+
   function renderRfqDetail(post){
     var root = document.getElementById('page-rfq-detail');
     if(!root) return;
@@ -20867,21 +20890,7 @@ body.kx-auth .kx-burger{ display:none !important; }
           : chat + note(isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }
     }
-    // เจ้าของประกาศ, under the meta row — the same profile and picture the
-    // feed card showed before you clicked in
-    var rfqOwner = document.getElementById('rfqOwner');
-    if(rfqOwner){
-      var rOwner = post.profiles || {};
-      var rName  = rOwner.company_name || 'ผู้ใช้ Konnex';
-      rfqOwner.querySelector('.rfq-owner-av').innerHTML = avatarInner(rOwner, rName);
-      rfqOwner.querySelector('.rfq-owner-name').textContent = rName;
-      rfqOwner.title = 'ดูโปรไฟล์ ' + rName;
-      rfqOwner.onclick = post.owner_id
-        ? function(){ kxViewProfile(post.owner_id); }
-        : null;
-      rfqOwner.style.cursor = post.owner_id ? 'pointer' : 'default';
-      rfqOwner.style.display = 'flex';
-    }
+    paintPostOwner('rfqOwner', post);
     window.kxCurrentDetailPostId    = post.id;
     window.kxCurrentDetailOwnerId   = post.owner_id;
     window.kxCurrentDetailOwnerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
@@ -20922,6 +20931,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     renderQa('offerQaBlock', post, !!(window.kxSession && post.owner_id === window.kxSession.user.id));
 
+    paintPostOwner('offerOwner', post);
     var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
     var sellerAv = root.querySelector('.seller-av');
     if(sellerAv){ sellerAv.style.overflow = 'hidden'; sellerAv.innerHTML = avatarInner(owner, ownerName); }

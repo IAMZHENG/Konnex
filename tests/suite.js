@@ -1189,7 +1189,7 @@
       await w.kxOpenPost(post.id, 'rfq');
       var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ Konnex';
       for (var i = 0; i < 80; i++) {
-        var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+        var el = w.document.querySelector('#page-rfq-detail .post-owner-name');
         if (el && el.textContent === want) break;
         await new Promise(function (r) { setTimeout(r, 10); });
       }
@@ -1197,13 +1197,13 @@
     }
     it('names the person who posted it', async function (w) {
       await open(w, POST);
-      var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+      var el = w.document.querySelector('#page-rfq-detail .post-owner-name');
       expect(el.textContent).toBe('บจก. ผู้ซื้อ',
         'the page knew the owner all along — it just never showed them');
     });
     it('shows their picture when they have one', async function (w) {
       await open(w, POST);
-      var img = w.document.querySelector('#page-rfq-detail .rfq-owner-av img');
+      var img = w.document.querySelector('#page-rfq-detail .post-owner-av img');
       expect(img).toBeTruthy();
       expect(img.getAttribute('src')).toBe('https://x/av.jpg');
     });
@@ -1211,7 +1211,7 @@
       var p = JSON.parse(JSON.stringify(POST));
       p.profiles = { company_name: 'สมชาย', avatar_url: null };
       await open(w, p);
-      var av = w.document.querySelector('#page-rfq-detail .rfq-owner-av');
+      var av = w.document.querySelector('#page-rfq-detail .post-owner-av');
       expect(av.querySelector('img')).toBeFalsy();
       expect(av.textContent).toBe('ส');
     });
@@ -1219,7 +1219,7 @@
       var p = JSON.parse(JSON.stringify(POST));
       p.profiles = { company_name: '<img src=x onerror=alert(1)>', avatar_url: null };
       await open(w, p);
-      var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+      var el = w.document.querySelector('#page-rfq-detail .post-owner-name');
       expect(el.querySelector('img')).toBeFalsy('the name is set as text, never parsed');
     });
     it('opens their profile when clicked', async function (w) {
@@ -1230,6 +1230,79 @@
       w.document.getElementById('rfqOwner').onclick();
       w.kxViewProfile = real;
       expect(seen).toEqual([OTHER]);
+    });
+    it('sits above the meta row, not below it', async function (w) {
+      await open(w, POST);
+      var info = w.document.querySelector('#page-rfq-detail .header-info');
+      var kids = Array.prototype.map.call(info.children, function (c) { return c.className || c.tagName; });
+      expect(kids.indexOf('post-owner') < kids.indexOf('meta-row')).toBe(true,
+        'who posted it is read before the details of what they posted');
+    });
+  });
+
+  // ================================== the same block, and order, on ประกาศขาย ===
+  describe('renderOfferDetail — เจ้าของประกาศ', function () {
+    var OFFER = {
+      id: 'O1', kind: 'offer', owner_id: OTHER, title: 'รับออกแบบชิ้นงาน',
+      province: 'ไม่ระบุ', status: 'open', price_high: 500, view_count: 0,
+      post_images: [], post_attachments: [], quotes: [], quote_requests: [],
+      profiles: { company_name: 'บจก. ผู้ขาย', avatar_url: 'https://x/s.jpg' }
+    };
+    async function open(w, post) {
+      plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
+      signIn(w);
+      await w.kxOpenPost(post.id, 'offer');
+      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ Konnex';
+      for (var i = 0; i < 80; i++) {
+        var el = w.document.querySelector('#page-offer-detail .post-owner-name');
+        if (el && el.textContent === want) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
+    }
+    it('names the seller in the header, not only in the sidebar', async function (w) {
+      await open(w, OFFER);
+      var el = w.document.querySelector('#page-offer-detail .post-owner-name');
+      expect(el.textContent).toBe('บจก. ผู้ขาย',
+        'the sidebar card stacks to the bottom on a narrow screen, where nobody reads it');
+    });
+    it('shows their picture', async function (w) {
+      await open(w, OFFER);
+      var img = w.document.querySelector('#page-offer-detail .post-owner-av img');
+      expect(img).toBeTruthy();
+      expect(img.getAttribute('src')).toBe('https://x/s.jpg');
+    });
+    it('never renders a name as markup', async function (w) {
+      var p = JSON.parse(JSON.stringify(OFFER));
+      p.profiles = { company_name: '<img src=x onerror=alert(1)>', avatar_url: null };
+      await open(w, p);
+      var el = w.document.querySelector('#page-offer-detail .post-owner-name');
+      expect(el.querySelector('img')).toBeFalsy('the name is set as text, never parsed');
+    });
+    it('opens their profile when clicked', async function (w) {
+      await open(w, OFFER);
+      var seen = [];
+      var real = w.kxViewProfile;
+      w.kxViewProfile = function (id) { seen.push(id); };
+      w.document.getElementById('offerOwner').onclick();
+      w.kxViewProfile = real;
+      expect(seen).toEqual([OTHER]);
+    });
+    /* The gallery used to open the page, so the title, the seller and the
+       price all sat below a screenful of photographs. */
+    it('puts the header above the pictures, like ต้องการซื้อ does', async function (w) {
+      await open(w, OFFER);
+      var card = w.document.querySelector('#page-offer-detail .offer-header-card');
+      var gal  = w.document.getElementById('offerGallerySlot');
+      var pos  = card.compareDocumentPosition(gal);
+      expect(!!(pos & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true,
+        'the header card comes first in the document');
+    });
+    it('sits above the meta row, not below it', async function (w) {
+      await open(w, OFFER);
+      var card = w.document.querySelector('#page-offer-detail .offer-header-card');
+      var kids = Array.prototype.map.call(card.children, function (c) { return c.className || c.tagName; });
+      expect(kids.indexOf('post-owner') < kids.indexOf('offer-meta-row')).toBe(true);
     });
   });
 
