@@ -6101,7 +6101,8 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #quotePdfModal .qpdf-doc{ padding:26px 30px 30px; max-height:66vh; overflow-y:auto; font-size:14px; }
 .qpdf-head{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--blue-900); padding-bottom:16px; margin-bottom:16px; }
 .qpdf-logo{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:18px; color:var(--blue-900); margin-bottom:8px; }
-.qpdf-logo span{ width:26px; height:26px; border-radius:7px; background:var(--blue-900); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; }
+/* the real mark, not a letter in a box — this document goes out to a customer */
+.qpdf-logo img{ width:26px; height:26px; border-radius:7px; object-fit:contain; display:block; }
 .qpdf-from{ font-size:13px; color:var(--ink-soft); line-height:1.6; }
 .qpdf-title{ text-align:right; font-size:20px; font-weight:700; color:var(--blue-900); line-height:1.2; }
 .qpdf-title span{ font-size:13px; font-weight:600; color:var(--ink-faint); letter-spacing:1px; }
@@ -11897,7 +11898,7 @@ html, body{
     <div class="qpdf-toolbar"><span>ตัวอย่างใบเสนอราคา</span><button class="pf-btn primary" onclick="printQuote()" style="padding:8px 16px">⬇ ดาวน์โหลด / พิมพ์ PDF</button></div>
     <div class="qpdf-doc" id="qpdfDoc">
       <div class="qpdf-head">
-        <div><div class="qpdf-logo"><span>K</span>KONNEX</div><div class="qpdf-from">บริษัท บางกอกพรีซิชั่น จำกัด<br>123 ถ.สุขุมวิท กรุงเทพฯ 10110<br>เลขผู้เสียภาษี 0105558xxxxxx</div></div>
+        <div><div class="qpdf-logo"><img src="assets/img/konnex-mark-3.png" alt="Konnex">KONNEX</div><div class="qpdf-from">บริษัท บางกอกพรีซิชั่น จำกัด<br>123 ถ.สุขุมวิท กรุงเทพฯ 10110<br>เลขผู้เสียภาษี 0105558xxxxxx</div></div>
         <div class="qpdf-title">ใบเสนอราคา<br><span>QUOTATION</span></div>
       </div>
       <div class="qpdf-meta">
@@ -11924,7 +11925,7 @@ html, body{
     <script type="text/plain" id="qpdfStyle">
 .qpdf-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #052a7a;padding-bottom:16px;margin-bottom:16px}
 .qpdf-logo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:18px;color:#052a7a;margin-bottom:8px}
-.qpdf-logo span{width:26px;height:26px;border-radius:7px;background:#052a7a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+.qpdf-logo img{width:26px;height:26px;border-radius:7px;object-fit:contain;display:block}
 .qpdf-from{font-size:13px;color:#565b6e;line-height:1.6}
 .qpdf-title{text-align:right;font-size:20px;font-weight:700;color:#052a7a;line-height:1.2}
 .qpdf-title span{font-size:13px;font-weight:600;color:#565b6e;letter-spacing:1px}
@@ -12250,7 +12251,10 @@ html, body{
   function closeQuotePdf(){ document.getElementById('quotePdfModal').classList.remove('open'); }
   function printQuote(){
     var w = window.open('', '_blank');
-    w.document.write('<html><head><title>ใบเสนอราคา</title><style>body{font-family:"IBM Plex Sans Thai",sans-serif;margin:32px;color:#1c1a18}'+document.getElementById('qpdfStyle').textContent+'</style></head><body>'+document.getElementById('qpdfDoc').outerHTML+'</body></html>');
+    // The new window is about:blank, so a relative src like assets/img/... has
+    // nothing to resolve against and the logo prints as a broken image. <base>
+    // points it back at the app, and covers every other relative URL too.
+    w.document.write('<html><head><title>ใบเสนอราคา</title><base href="'+location.href+'"><style>body{font-family:"IBM Plex Sans Thai",sans-serif;margin:32px;color:#1c1a18}'+document.getElementById('qpdfStyle').textContent+'</style></head><body>'+document.getElementById('qpdfDoc').outerHTML+'</body></html>');
     w.document.close(); setTimeout(function(){ w.print(); }, 350);
   }
   document.getElementById('quotePdfModal').addEventListener('click', function(e){ if(e.target.id==='quotePdfModal') closeQuotePdf(); });
