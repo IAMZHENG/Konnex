@@ -1066,4 +1066,171 @@
       w.kxCurrentUser = null;
     });
   });
+
+  // ===================================================== where a sign-in lands ===
+  /* A brand-new account used to be dropped on the feed with an empty profile —
+     the one page that says nothing about what to do next. */
+  describe('kxAuthLanding — the page a sign-in lands on', function () {
+    it('sends a brand-new account to แก้ไขโปรไฟล์', function (w) {
+      w.kxProfileIsNew = true;
+      expect(w.kxAuthLanding()).toBe('page-edit-profile');
+    });
+    it('sends it there once, not on every sign-in after', function (w) {
+      w.kxProfileIsNew = true;
+      w.kxAuthLanding();
+      expect(w.kxAuthLanding()).toBe('page-feed', 'the flag is spent on first landing');
+    });
+    it('sends a returning account to the feed', function (w) {
+      w.kxProfileIsNew = false;
+      expect(w.kxAuthLanding()).toBe('page-feed');
+    });
+  });
+
+  // ================================================ what a new profile row holds ===
+  describe('kxEnsureProfile — a new account starts empty', function () {
+    function noRowYet(w) {
+      return plan(w, { profiles: { select: { data: null, error: null },
+                                   insert: { data: { id: ME }, error: null } } });
+    }
+    it('invents no name from the provider or the email address', async function (w) {
+      var sb = noRowYet(w);
+      w.localStorage.removeItem('kx.pendingProfile');
+      await w.kxEnsureProfile({ id: ME, email: 'someone@example.com',
+        user_metadata: { full_name: 'Laoyang', avatar_url: 'https://x/p.jpg' } });
+      restore(w);
+      var row = sb._writes[0].row;
+      expect(row.company_name).toBe(null,
+        'it used to fall back to the provider name, then to the email prefix');
+      expect(row.contact_name).toBe(null);
+    });
+    it('still keeps the picture the provider gave', async function (w) {
+      var sb = noRowYet(w);
+      w.localStorage.removeItem('kx.pendingProfile');
+      await w.kxEnsureProfile({ id: ME, email: 'someone@example.com',
+        user_metadata: { avatar_url: 'https://x/p.jpg' } });
+      restore(w);
+      expect(sb._writes[0].row.avatar_url).toBe('https://x/p.jpg',
+        'a picture is the person’s own; an empty text field is the confusing part');
+    });
+    it('keeps every detail the signup form collected', async function (w) {
+      var sb = noRowYet(w);
+      w.localStorage.setItem('kx.pendingProfile', JSON.stringify({
+        email: 'typed@example.com', company_name: 'บจก. ที่พิมพ์เอง',
+        contact_name: 'สมชาย', phone: '0899999999', tax_id: '0105558000000',
+        business_type: 'company' }));
+      await w.kxEnsureProfile({ id: ME, email: 'typed@example.com', user_metadata: {} });
+      restore(w);
+      var row = sb._writes[0].row;
+      expect(row.company_name).toBe('บจก. ที่พิมพ์เอง', 'the person typed this themselves');
+      expect(row.phone).toBe('0899999999');
+      expect(w.localStorage.getItem('kx.pendingProfile')).toBe(null, 'and it is spent');
+    });
+    it('ignores a stash left by a different email', async function (w) {
+      var sb = noRowYet(w);
+      w.localStorage.setItem('kx.pendingProfile', JSON.stringify({
+        email: 'someone.else@example.com', company_name: 'บัญชีอื่น' }));
+      await w.kxEnsureProfile({ id: ME, email: 'me@example.com', user_metadata: {} });
+      restore(w);
+      expect(sb._writes[0].row.company_name).toBe(null,
+        'the stash belongs to whoever started that signup, not to this account');
+      w.localStorage.removeItem('kx.pendingProfile');
+    });
+    it('flags the account as new so the landing helper can route it', async function (w) {
+      var sb = noRowYet(w);
+      w.kxProfileIsNew = false;
+      w.localStorage.removeItem('kx.pendingProfile');
+      await w.kxEnsureProfile({ id: ME, email: 'a@b.c', user_metadata: {} });
+      restore(w);
+      expect(w.kxProfileIsNew).toBe(true);
+      expect(sb._writes.length).toBe(1, 'reaching the insert is what "new" means');
+    });
+  });
+
+  // ========================================== signing out empties the form too ===
+  /* `data` lives in the profile module's closure for as long as the page is
+     open, so signing in as someone else without reloading left the previous
+     account's answers in the fields. */
+  describe('kxProfileReset — nothing survives an account switch', function () {
+    function fieldValues(w) {
+      return ['epName', 'pfTagline', 'pfPhone', 'pfProvince'].map(function (id) {
+        var el = w.document.getElementById(id);
+        return el ? el.value : null;
+      });
+    }
+    it('clears every field the previous account filled in', function (w) {
+      w.kxProfileFromRow({ id: OTHER, company_name: 'บัญชีเก่า จำกัด',
+        tagline: 'ของบัญชีก่อนหน้า', phone: '0812345678', province: 'เชียงใหม่' });
+      expect(fieldValues(w).join('|')).toContain('บัญชีเก่า จำกัด');
+      w.kxProfileReset();
+      expect(fieldValues(w)).toEqual(['', '', '', ''], 'a signed-out form holds nothing');
+    });
+    it('drops the browser-wide cache key, which belongs to no account', function (w) {
+      w.localStorage.setItem('kx.profile', JSON.stringify({ name: 'ของคนก่อน' }));
+      w.kxProfileReset();
+      expect(w.localStorage.getItem('kx.profile')).toBe(null,
+        'the per-account key kx.profile:<uid> is namespaced and is left alone');
+    });
+  });
+
+  // =============================================== whose request am I reading? ===
+  describe('renderRfqDetail — เจ้าของประกาศ', function () {
+    var POST = {
+      id: 'P1', kind: 'rfq', owner_id: OTHER, title: 'ต้องการซื้อของ',
+      province: 'เชียงใหม่', status: 'open', deadline: '2099-01-01T00:00:00Z',
+      post_images: [], post_attachments: [], quotes: [],
+      profiles: { company_name: 'บจก. ผู้ซื้อ', avatar_url: 'https://x/av.jpg' }
+    };
+    /* kxOpenPost resolves before the render has landed, so waiting on it alone
+       reads whatever the previous test left in the DOM. Wait for this post's
+       own name to appear instead. */
+    async function open(w, post) {
+      plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
+      signIn(w);
+      await w.kxOpenPost(post.id, 'rfq');
+      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ Konnex';
+      for (var i = 0; i < 80; i++) {
+        var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+        if (el && el.textContent === want) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
+    }
+    it('names the person who posted it', async function (w) {
+      await open(w, POST);
+      var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+      expect(el.textContent).toBe('บจก. ผู้ซื้อ',
+        'the page knew the owner all along — it just never showed them');
+    });
+    it('shows their picture when they have one', async function (w) {
+      await open(w, POST);
+      var img = w.document.querySelector('#page-rfq-detail .rfq-owner-av img');
+      expect(img).toBeTruthy();
+      expect(img.getAttribute('src')).toBe('https://x/av.jpg');
+    });
+    it('falls back to an initial when they have no picture', async function (w) {
+      var p = JSON.parse(JSON.stringify(POST));
+      p.profiles = { company_name: 'สมชาย', avatar_url: null };
+      await open(w, p);
+      var av = w.document.querySelector('#page-rfq-detail .rfq-owner-av');
+      expect(av.querySelector('img')).toBeFalsy();
+      expect(av.textContent).toBe('ส');
+    });
+    it('never renders a name as markup', async function (w) {
+      var p = JSON.parse(JSON.stringify(POST));
+      p.profiles = { company_name: '<img src=x onerror=alert(1)>', avatar_url: null };
+      await open(w, p);
+      var el = w.document.querySelector('#page-rfq-detail .rfq-owner-name');
+      expect(el.querySelector('img')).toBeFalsy('the name is set as text, never parsed');
+    });
+    it('opens their profile when clicked', async function (w) {
+      await open(w, POST);
+      var seen = [];
+      var real = w.kxViewProfile;
+      w.kxViewProfile = function (id) { seen.push(id); };
+      w.document.getElementById('rfqOwner').onclick();
+      w.kxViewProfile = real;
+      expect(seen).toEqual([OTHER]);
+    });
+  });
+
 })(window.KX);

@@ -2430,6 +2430,40 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-size: 15px;
     flex-wrap: wrap
     }
+/* เจ้าของประกาศ — same weight and avatar size the rest of the app uses for a
+   person, and it opens their profile like every other name in the app does. */
+#page-rfq-detail .rfq-owner {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 14px;
+    cursor: pointer;
+    width: fit-content;
+    max-width: 100%;
+    }
+#page-rfq-detail .rfq-owner-av {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--blue-900);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+    overflow: hidden;
+    }
+#page-rfq-detail .rfq-owner-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    }
+#page-rfq-detail .rfq-owner:hover .rfq-owner-name { color: var(--blue-700); }
 #page-rfq-detail .meta-row span {
     display: flex;
     align-items: center;
@@ -8332,6 +8366,13 @@ html, body{
         <div class="header-info">
           <h1></h1>
           <div class="meta-row"></div>
+          <!-- who posted it. The offer page has carried a seller block all
+               along; this page knew the owner (it already wires ส่งข้อความ to
+               them) but never showed you whose request you were reading. -->
+          <div class="rfq-owner" id="rfqOwner" style="display:none">
+            <span class="rfq-owner-av"></span>
+            <span class="rfq-owner-name"></span>
+          </div>
         </div>
         <img class="header-thumb" alt="" style="display:none">
       </div>
@@ -16626,7 +16667,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       // email confirmation is off on this project — signed in immediately
       await kxEnsureProfile(res.data.user);
       kxToast('สมัครสมาชิกสำเร็จ');
-      navigateTo('page-feed');
+      navigateTo(window.kxAuthLanding());
     }else{
       kxToast('สมัครสำเร็จ! กรุณายืนยันอีเมลจากลิงก์ที่เราส่งไป ก่อนเข้าสู่ระบบ');
       authTab('login');
@@ -17406,6 +17447,22 @@ body.kx-auth .kx-burger{ display:none !important; }
     avatar:'avatar_url', cover:'cover_url'
   };
   var profileExtrasMissing = false;   // profile_fields.sql not run yet
+
+  /* Signing out has to empty the form, not only the session. `data` lives in
+     this closure for as long as the page is open, so signing in as someone
+     else without reloading left the previous account's answers sitting in the
+     fields until their row came back and overwrote them one column at a time —
+     and any column that row did not carry was never overwritten at all. The
+     per-account cache (kx.profile:<uid>) is left alone: it is namespaced and
+     belongs to whoever signed out. The un-namespaced key is the one that gets
+     read by whoever opens this browser next, so that one goes. */
+  window.kxProfileReset = function(){
+    try{ localStorage.removeItem(BASE_KEY); }catch(e){}
+    data = {};
+    for(var k in DEFAULTS) data[k] = Array.isArray(DEFAULTS[k]) ? DEFAULTS[k].slice() : DEFAULTS[k];
+    fill();
+    applyToProfile();
+  };
 
   window.kxProfileFromRow = function(row){
     if(!row) return;
@@ -19199,6 +19256,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       // บุคคลธรรมดา vs นิติบุคคล follows the account, so every label and every
       // person/company-only field matches whoever just signed in
       if(window.kxSyncEntity) window.kxSyncEntity(existing.data.business_type);
+      window.kxProfileIsNew = false;
       return existing.data;
     }
     var pending = null;
@@ -19209,18 +19267,24 @@ body.kx-auth .kx-burger{ display:none !important; }
         if(p.email && user.email && p.email.toLowerCase() === user.email.toLowerCase()) pending = p;
       }
     }catch(e){}
-    /* Arriving through Google or Facebook there is no signup form behind this,
-       so the provider's own details are used: it gave a name and usually a
-       picture, and starting someone off as the left-hand side of their email
-       address when their name is right there is a poor first impression. */
+    /* Arriving through Google or Facebook there is no signup form behind this.
+       The provider also offers a display name; it is deliberately not used —
+       see the note on the row below. */
     var meta = (user && user.user_metadata) || {};
-    var social = (meta.full_name || meta.name || '').trim();
     var photo  = meta.avatar_url || meta.picture || null;
 
+    /* Only what the person actually gave us.
+       This used to fall back to the provider's display name, and past that to
+       the left-hand side of the email address — so a brand-new account opened
+       its own profile already filled in with a name it had never been told,
+       which reads as another account's data left behind rather than as a
+       starting point. A new account starts empty and lands on แก้ไขโปรไฟล์
+       (see the landing helper below) to fill it in. The picture stays: it is
+       the person's own, and an empty text field is the part that confuses. */
     var row = {
       id: user.id,
-      company_name: (pending && pending.company_name) || social || (user.email || '').split('@')[0],
-      contact_name: pending ? pending.contact_name : (social || null),
+      company_name: (pending && pending.company_name) || null,
+      contact_name: pending ? pending.contact_name : null,
       phone:        pending ? pending.phone        : null,
       tax_id:       pending ? pending.tax_id        : null,
       avatar_url:   photo,
@@ -19229,6 +19293,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     };
     var ins = await sb.from('profiles').insert(row).select().single();
     if(pending){ try{ localStorage.removeItem('kx.pendingProfile'); }catch(e){} }
+    // reaching the insert at all means there was no row a moment ago: this
+    // account has never been signed into before
+    window.kxProfileIsNew = true;
     if(ins.error){ console.error('profile insert failed', ins.error); window.kxCurrentUser = row; return row; }
     window.kxCurrentUser = ins.data;
     // the same three the existing-row branch runs, so a first sign-in lands in
@@ -19237,6 +19304,19 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxProfileFromRow) window.kxProfileFromRow(ins.data);
     if(window.kxSyncEntity) window.kxSyncEntity(ins.data.business_type);
     return ins.data;
+  };
+
+  /* Where a sign-in lands. A brand-new account goes to แก้ไขโปรไฟล์ instead of
+     the feed: its profile is empty by design now, and the feed is the one page
+     that tells you nothing about what to do next. Every account after its first
+     sign-in goes to the feed as before. Used by all three sign-in paths — the
+     login form, signup-with-immediate-session, and boot() after an OAuth
+     round-trip — so they cannot drift apart. */
+  window.kxAuthLanding = function(){
+    if(!window.kxProfileIsNew) return 'page-feed';
+    window.kxProfileIsNew = false;          // only on the first landing
+    kxToast('ยินดีต้อนรับ! กรอกโปรไฟล์ให้ครบเพื่อเริ่มใช้งาน');
+    return 'page-edit-profile';
   };
 
   window.kxSignOut = async function(){
@@ -19287,6 +19367,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.kxSession = session;
     if(event === 'SIGNED_OUT'){
       window.kxCurrentUser = null;
+      window.kxProfileIsNew = false;
+      // the next person to sign in on this browser must not find the last
+      // one's answers already in the แก้ไขโปรไฟล์ fields
+      if(window.kxProfileReset) window.kxProfileReset();
       navigateTo('page-auth');
       return;
     }
@@ -19332,7 +19416,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(window.kxLoadProfile) window.kxLoadProfile();
       var hashPost = window.kxPostFromHash && window.kxPostFromHash();
       if(activeId === 'page-auth'){
-        navigateTo('page-feed');
+        // the OAuth round-trip lands back here, so this is where a first
+        // Google/Facebook sign-in gets sent to แก้ไขโปรไฟล์
+        navigateTo(window.kxAuthLanding());
       }else if(hashPost){
         /* Refreshed on a listing. The page was restored from the hash, but the
            post it is about lives in the hash too and nothing had loaded it —
@@ -19391,7 +19477,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     await kxEnsureProfile(res.data.user);
     kxToast('เข้าสู่ระบบสำเร็จ');
-    navigateTo('page-feed');
+    navigateTo(window.kxAuthLanding());
   };
   /* ---- เข้าสู่ระบบด้วย Google / Facebook ----
      signInWithOAuth hands off to the provider and comes back to the app with a
@@ -20780,6 +20866,21 @@ body.kx-auth .kx-burger{ display:none !important; }
           ? chat + '<button class="btn btn-primary" onclick="openModal()">🖊️ เสนอราคานี้</button>'
           : chat + note(isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว' : '🔒 ปิดรับข้อเสนอแล้ว');
       }
+    }
+    // เจ้าของประกาศ, under the meta row — the same profile and picture the
+    // feed card showed before you clicked in
+    var rfqOwner = document.getElementById('rfqOwner');
+    if(rfqOwner){
+      var rOwner = post.profiles || {};
+      var rName  = rOwner.company_name || 'ผู้ใช้ Konnex';
+      rfqOwner.querySelector('.rfq-owner-av').innerHTML = avatarInner(rOwner, rName);
+      rfqOwner.querySelector('.rfq-owner-name').textContent = rName;
+      rfqOwner.title = 'ดูโปรไฟล์ ' + rName;
+      rfqOwner.onclick = post.owner_id
+        ? function(){ kxViewProfile(post.owner_id); }
+        : null;
+      rfqOwner.style.cursor = post.owner_id ? 'pointer' : 'default';
+      rfqOwner.style.display = 'flex';
     }
     window.kxCurrentDetailPostId    = post.id;
     window.kxCurrentDetailOwnerId   = post.owner_id;
