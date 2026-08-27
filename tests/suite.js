@@ -1231,12 +1231,12 @@
       w.kxViewProfile = real;
       expect(seen).toEqual([OTHER]);
     });
-    it('sits above the meta row, not below it', async function (w) {
+    it('sits above the title, not below it', async function (w) {
       await open(w, POST);
       var info = w.document.querySelector('#page-rfq-detail .header-info');
       var kids = Array.prototype.map.call(info.children, function (c) { return c.className || c.tagName; });
-      expect(kids.indexOf('post-owner') < kids.indexOf('meta-row')).toBe(true,
-        'who posted it is read before the details of what they posted');
+      expect(kids.indexOf('post-owner') < kids.indexOf('H1')).toBe(true,
+        'who posted it is read before what they posted');
     });
   });
 
@@ -1288,21 +1288,63 @@
       w.kxViewProfile = real;
       expect(seen).toEqual([OTHER]);
     });
-    /* The gallery used to open the page, so the title, the seller and the
-       price all sat below a screenful of photographs. */
-    it('puts the header above the pictures, like ต้องการซื้อ does', async function (w) {
-      await open(w, OFFER);
-      var card = w.document.querySelector('#page-offer-detail .offer-header-card');
-      var gal  = w.document.getElementById('offerGallerySlot');
-      var pos  = card.compareDocumentPosition(gal);
-      expect(!!(pos & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true,
-        'the header card comes first in the document');
-    });
-    it('sits above the meta row, not below it', async function (w) {
+    it('sits above the title, not below it', async function (w) {
       await open(w, OFFER);
       var card = w.document.querySelector('#page-offer-detail .offer-header-card');
       var kids = Array.prototype.map.call(card.children, function (c) { return c.className || c.tagName; });
-      expect(kids.indexOf('post-owner') < kids.indexOf('offer-meta-row')).toBe(true);
+      expect(kids.indexOf('post-owner') < kids.indexOf('H1')).toBe(true);
+    });
+    /* The two detail pages kept drifting apart — the gallery opened ประกาศขาย
+       but sat mid-card on ต้องการซื้อ, and the seller was in a sidebar that
+       stacks to the bottom on a narrow screen. Rather than eyeball them, this
+       reads the order of the blocks that actually rendered on each page and
+       requires them to match. ประกาศขาย carries one extra block, its own
+       price; ต้องการซื้อ states a budget inside the meta row instead. */
+    it('lays its blocks out in the same order as ต้องการซื้อ', async function (w) {
+      function roleOf(el) {
+        var c = (el.className || '').toString(), id = el.id || '';
+        if (/post-owner/.test(c)) return 'OWNER';
+        if (el.tagName === 'H1') return 'TITLE';
+        if (/tag-row|offer-tags-row/.test(c)) return 'TAG';
+        if (/meta-row/.test(c)) return 'META';
+        if (/price-block/.test(c)) return 'PRICE';
+        if (/Gallery|gal/i.test(id + c)) return 'GALLERY';
+        if (/desc/.test(c)) return 'DESC';
+        if (/action-row/.test(c)) return 'ACTIONS';
+        return null;
+      }
+      function sequence(w, sel) {
+        var card = w.document.querySelector(sel), seq = [];
+        (function walk(el, d) {
+          Array.prototype.forEach.call(el.children, function (c) {
+            if (w.getComputedStyle(c).display === 'none') return;
+            var r = roleOf(c);
+            if (r) { seq.push(r); return; }
+            if (d < 2) walk(c, d + 1);
+          });
+        })(card, 0);
+        return seq;
+      }
+      await open(w, OFFER);
+      var offer = sequence(w, '#page-offer-detail .offer-header-card');
+
+      var buy = { id: 'P9', kind: 'rfq', owner_id: OTHER, title: 'ต้องการซื้อ',
+        province: 'เชียงใหม่', status: 'open', deadline: '2099-01-01T00:00:00Z',
+        post_images: [], post_attachments: [], quotes: [],
+        profiles: { company_name: 'บจก. ผู้ซื้อ', avatar_url: null } };
+      plan(w, { posts: { _: { data: buy, error: null } }, _: { data: [], error: null } });
+      signIn(w);
+      await w.kxOpenPost(buy.id, 'rfq');
+      for (var i = 0; i < 80; i++) {
+        var el = w.document.querySelector('#page-rfq-detail .post-owner-name');
+        if (el && el.textContent === 'บจก. ผู้ซื้อ') break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
+      var rfq = sequence(w, '#page-rfq-detail .header-card');
+
+      expect(offer.filter(function (b) { return b !== 'PRICE'; })).toEqual(rfq,
+        'ประกาศขาย: ' + offer.join(' → ') + '   ต้องการซื้อ: ' + rfq.join(' → '));
     });
   });
 

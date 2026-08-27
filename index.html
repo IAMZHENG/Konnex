@@ -2439,7 +2439,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     display: flex;
     align-items: center;
     gap: 9px;
-    margin: 10px 0 14px;
+    margin: 0 0 12px;
     cursor: pointer;
     width: fit-content;
     max-width: 100%;
@@ -7132,7 +7132,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #page-offer-detail .offer-meta-row {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 20px;   /* matches ต้องการซื้อ's .meta-row */
     color: var(--ink-soft);
     font-size: 15px;
     flex-wrap: wrap;
@@ -8370,12 +8370,12 @@ html, body{
       </div>
       <div class="header-top">
         <div class="header-info">
-          <h1></h1>
-          <!-- who posted it, before the details of what they posted -->
+          <!-- who posted it comes first, above the title -->
           <div class="post-owner" id="rfqOwner" style="display:none">
             <span class="post-owner-av"></span>
             <span class="post-owner-name"></span>
           </div>
+          <h1></h1>
           <div class="meta-row"></div>
         </div>
         <img class="header-thumb" alt="" style="display:none">
@@ -10867,31 +10867,31 @@ html, body{
             <span class="offer-cat-tag">📦 ข้อเสนอขาย</span>
             <span class="offer-status-tag">🟢 กำลังแสดง</span>
           </div>
-          <h1></h1>
-          <!-- who posted it, before the details of what they posted -->
+          <!-- who posted it comes first, above the title -->
           <div class="post-owner" id="offerOwner" style="display:none">
             <span class="post-owner-av"></span>
             <span class="post-owner-name"></span>
           </div>
+          <h1></h1>
           <div class="offer-meta-row"></div>
           <div class="offer-price-block">
             <div class="offer-price-num"></div>
             <div class="offer-price-unit">เริ่มต้น / ขึ้นอยู่กับสเปคงาน</div>
+          </div>
+          <!-- GALLERY — inside the header card, between the figures and the
+               description, which is exactly where ต้องการซื้อ puts it -->
+          <div id="offerGallerySlot"></div>
+          <div class="gallery-wrap">
+            <div class="gallery-track" id="offerGallery"></div>
+            <button class="gallery-nav prev" onclick="cycleGallery(-1)">‹</button>
+            <button class="gallery-nav next" onclick="cycleGallery(1)">›</button>
+            <div class="gallery-dots" id="offerGalleryDots"></div>
           </div>
           <div class="offer-desc"></div>
           <div class="offer-action-row">
             <button class="btn btn-outline" id="kxOfferChatBtn" onclick="kxChatWithSeller()">💬 ส่งข้อความ</button>
             <button class="btn btn-primary" onclick="openQuoteModal()">🧾 ขอใบเสนอราคา</button>
           </div>
-        </div>
-
-        <!-- GALLERY -->
-        <div id="offerGallerySlot"></div>
-        <div class="gallery-wrap">
-          <div class="gallery-track" id="offerGallery"></div>
-          <button class="gallery-nav prev" onclick="cycleGallery(-1)">‹</button>
-          <button class="gallery-nav next" onclick="cycleGallery(1)">›</button>
-          <div class="gallery-dots" id="offerGalleryDots"></div>
         </div>
 
         <!-- the คำถามเกี่ยวกับงานนี้ block was nested inside the header card;
