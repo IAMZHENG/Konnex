@@ -1405,4 +1405,173 @@
     });
   });
 
+
+  // ======================================= ตรวจสอบการยืนยันตัวตน (admin queue) ===
+  /* The applicant's half shipped long ago; nothing could answer a request
+     because deciding was left to the service role and the app holds the anon
+     key. These cover the app's half. The actual boundary is the RLS policy and
+     the is_admin check inside kx_decide_verification, which live in
+     database/verification_review.sql and are not reachable from here. */
+  describe('page-admin-verify — the queue', function () {
+    var PENDING = {
+      id: 'req-1', profile_id: OTHER, kind: 'company', status: 'pending', note: null,
+      files: [{ label: 'หนังสือรับรองบริษัท', name: 'cert.pdf', path: OTHER + '/cert.pdf' }],
+      created_at: '2026-08-20T00:00:00Z', decided_at: null,
+      profiles: { company_name: 'บจก. ทดสอบ', avatar_url: null, is_verified: false }
+    };
+    var DECIDED = {
+      id: 'req-2', profile_id: THIRD, kind: 'person', status: 'approved', note: 'เอกสารครบ',
+      files: [], created_at: '2026-08-10T00:00:00Z', decided_at: '2026-08-12T00:00:00Z',
+      profiles: { company_name: 'สมชาย', avatar_url: null, is_verified: true }
+    };
+    function asAdmin(w, yes) {
+      signIn(w);
+      w.kxCurrentUser = { id: ME, company_name: 'ผู้ดูแล', is_admin: !!yes };
+    }
+    async function loadQueue(w, data) {
+      var sb = plan(w, { verification_requests: { _: { data: data, error: null } } });
+      // the documents sit in a private bucket; the real helper asks storage for
+      // a signed URL, which the fake sb has no storage to answer. Put the real
+      // one back afterwards — fillDocs runs un-awaited, so the wait first.
+      var realSigned = w.kxSignedUrl;
+      w.kxSignedUrl = function (b, p) { return Promise.resolve('signed:' + b + '/' + p); };
+      await w.kxLoadVerifyQueue();
+      await new Promise(function (r) { setTimeout(r, 60); });
+      w.kxSignedUrl = realSigned;
+      return sb;
+    }
+
+    it('keeps the rail entry away from an ordinary account', function (w) {
+      asAdmin(w, false);
+      w.renderSidebars('page-feed');
+      var nav = w.document.querySelector('#page-feed .side-nav').textContent;
+      expect(/ตรวจสอบการยืนยันตัวตน/.test(nav)).toBe(false);
+    });
+    it('shows it to an administrator', function (w) {
+      asAdmin(w, true);
+      w.renderSidebars('page-feed');
+      var nav = w.document.querySelector('#page-feed .side-nav').textContent;
+      expect(/ตรวจสอบการยืนยันตัวตน/.test(nav)).toBe(true);
+      w.kxCurrentUser = null;
+    });
+    it('turns an ordinary account away from the page', async function (w) {
+      asAdmin(w, false);
+      await w.kxLoadVerifyQueue();
+      expect(w.document.getElementById('avList').textContent).toContain('ผู้ดูแลระบบเท่านั้น');
+    });
+    it('never queries the table for a non-admin', async function (w) {
+      asAdmin(w, false);
+      var sb = plan(w, { verification_requests: { _: { data: [], error: null } } });
+      await w.kxLoadVerifyQueue();
+      restore(w);
+      expect(sb._calls.length).toBe(0, 'it stops before asking');
+    });
+    it('lists the pending requests and counts them', async function (w) {
+      asAdmin(w, true);
+      await loadQueue(w, [PENDING, DECIDED]);
+      restore(w);
+      expect(w.document.querySelectorAll('#avList .av-card').length).toBe(1, 'the pending tab shows only pending');
+      expect(w.document.getElementById('avPendingN').textContent).toBe('(1)');
+      expect(w.document.querySelector('#avList .av-who').textContent).toBe('บจก. ทดสอบ');
+    });
+    it('reaches the documents through a signed URL, not a public one', async function (w) {
+      asAdmin(w, true);
+      await loadQueue(w, [PENDING]);
+      restore(w);
+      var link = w.document.querySelector('#avList a.av-doc');
+      expect(link).toBeTruthy('the tile becomes a link once the URL is granted');
+      expect(link.getAttribute('href')).toContain('verify-docs',
+        'a photo of an ID card must not be readable from the public attachments bucket');
+    });
+    it('refuses to reject without a reason, and asks nothing of the server', async function (w) {
+      asAdmin(w, true);
+      var sb = await loadQueue(w, [PENDING]);
+      var confirmWas = w.confirm; w.confirm = function () { return true; };
+      sb._calls.length = 0;
+      w.document.querySelector('#avList .av-actions .btn-outline').click();
+      await new Promise(function (r) { setTimeout(r, 60); });
+      w.confirm = confirmWas;
+      restore(w);
+      expect(sb._calls.filter(function (c) { return c.rpc; }).length).toBe(0,
+        'the note is what the applicant is told, so a blank one helps nobody');
+    });
+    it('sends the decision, the request id and the reason', async function (w) {
+      asAdmin(w, true);
+      var sb = await loadQueue(w, [PENDING]);
+      var confirmWas = w.confirm; w.confirm = function () { return true; };
+      w.document.querySelector('#avList .av-reason').value = 'เอกสารไม่ชัด';
+      w.document.querySelector('#avList .av-actions .btn-outline').click();
+      await new Promise(function (r) { setTimeout(r, 80); });
+      w.confirm = confirmWas;
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_decide_verification'; })[0];
+      expect(call).toBeTruthy();
+      expect(call.args).toEqual({ req_id: 'req-1', approve: false, admin_note: 'เอกสารไม่ชัด' });
+    });
+    it('approves with approve:true and no reason required', async function (w) {
+      asAdmin(w, true);
+      var sb = await loadQueue(w, [PENDING]);
+      var confirmWas = w.confirm; w.confirm = function () { return true; };
+      w.document.querySelector('#avList .av-actions .btn-primary').click();
+      await new Promise(function (r) { setTimeout(r, 80); });
+      w.confirm = confirmWas;
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_decide_verification'; })[0];
+      expect(call.args.approve).toBe(true);
+      expect(call.args.req_id).toBe('req-1');
+    });
+    it('offers a way back for an approval given by mistake', async function (w) {
+      asAdmin(w, true);
+      await loadQueue(w, [PENDING, DECIDED]);
+      w.kxVerifyFilter(w.document.querySelectorAll('#avTabs .sh-tab')[1], 'approved');
+      await new Promise(function (r) { setTimeout(r, 40); });
+      restore(w);
+      var btn = w.document.querySelector('#avList .av-card .btn-outline');
+      expect(btn).toBeTruthy('an approval you cannot take back is one you cannot safely give');
+      expect(btn.textContent).toContain('ถอน');
+      expect(w.document.querySelector('#avList .av-note').textContent).toContain('เอกสารครบ');
+    });
+    it('says which migration is missing rather than failing blankly', async function (w) {
+      asAdmin(w, true);
+      plan(w, { verification_requests: { _: { data: null, error: ERR.tableMissing } } });
+      await w.kxLoadVerifyQueue();
+      restore(w);
+      expect(w.document.getElementById('avList').textContent).toContain('verification_review.sql');
+      w.kxCurrentUser = null;
+    });
+  });
+
+  describe('submitVerify — where the documents go', function () {
+    /* `attachments` carries "anyone can view attachments ... to public", so a
+       photograph of a national ID card uploaded there was readable by anyone
+       holding the URL, signed out. This reads the shipped source rather than
+       the running page, because the upload only happens with a real file
+       picked — and the bucket name is the whole point. */
+    it('never sends a verification document to the public bucket', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var i = src.indexOf('async function submitVerify');
+      expect(i > -1).toBe(true, 'submitVerify should still exist');
+      var body = src.slice(i, i + 2600);
+      expect(body).toContain("kxUploadFile('verify-docs'",
+        'verification documents belong in the private bucket');
+      expect(/kxUploadFile\('attachments'/.test(body)).toBe(false,
+        'attachments is world-readable by policy');
+    });
+    it('stores the storage path, since a private bucket has no public URL', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var i = src.indexOf('async function submitVerify');
+      var body = src.slice(i, i + 2600);
+      expect(body).toContain('returnPath', 'kxUploadFile hands back a path for a private bucket');
+    });
+    it('exposes a signed-URL helper that returns null when storage refuses', async function (w) {
+      var realSb = w.sb;
+      w.sb = { storage: { from: function () {
+        return { createSignedUrl: function () {
+          return Promise.resolve({ data: null, error: { message: 'denied' } }); } }; } } };
+      var url = await w.kxSignedUrl('verify-docs', 'someone-else/id.jpg');
+      w.sb = realSb;
+      expect(url).toBe(null, 'a refused document shows a placeholder, never a broken link');
+    });
+  });
+
 })(window.KX);
