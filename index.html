@@ -8687,17 +8687,12 @@ html, body{
              does not show an empty card to visitors. -->
         <div class="card" data-pf-sec="overview" id="pfWorkCard" data-pf-hide="1" style="display:none;"></div>
 
-        <!-- RECENT WORK — hidden with ผลงานสะสม, which is the same data: both were
-             built from the RFQs this account had been chosen for, and nothing is
-             chosen any more. Kept in the markup rather than deleted because the
-             answer may be to refill it from something else (งานที่เคยเสนอราคา, or a
-             portfolio the seller uploads) rather than to lose the section. -->
-        <div class="card" data-pf-sec="overview" id="pfRecentCard" data-pf-hide="1" style="display:none;">
-          <div class="card-head">
-            <h3>ผลงานล่าสุด</h3>
-          </div>
-          <div class="pf-wins-list" id="pfWinsPreview"></div>
-        </div>
+        <!-- ผลงานล่าสุด and ผลงานสะสม stood here and below. Both were built from
+             the RFQs this account had been chosen for, and nothing is chosen any
+             more — no_winner.sql dropped the trigger and zeroed wins_count, so
+             they could only ever be empty while telling the reader "เมื่อคุณชนะ
+             การเสนอราคา งานจะมาแสดงที่นี่เอง". ผลงานที่ผ่านมา (pfPortfolioCard)
+             is the section that holds work now, and the seller fills it. -->
 
         <!-- SERVICES -->
         <div class="card" id="pfServicesCard" data-pf-sec="services">
@@ -8716,18 +8711,6 @@ html, body{
              ภาพรวม, and its own tab is still the place to read all of them -->
         <div class="card" id="pfReviewsCard" data-pf-sec="overview reviews"></div>
 
-        <!-- TRACK RECORD — filled by the system, not typed in -->
-        <div class="card" id="pfWinsCard" data-pf-sec="wins" data-pf-hide="1" style="display:none;">
-          <div class="card-head">
-            <h3>ผลงานสะสม</h3>
-            <span class="pf-wins-src">
-              <svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"></path><path d="M9 12.5l2 2 4-4.5"></path></svg>
-              บันทึกอัตโนมัติจากงานที่ชนะการเสนอราคา
-            </span>
-          </div>
-          <div class="pf-wins-list" id="pfWinsList"></div>
-          <div class="pf-wins-note">แสดงเฉพาะงานที่ปิดดีลในระบบ ผู้ให้บริการแก้ไขหรือเพิ่มเองไม่ได้</div>
-        </div>
 
         <div class="card" data-pf-sec="overview" id="pfContactCard">
           <h3>ติดต่อบริษัท</h3>
@@ -8975,10 +8958,6 @@ html, body{
     pfShowSection(sec);
     // kxRenderProfileShell already loaded this card from the reviews table; the
     // demo painter that used to be called here has gone
-    // ภาพรวม carries a wins preview, so it needs the same data the wins tab does
-    if((sec === 'overview' || sec === 'wins') && typeof window.renderProfileWins === 'function'){
-      try{ window.renderProfileWins(); }catch(e){}
-    }
   }
   window.pfTab = pfTab;
   /* The gate held `var hasQuoteRelationship = true` with a comment saying
@@ -11645,11 +11624,19 @@ html, body{
         <div class="au-tag">แพลตฟอร์มที่เชื่อมโยงผู้ซื้อ ผู้ขาย และผู้ให้บริการ ให้ค้นหาโอกาสทางธุรกิจ รับข้อเสนอ และสร้างความร่วมมือได้ในที่เดียว</div>
       </div>
       <div class="au-points">
-        <div class="au-point"><span class="au-pic">🧾</span><div><div class="au-pt">โพสต์ RFQ รับใบเสนอราคาหลายเจ้า</div><div class="au-ps">เปรียบเทียบราคาและคัดผู้ให้บริการที่ดีที่สุด</div></div></div>
-        <div class="au-point"><span class="au-pic">🛡️</span><div><div class="au-pt">ผู้ให้บริการยืนยันตัวตน</div><div class="au-ps">ทำธุรกิจกับบริษัทที่ตรวจสอบแล้วอย่างมั่นใจ</div></div></div>
-        <div class="au-point"><span class="au-pic">💬</span><div><div class="au-pt">เจรจาและปิดดีลในระบบ</div><div class="au-ps">แชท ต่อรอง และติดตามสถานะงานครบในที่เดียว</div></div></div>
+        <!-- Three things Konnex actually does. The set this replaces promised
+             two it does not: a ยืนยันตัวตน check (profiles.is_verified is read
+             in six places and written in none — nothing can set it), and
+             "ปิดดีลในระบบ · ติดตามสถานะงาน", which was the winner-picking flow
+             that database/no_winner.sql deliberately removed. -->
+        <div class="au-point"><span class="au-pic">🧾</span><div><div class="au-pt">โพสต์ RFQ รับใบเสนอราคาหลายเจ้า</div><div class="au-ps">เทียบราคาและเงื่อนไขจากผู้ขายหลายรายในที่เดียว</div></div></div>
+        <div class="au-point"><span class="au-pic">👤</span><div><div class="au-pt">เชื่อมต่อกับคู่ค้า</div><div class="au-ps">เก็บรายชื่อผู้ที่เคยติดต่อ และดูว่าใครเชื่อมต่อกับใครบ้าง</div></div></div>
+        <div class="au-point"><span class="au-pic">💬</span><div><div class="au-pt">คุยกับเจ้าของประกาศโดยตรง</div><div class="au-ps">ถามรายละเอียดและขอใบเสนอราคาได้ในแอป</div></div></div>
       </div>
-      <div class="au-stat">ผู้ประกอบการกว่า <b>12,000</b> รายใช้งาน Konnex อยู่ในขณะนี้</div>
+      <!-- "ผู้ประกอบการกว่า 12,000 รายใช้งาน Konnex อยู่ในขณะนี้" stood here.
+           It was a hardcoded number that no code ever updated; the profiles
+           table holds four rows. A count worth showing can go back here once
+           there is one worth showing. -->
     </div>
 
     <div class="au-panel">
@@ -11683,8 +11670,8 @@ html, body{
           <h2>สร้างบัญชีธุรกิจ</h2>
           <p class="au-sub">สมัครฟรี เริ่มโพสต์งานหรือเสนอราคาได้ทันที</p>
           <div class="au-entity">
-            <div class="au-entcard" id="auEntPerson" onclick="authEntity('person')" role="radio" aria-checked="false" tabindex="0"><div class="au-radio"></div><div><div class="au-rt">บุคคลธรรมดา</div><div class="au-rs">ยืนยันตัวตนด้วยบัตรประชาชน</div></div></div>
-            <div class="au-entcard active" id="auEntCompany" onclick="authEntity('company')" role="radio" aria-checked="true" tabindex="0"><div class="au-radio on"></div><div><div class="au-rt">นิติบุคคล</div><div class="au-rs">ยืนยันด้วยหนังสือรับรองบริษัท</div></div></div>
+            <div class="au-entcard" id="auEntPerson" onclick="authEntity('person')" role="radio" aria-checked="false" tabindex="0"><div class="au-radio"></div><div><div class="au-rt">บุคคลธรรมดา</div><div class="au-rs">รับงานในชื่อตัวเอง</div></div></div>
+            <div class="au-entcard active" id="auEntCompany" onclick="authEntity('company')" role="radio" aria-checked="true" tabindex="0"><div class="au-radio on"></div><div><div class="au-rt">นิติบุคคล</div><div class="au-rs">รับงานในนามบริษัท มีเลขผู้เสียภาษี</div></div></div>
           </div>
           <div class="au-field"><label id="auNameLabel">ชื่อบริษัท / ธุรกิจ <span class="au-req">*</span></label><input type="text" id="auNameInput" placeholder="เช่น บจก. ไทยพรีซิชั่น"></div>
           <div class="au-field"><label id="auTaxLabel">เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี (ไม่บังคับ)</label><input type="text" id="auTaxInput" inputmode="numeric" maxlength="13" placeholder="เลข 13 หลัก (เว้นว่างไว้ก่อนได้)"></div>
@@ -12984,7 +12971,7 @@ if('serviceWorker' in navigator && (location.protocol === 'https:' || location.h
   };
   var re = /(🏠|📷|📦|🧾|🏬|💬|🔔|🔖|🕘|🕗|🔍|👤|＋|⚙️|⚙|🏗️|🏗|🚚|💻|🎨|🧰|📍|💰|📋|🛡️|🛡|🛒|👁️|👁|🔒|✅|✔️|✔|✓|✕|✗|✏️|✎|🖊️|🖊|🔗|⋮|📞|✉️|✉|🌐|🏢|📅|⏱️|⏱|🏷️|🏷|📎|☁️|☁|🖼️|🖼|➤|ℹ️|ℹ|📊|📄|👑|♡)/g;
   function run(){
-    var sels = ['.ic','.mbn-ic','.cat-ic','.icon-btn','.navbar .search','.conv-search','.search-bid',
+    var sels = ['.ic','.au-pic','.mbn-ic','.cat-ic','.icon-btn','.navbar .search','.conv-search','.search-bid',
       '.filter-tab','.select-chip','.status-tab','.tab-ic','.origin-tab','.origin-badge',
       '.post-meta span','.rfq-meta span','.meta-row span','.bid-meta span','.offer-stats span',
       '.stat-ic','.stat-row','.contact-ic','.cert-ic','.feature-item .c','.verify-row .check',
@@ -14299,12 +14286,8 @@ body.kx-auth .kx-burger{ display:none !important; }
 /* the flex column the other tabs still use */
 #page-company-profile .left > .card{ order:5; }
 #page-company-profile .left > .card:first-of-type{ order:1; }   /* เกี่ยวกับ */
-#page-company-profile #pfRecentCard{ order:2; }                 /* ผลงานล่าสุด */
 #page-company-profile .left > .card:has(.contact-list){ order:3; }
 
-/* --- the wins preview on ภาพรวม --- */
-#page-company-profile #pfWinsPreview{ max-width:none; gap:14px; }
-#page-company-profile #pfRecentCard .card-head{ margin-bottom:14px; }
 
 @media (max-width: 1024px){
   #page-company-profile .wrap{ max-width:none; }
@@ -14541,17 +14524,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 .kx-rule b{ color:var(--ink); font-weight:600; }
 .kx-rule--live b{ color:var(--blue-700); font-variant-numeric:tabular-nums; }
 
-/* ===== ผลงานสะสม — the track record the seller cannot write =====
-   ผลงานของเรา above it is a gallery the owner uploads, so a visitor has no way to
-   tell an actual job from a stock photo. This card is the opposite: every row comes
-   from a bid the system recorded as won, and the copy says so. That distinction is
-   the whole point of the card — it is the evidence half of the profile.
-
-   No price and no buyer name. The price a job was won at is the seller's position
-   against its competitors, and this platform runs sealed bids on purpose — publishing
-   it permanently on a public page would undo that. The buyer's identity is the
-   buyer's to publish, not the seller's. Job, category, province and month answer
-   "what have they actually done", which is what was asked for. */
+/* ===== card-head "ดูทั้งหมด" links =====
+   These were written for the ผลงานสะสม card, which is gone — the whole point of
+   that card was that the system filled it from bids recorded as won, and nothing
+   is recorded as won any more. The rules stayed because บริการของเรา and รีวิว
+   put the same link in the same corner. */
 #page-company-profile .pf-seeall{ margin-left:auto; margin-right:10px; font-size:14px; font-weight:600; color:var(--blue-700); text-decoration:none; white-space:nowrap; }
 #page-company-profile .pf-seeall:hover{ text-decoration:underline; }
 /* ＋ เพิ่มบริการ and ✎ เขียนรีวิว are <button>, ดูทั้งหมด › and ＋ โพสต์ใหม่ are
@@ -14563,89 +14540,8 @@ body.kx-auth .kx-burger{ display:none !important; }
   height:auto; min-height:0; min-width:0; border-radius:0;
   font-family:inherit; line-height:inherit; cursor:pointer;
 }
-#page-company-profile .pf-wins-src{
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:13px; font-weight:600; color:#0846c7;
-  background:#eaf1ff; border:1px solid #c2d6ff;
-  border-radius:999px; padding:4px 10px;
-}
-#page-company-profile .pf-wins-src .li-svg{
-  width:13px; height:13px; stroke:currentColor; stroke-width:1.9;
-  fill:none; stroke-linecap:round; stroke-linejoin:round; flex:none;
-}
-/* the same column the feed uses, so a win reads like a post rather than a table row */
-#page-company-profile .pf-wins-list{
-  display:flex; flex-direction:column; gap:16px;
-  max-width:760px; margin-left:auto; margin-right:auto;
-}
-#page-company-profile .pf-win{
-  display:block; padding:0;
-  border:1px solid var(--line); border-radius:16px; overflow:hidden;
-  background:var(--card); cursor:pointer;
-  transition:border-color .15s ease, box-shadow .15s ease;
-}
-#page-company-profile .pf-win:hover{
-  border-color:var(--blue-600);
-  box-shadow:0 6px 18px rgba(10,91,255,.12);
-}
-#page-company-profile .pf-win:focus-visible{
-  outline:2px solid var(--blue-600); outline-offset:2px;
-}
-#page-company-profile .pf-win:hover .pf-win-title{ color:var(--blue-700); }
-/* the affordance: without it the card looks like a static record */
-#page-company-profile .pf-win-src{
-  display:block; margin-top:8px;
-  font-size:14px; font-weight:600; color:var(--blue-700);
-}
-/* the feed card's shape exactly: the picture leads, full bleed at 16:9, and the text
-   sits underneath it */
-#page-company-profile .pf-win-photo{
-  position:relative; display:block; width:100%; height:auto;
-  aspect-ratio:16/9; border-radius:0; overflow:hidden; background:var(--bg);
-}
-#page-company-profile .pf-win-photo img{
-  width:100%; height:100%; object-fit:cover; display:block;
-}
-#page-company-profile .pf-win-won{
-  position:absolute; left:10px; bottom:10px;
-  display:inline-flex; align-items:center; gap:4px;
-  font-size:12px; font-weight:600; color:#0846c7;
-  background:rgba(255,255,255,.94); border-radius:999px; padding:3px 8px;
-}
-#page-company-profile .pf-win-won .li-svg{
-  width:12px; height:12px; flex:none; stroke:currentColor; stroke-width:1.9;
-  fill:none; stroke-linecap:round; stroke-linejoin:round;
-}
-#page-company-profile .pf-win-body{ display:block; padding:12px 14px 14px; }
-#page-company-profile .pf-win-title{
-  display:block; font-size:16px; font-weight:700; color:var(--ink); line-height:1.45;
-}
-#page-company-profile .pf-win-meta{
-  display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px;
-  margin-top:5px; font-size:14px; color:#565b6e;
-}
-#page-company-profile .pf-win-cat{
-  font-size:13px; font-weight:600; color:#0846c7;
-  background:#c2d6ff; border-radius:999px; padding:2px 9px;
-}
-/* the date is the last item of the meta row, not a third column. As a column it
-   needed 55px that a 355px card did not have, so the row wrapped into three stacked
-   lines and each entry ran to 157px. Inside the meta it sits right on desktop and
-   folds onto the next line on a phone — 88px. */
-#page-company-profile .pf-win-date{ margin-left:auto; flex:none; font-size:14px; color:#565b6e; white-space:nowrap; }
-#page-company-profile .pf-wins-note{
-  margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);
-  font-size:13px; color:#565b6e; line-height:1.6;
-}
-#page-company-profile .pf-wins-empty{
-  padding:26px 16px; text-align:center; font-size:15px; color:#565b6e;
-  border:1px dashed var(--line); border-radius:12px;
-}
-@media (max-width:768px){
-  /* the card is already a column; only the date needs to stop being pushed right */
-  #page-company-profile .pf-wins-list{ max-width:none; }
-  #page-company-profile .pf-win-date{ margin-left:0; }
-}
+/* .pf-win* styles removed with the ผลงานสะสม cards */
+
 
 /* ===== Feed cards carry the figure the way งานของฉัน does =====
    The count box on the feed showed how many offers or quote requests a post had, but
@@ -17991,177 +17887,10 @@ body.kx-auth .kx-burger{ display:none !important; }
 </script>
 
 
-<script>
-/* ===== ผลงานสะสม =====
-   Reads the bids the system already marks as won and renders them on the profile.
-   It is a read of live page state, not a second copy of the data — mark one more bid
-   won and it appears here, which is what makes it "สะสม" rather than a typed-in list.
-   HISTORY carries closed jobs from before this view existed; live rows win on ties so
-   a job never appears twice. Nothing here can be edited from the profile. */
-(function(){
-  var CATS = [
-    { re:/CNC|กลึง|กัด|เจาะ|แม่พิมพ์|โลหะ|เหล็ก|สแตนเลส|เครื่องจักร|ผลิต/, name:'งานผลิต & เครื่องจักร' },
-    { re:/ไฟฟ้า|solar|โซลาร์|ติดตั้ง|ก่อสร้าง|รับเหมา|อาคาร|โรงงาน/i,      name:'ก่อสร้าง & รับเหมา' },
-    { re:/ขนส่ง|รถบรรทุก|เครน|โลจิสติกส์|ส่งของ/,                          name:'ขนส่ง & โลจิสติกส์' },
-    { re:/เว็บ|ระบบ|ซอฟต์แวร์|แอป|IT|ไอที/i,                               name:'ไอที & ซอฟต์แวร์' }
-  ];
-  function catOf(t){
-    for(var i=0;i<CATS.length;i++) if(CATS[i].re.test(t)) return CATS[i].name;
-    return 'บริการอื่นๆ';
-  }
-  // "14 พ.ค. 2567" -> { y:2567, m:5 } for sorting and for the "พ.ค. 2567" label
-  var MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-  function parseThaiDate(s){
-    if(!s) return null;
-    var p = String(s).trim().split(/\s+/);
-    if(p.length < 3) return null;
-    var mi = MONTHS.indexOf(p[1]), y = parseInt(p[2], 10);
-    if(mi < 0 || !y) return null;
-    return { d:parseInt(p[0], 10) || 1, m:mi + 1, y:y };
-  }
-  function label(dt){ return dt ? MONTHS[dt.m-1] + ' ' + dt.y : ''; }
-  function sortKey(dt){ return dt ? dt.y*100 + dt.m : 0; }
-
-  // jobs closed before this card existed
-  /* Four invented jobs that every account displayed as its own track record —
-     the most misleading thing on the page, since ผลงานสะสม is exactly what a
-     buyer judges a supplier by. Empty: the list is built from quotes you
-     actually won. */
-  var HISTORY = [];
-
-  function collect(){
-    var out = {}, order = [];
-    HISTORY.forEach(function(w){
-      out[w.id] = { id:w.id, title:w.title, loc:w.loc, dt:w.dt, cat:catOf(w.title) };
-      order.push(w.id);
-    });
-    // live rows overwrite history on the same id
-    document.querySelectorAll('#page-my-bids .bid-row[data-status="won"]').forEach(function(row){
-      // the cards no longer print a document number, so the job title is the key
-      var title = (row.querySelector('.bid-title')||{}).textContent || '';
-      var id = '';
-      if(!title) return;
-      var loc = '';
-      var metas = row.querySelectorAll('.bid-meta span');
-      for(var i=0;i<metas.length;i++){
-        var t = metas[i].textContent.trim();
-        if(t && t.indexOf('|') < 0 && !/\d{4}/.test(t)){ loc = t.replace(/^[^ก-๙A-Za-z]+/,'').trim(); break; }
-      }
-      // "ตัดสินใจเมื่อ" is when the job was awarded — the date that belongs on a record
-      var dt = parseThaiDate((row.querySelector('.bid-sub-value')||{}).textContent);
-      var key = id || title;
-      if(!out[key]) order.push(key);
-      out[key] = { id:id, title:title, loc:loc, dt:dt, cat:catOf(title) };
-    });
-    return order.map(function(k){ return out[k]; })
-                .sort(function(a,b){ return sortKey(b.dt) - sortKey(a.dt); });
-  }
-
-  /* The picture is the job's own. This used to hand each entry a stock photo
-     from a per-category pool, hashed off the RFQ id so at least the same job
-     kept the same one — which is how a CNC angle head came to be illustrated
-     by four people signing papers at a table. The post has images; the query
-     below now asks for them. A post with none gets the Konnex mark on a plain
-     ground rather than a photograph of something else. */
-  var WIN_PLACEHOLDER = 'assets/img/konnex-mark-3.png';
-  function imgFor(w){
-    return (w.imgs && w.imgs.length) ? w.imgs[0] : WIN_PLACEHOLDER;
-  }
-
-  var TROPHY = '<svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v3a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 12v4M8 20h8M10 20l.5-4h3l.5 4"/></svg>';
-
-  function esc(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
-
-  /* The won bids, read from the database rather than scraped out of whatever
-     the ใบเสนอราคาที่ส่ง page happens to have rendered. Kept in this shape so
-     collect() and the card markup below stay as they were. */
-  var WINS_DB = [];
-  window.kxLoadProfileWins = async function(){
-    if(!window.kxSession){ WINS_DB = []; return; }
-    var res = await sb.from('quotes')
-      .select('id,created_at,posts(id,title,province,category_id,post_images(url,sort))')
-      .eq('bidder_id', window.kxSession.user.id).eq('status', 'won')
-      .order('created_at', { ascending:false });
-    if(res.error){ console.error('kxLoadProfileWins failed', res.error); return; }
-    WINS_DB = res.data.filter(function(q){ return q.posts; }).map(function(q){
-      var d = new Date(q.created_at);
-      var imgs = (q.posts.post_images || []).slice()
-        .sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); })
-        .map(function(im){ return im.url; });
-      return { id:q.posts.id, title:q.posts.title, loc:q.posts.province || '',
-               imgs: imgs, dt:{ y:d.getFullYear()+543, m:d.getMonth()+1 } };
-    });
-    if(window.renderProfileWins) window.renderProfileWins();
-  };
-
-  window.renderProfileWins = function(){
-    var list = document.getElementById('pfWinsList');
-    if(!list) return;
-
-    /* WINS_DB only. This used to fall back to collect(), which scraped
-       #page-my-bids for rows marked won — and that page still holds its
-       original demo markup until kxLoadMyBids has replaced it, so an account
-       with no wins at all was shown someone else's invented job as its own
-       track record. */
-    var wins = WINS_DB.map(function(w){
-      return { id:w.id, title:w.title, loc:w.loc, dt:w.dt, imgs:w.imgs, cat:catOf(w.title) };
-    });
-    if(!wins.length){
-      list.innerHTML = '<div class="pf-wins-empty">ยังไม่มีงานที่ปิดดีลในระบบ<br>เมื่อคุณชนะการเสนอราคา งานจะมาแสดงที่นี่เอง</div>';
-      return;
-    }
-
-    list.innerHTML = wins.slice(0, 6).map(function(w){
-      // every entry came from a real RFQ, so the card opens it — a record you cannot
-      // click back to is just an assertion
-      return '<div class="pf-win" role="link" tabindex="0"' +
-        ' aria-label="ดูงานต้นทาง: ' + esc(w.title) + '"' +
-        ' onclick="kxOpenPost(\'' + esc(w.id) + '\',\'rfq\')"' +
-        ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();kxOpenPost(\'' + esc(w.id) + '\',\'rfq\');}">' +
-        '<span class="pf-win-photo"><img src="' + esc(imgFor(w)) + '" alt="" loading="lazy">' +
-          '<span class="pf-win-won">' + TROPHY + 'ถูกเลือก</span></span>' +
-        '<span class="pf-win-body">' +
-          '<span class="pf-win-title">' + esc(w.title) + '</span>' +
-          '<span class="pf-win-meta">' +
-            '<span class="pf-win-cat">' + esc(w.cat) + '</span>' +
-            (w.loc ? '<span>' + esc(w.loc) + '</span>' : '') +
-            '<span class="pf-win-date">' + esc(label(w.dt)) + '</span>' +
-          '</span>' +
-          '<span class="pf-win-src">ดูงานต้นทาง ›</span>' +
-        '</span>' +
-      '</div>';
-    }).join('');
-
-    // the overview shows the three most recent; the tab shows six
-    var preview = document.getElementById('pfWinsPreview');
-    if(preview){
-      var cards = list.children;
-      preview.innerHTML = '';
-      for(var pi = 0; pi < Math.min(3, cards.length); pi++){
-        preview.appendChild(cards[pi].cloneNode(true));
-      }
-    }
-
-    if(wins.length > 6){
-      list.insertAdjacentHTML('beforeend',
-        '<div class="pf-wins-note" style="border-top:none;padding-top:0;margin-top:2px;">' +
-        'แสดง 6 งานล่าสุด จากทั้งหมด ' + wins.length + ' งานที่บันทึกไว้</div>');
-    }
-  };
-
-  // re-read every time the profile is opened, so a newly won bid shows up
-  var base = window.navigateTo;
-  if(typeof base === 'function'){
-    window.navigateTo = function(pageId){
-      var r = base.apply(this, arguments);
-      if(pageId === 'page-company-profile'){ try{ window.renderProfileWins(); }catch(e){} }
-      return r;
-    };
-  }
-  if(document.readyState !== 'loading') window.renderProfileWins();
-  else document.addEventListener('DOMContentLoaded', window.renderProfileWins);
-})();
-</script>
+<!-- The ผลงานสะสม script stood here: it queried quotes where status = 'won'
+     and painted the two profile cards above. quotes.status is narrowed to
+     'pending' now (database/no_winner.sql), so the query could only ever come
+     back empty, and it ran on every profile open. Removed with the cards. -->
 <!-- The demo reviews script lived here: a REVIEWS array, per-criterion
      bars and a star-tab filter, all writing into #rvBars / #rvTabs / #rvList.
      kxLoadReviews paints that card from the reviews table, so the two raced
@@ -19928,10 +19657,9 @@ body.kx-auth .kx-burger{ display:none !important; }
     document.querySelectorAll('#pfServices .svc-title').forEach(function(s){
       var c = catOf(s.textContent); if(c) cats[c] = (cats[c]||0) + 1;
     });
-    document.querySelectorAll('#page-company-profile .pf-win-cat').forEach(function(w){
-      var c = catOf(w.textContent) || labelToCat(w.textContent);
-      if(c) wins[c] = (wins[c]||0) + 1;
-    });
+    /* This read the categories off the ผลงานสะสม card. That card is gone, so
+       wins stays empty — which is what the loop produced anyway once the
+       trigger behind it was dropped. */
     var prov = '';
     var meta = document.querySelector('#page-company-profile .hero-meta-line');
     if(meta){
@@ -21303,7 +21031,6 @@ body.kx-auth .kx-burger{ display:none !important; }
          their details. kxProfileFromRow refreshes the cache and then paints. */
       if(window.kxProfileFromRow) window.kxProfileFromRow(pr);
       kxRenderProfileShell(pr);
-      if(window.kxLoadProfileWins) window.kxLoadProfileWins();
     }
 
     var h1 = p.querySelector('.hero-idblock h1');

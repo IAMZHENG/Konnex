@@ -719,11 +719,11 @@
         function (r) { return r.style.display !== 'none'; });
       expect(shown.length).toBe(2, 'removing the strip must not leave rows hidden by a stale filter');
     });
-    it('hides the sections only a winner could have filled', function (w) {
-      // ผลงานสะสม and ผลงานล่าสุด both listed the RFQs this account was chosen for
+    it('removes the sections only a winner could have filled', function (w) {
+      // ผลงานสะสม and ผลงานล่าสุด both listed the RFQs this account was chosen
+      // for. They were hidden when the winner went; now they are gone.
       ['pfWinsCard', 'pfRecentCard'].forEach(function (id) {
-        var el = w.document.getElementById(id);
-        expect(el.getAttribute('data-pf-hide')).toBe('1', id + ' can only ever be empty now');
+        expect(w.document.getElementById(id)).toBeFalsy(id + ' could only ever be empty');
       });
       var tabs = w.document.querySelector('#page-company-profile .tabs').textContent;
       expect(tabs).notToContain('ผลงานสะสม', 'a tab that opens onto nothing is worse than no tab');
@@ -1034,6 +1034,63 @@
       w.kxLoadMyPosts = real;
       expect(seen).toEqual(['rfq:yes'],
         'this is the mechanism boot() uses to recover a refreshed page');
+    });
+  });
+
+  // ============================== the sign-in page only claims what is true ===
+  /* Every line here is read by someone deciding whether to sign up, so a claim
+     the app cannot keep is worse than no claim. Two of the three original
+     bullets described features that do not exist: a ยืนยันตัวตน check
+     (profiles.is_verified is read in six places and written in none) and
+     "ปิดดีลในระบบ", which no_winner.sql removed on purpose. */
+  describe('page-auth — no claims the app cannot keep', function () {
+    function panelText(w) {
+      return (w.document.getElementById('page-auth').textContent || '');
+    }
+    it('states no user count', function (w) {
+      expect(/12,?000/.test(panelText(w))).toBe(false,
+        'the number was hardcoded and no code ever updated it');
+    });
+    it('does not promise identity verification anywhere on the page', function (w) {
+      var t = panelText(w);
+      expect(/ตรวจสอบแล้ว|ยืนยันตัวตนด้วย|ยืนยันด้วยหนังสือรับรอง/.test(t)).toBe(false,
+        'nothing in the app can set profiles.is_verified, and signup asks for no document');
+    });
+    it('does not promise deal-closing or job tracking', function (w) {
+      expect(/ปิดดีล|ติดตามสถานะงาน/.test(panelText(w))).toBe(false,
+        'the winner-picking flow was removed by database/no_winner.sql');
+    });
+    it('still names three things, each with a subtitle', function (w) {
+      var pts = w.document.querySelectorAll('#page-auth .au-point');
+      expect(pts.length).toBe(3);
+      Array.prototype.forEach.call(pts, function (p) {
+        expect((p.querySelector('.au-pt').textContent || '').trim()).toBeTruthy();
+        expect((p.querySelector('.au-ps').textContent || '').trim()).toBeTruthy();
+      });
+    });
+  });
+
+  // ===================== the profile no longer advertises a removed feature ===
+  describe('page-company-profile — ผลงานสะสม is gone', function () {
+    it('has no wins cards left to fill', function (w) {
+      expect(w.document.getElementById('pfWinsCard')).toBeFalsy();
+      expect(w.document.getElementById('pfRecentCard')).toBeFalsy();
+      expect(w.document.getElementById('pfWinsList')).toBeFalsy();
+    });
+    it('never tells anyone a won bid will appear there', function (w) {
+      var els = w.document.querySelectorAll('#page-company-profile *');
+      var found = [];
+      Array.prototype.forEach.call(els, function (el) {
+        if (el.children.length || el.tagName === 'SCRIPT') return;
+        var t = (el.textContent || '').trim();
+        if (/ปิดดีลในระบบ|ชนะการเสนอราคา|ผลงานสะสม/.test(t)) found.push(t.slice(0, 60));
+      });
+      expect(found).toEqual([], 'wins_count is frozen at 0, so this could only ever be a false promise');
+    });
+    it('drops the loader that queried for won bids', function (w) {
+      expect(typeof w.kxLoadProfileWins).toBe('undefined',
+        "quotes.status is narrowed to 'pending', so the query could only come back empty");
+      expect(typeof w.renderProfileWins).toBe('undefined');
     });
   });
 
