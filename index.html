@@ -7735,9 +7735,9 @@ html, body{
 #page-company-profile .hero-overlay{ position:absolute; left:26px; right:26px; bottom:18px; display:flex; align-items:flex-end; gap:16px; }
 #page-company-profile .hero-logo{ width:78px; height:78px; border-radius:16px; background:#fff; color:#052a7a; display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:700; flex-shrink:0; box-shadow:0 4px 14px rgba(0,0,0,.22); }
 #page-company-profile .hero-idblock{ flex:1; min-width:0; padding-bottom:2px; }
-#page-company-profile .hero-idblock h1{ font-size:23px; font-weight:700; color:#fff; margin:0; text-shadow:0 2px 10px rgba(0,0,0,.35); }
+#page-company-profile .hero-idblock h1{ font-size:23px; font-weight:700; color:#fff; margin:0; }
 #page-company-profile .hero-idblock .verified-pill{ font-size:13px; color:#052a7a; background:rgba(255,255,255,.92); padding:2px 9px; border-radius:999px; font-weight:600; vertical-align:middle; }
-#page-company-profile .hero-meta-line{ font-size:15px; color:#eaf1ff; margin-top:6px; text-shadow:0 1px 6px rgba(0,0,0,.35); }
+#page-company-profile .hero-meta-line{ font-size:15px; color:#eaf1ff; margin-top:6px; }
 #page-company-profile .hero-overlay .hero-actions{ display:flex; gap:10px; flex-shrink:0; padding-bottom:2px; }
 #page-company-profile .hero-statstrip{ display:flex; background:#fff; }
 #page-company-profile .hero-statstrip .hss{ flex:1; padding:16px 22px; text-align:center; border-right:1px solid #eef0f6; }
@@ -12733,7 +12733,16 @@ function navigateTo(pageId, skipHistory){
     btn.classList.toggle('active', btn.getAttribute('data-page') === pageId);
   });
   window.scrollTo(0,0);
-  history.replaceState(null, '', '#' + pageId);
+  /* A real navigation adds a browser history entry; restoring one (skipHistory)
+     replaces the current entry instead.
+
+     Everything used to call replaceState, so moving around the app produced no
+     history at all — the browser's Back button skipped straight out of the app
+     or to whatever hash happened to be there before, which is why it landed
+     somewhere unrelated. kxPopping guards the case where this call *is* the
+     result of a popstate: navigating then must not push the entry back on. */
+  if(skipHistory || window.kxPopping) history.replaceState(null, '', '#' + pageId);
+  else { history.pushState(null, '', '#' + pageId); window.kxPushed = (window.kxPushed || 0) + 1; }
   document.body.classList.toggle('kx-show-back', !(pageId === 'page-feed' || pageId === 'page-auth' || navHistory.length === 0));
   document.body.classList.toggle('kx-auth', pageId === 'page-auth');
   placeBackBtn(pageId);
@@ -12750,11 +12759,35 @@ function placeBackBtn(pageId){
   var old = document.getElementById('kx-back'); if(old) old.remove();
   return;
 }
+/* The in-app กลับ and the browser's Back are the same action, so this defers to
+   the browser whenever there is an entry of ours to go back to — one history,
+   one behaviour, and the two can no longer drift apart. Falls back to the app's
+   own trail when there is nothing of ours behind (a deep link opened cold). */
 function goBack(){
-  if(navHistory.length === 0){ navigateTo('page-feed'); return; }
+  if(window.kxPushed > 0){ history.back(); return; }
+  if(navHistory.length === 0){ navigateTo('page-feed', true); return; }
   var prev = navHistory.pop();
   navigateTo(prev, true);
 }
+
+window.addEventListener('popstate', function(){
+  var raw = (window.location.hash || '').replace('#','');
+  var slash = raw.indexOf('/');
+  var pageId = slash < 0 ? raw : raw.slice(0, slash);
+  if(!pageId) return;
+  window.kxPushed = Math.max(0, (window.kxPushed || 0) - 1);
+  if(navHistory.length) navHistory.pop();
+  /* Back and forward fire popstate *and* hashchange. Cleared on a timeout
+     rather than straight away so the hashchange that follows sees the flag and
+     stands down — handling it twice would push a fresh entry and destroy
+     Forward. */
+  window.kxPopping = true;
+  var post = window.kxPostFromHash && window.kxPostFromHash();
+  // a listing carries its post in the URL, so going back to one reopens it
+  if(post && window.kxOpenPost) kxOpenPost(post.id, post.kind);
+  else navigateTo(pageId, true);
+  setTimeout(function(){ window.kxPopping = false; }, 0);
+});
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape'){
     document.querySelectorAll('.modal-overlay.open').forEach(function(m){ m.classList.remove('open'); });
@@ -12772,12 +12805,15 @@ document.addEventListener('keydown', function(e){
   // put the post back in the URL, so boot() below can still see which one it was
   if(rawHash.indexOf('/') > -1) history.replaceState(null, '', rawHash);
   window.addEventListener('hashchange', function(){
+    // popstate already handled this one; acting again would push a new entry
+    // and throw away Forward
+    if(window.kxPopping) return;
     var raw = window.location.hash.replace('#','');
     var h = pageOf(raw);
     if(!validPages.includes(h)) return;
     var post = window.kxPostFromHash && window.kxPostFromHash();
     if(post && window.kxOpenPost) kxOpenPost(post.id, post.kind);
-    else navigateTo(h);
+    else navigateTo(h, true);
   });
 })();
 
@@ -16071,14 +16107,14 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-bids .bid-row,
 #page-my-requests .bid-row{
   align-items:stretch !important;
-  /* A fixed height, not a floor. The picture can only fill the card if the card
-     has a definite height to fill — with min-height the <img> was left on
-     height:auto and sized itself from its own aspect ratio, so a portrait photo
-     stretched its whole row to 297px while a landscape one sat at 180. 190 less
-     the 14px padding top and bottom leaves 162, which is exactly 4:3 against
-     the 216px width below. */
-  height:190px;
-  overflow:hidden;
+  /* A floor, not a fixed height. It was fixed once, to give the picture a
+     definite height to fill — but that also cut off any card whose text ran
+     long: a two-line title pushed the note past 190px and it was simply
+     clipped. The picture keeps its height a different way (see the thumb rule
+     below), so the card is free to grow with its content again. 190 less the
+     14px padding top and bottom leaves 162, which is exactly 4:3 against the
+     216px width below. */
+  min-height:190px;
   padding:14px !important;
   gap:16px !important;
 }
@@ -16088,7 +16124,13 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-thumb{
   flex:0 0 216px;
   width:216px !important;
-  height:100% !important;
+  /* aspect-ratio, not height:100%. The card no longer has a fixed height for a
+     percentage to resolve against, and left on its own ratio a portrait photo
+     would make itself 288px tall and drag the whole row with it. Pinning the
+     ratio makes every picture 162px against the 216px width whatever its shape,
+     and align-self:stretch still grows it to match a card whose text runs long. */
+  aspect-ratio:4 / 3;
+  height:auto !important;
   min-height:0 !important;
   align-self:stretch !important;
   object-fit:cover;
@@ -16102,6 +16144,16 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-my-requests .bid-body{
   display:flex; flex-direction:column; justify-content:center; min-width:0;
 }
+/* These are flex items, so when the column is shorter than its contents they
+   do not overflow — they *shrink*, and the text keeps its own height and draws
+   straight over the line below. That is how a two-line title ended up sitting
+   on top of the buyer's name. The card grows with its content now so the case
+   should not arise, but a flex item that refuses to shrink turns any future
+   squeeze into a visible overflow instead of two lines of text on one. */
+#page-rfq-offers .rfq-body > *,
+#page-my-offers .offer-body > *,
+#page-my-bids .bid-body > *,
+#page-my-requests .bid-body > *{ flex-shrink:0; }
 #page-rfq-offers .rfq-title,
 #page-my-offers .offer-title,
 #page-my-bids .bid-title,
@@ -21400,7 +21452,13 @@ body.kx-auth .kx-burger{ display:none !important; }
        ever declares a winner. What the seller can usefully know is whether the
        listing is still taking quotes, so the pill says that instead. 'รอผล'
        claimed a result was coming; none is. */
-    var stillOpen = !!post && post.status === 'open';
+    /* rfqCardStatus is the one place that decides whether a listing is still
+       taking quotes — status column *and* deadline. This used to test
+       post.status === 'open' on its own, and the query did not even select
+       status, so post.status was undefined and every row said ปิดรับแล้ว while
+       its deadline was still months away. */
+    var stillOpen = !!post && !(window.rfqCardStatus ? window.rfqCardStatus(post).done
+                                                     : post.status !== 'open');
     var pill = (q.origin === 'offer')
       ? ['won', 'ตอบแล้ว']                                  // a reply you sent to a request
       : stillOpen ? ['pending', 'ส่งแล้ว'] : ['closed', 'ปิดรับแล้ว'];
@@ -21465,7 +21523,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var list = document.getElementById('bidList');
     if(!list) return;
     var res = await sb.from('quotes')
-      .select('id,price,note,status,created_at, quote_attachments(file_name,file_kind,file_size,file_url), posts(id,title,province,deadline,post_images(url,sort),profiles!posts_owner_id_fkey(company_name,avatar_url))')
+      .select('id,price,note,status,created_at, quote_attachments(file_name,file_kind,file_size,file_url), posts(id,title,province,status,deadline,post_images(url,sort),profiles!posts_owner_id_fkey(company_name,avatar_url))')
       .eq('bidder_id', window.kxSession.user.id)
       .order('created_at', { ascending:false });
     if(res.error){ console.error('kxLoadMyBids failed', res.error); return; }
