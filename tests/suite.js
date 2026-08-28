@@ -1127,6 +1127,34 @@
     });
   });
 
+  // ================================= no service worker stands between a =====
+  // ================================= deploy and the people using the app ====
+  /* The app shipped a cache-first service worker against a hardcoded cache
+     name. It never ran — it registered from a blob: URL, which browsers refuse,
+     and the failure went into a silent .catch() — but had it run, the first copy
+     of a file to reach `konnex-shell-v1` would have been served for ever, with
+     nothing to bump the version and no revalidation. Refreshing would not have
+     rescued anyone. */
+  describe('service worker', function () {
+    it('registers nothing', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(/serviceWorker\s*\.\s*register/.test(src)).toBe(false,
+        'a worker between the deploy and the user can freeze them on one build');
+    });
+    it('ships no cache-first fetch handler', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var code = src.replace(/\/\*[\s\S]*?\*\//g, '');   // the explanation may name it
+      expect(code.indexOf('konnex-shell-v1')).toBe(-1);
+      expect(/cache\.match\([^)]*\)\.then\(\s*cached\s*=>\s*cached\s*\|\|/.test(code)).toBe(false);
+    });
+    it('still clears up after any client that did register one', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(src).toContain('getRegistrations',
+        'someone whose browser accepted the blob has to be let out again');
+      expect(src).toContain('caches.delete');
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');

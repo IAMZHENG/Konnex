@@ -12837,26 +12837,39 @@ document.addEventListener('keydown', function(e){
   }catch(e){ /* manifest is a progressive enhancement; safe to ignore if unsupported */ }
 })();
 
-// Minimal offline app-shell caching so the page still opens once installed.
-// Only attempts registration on http/https contexts (service workers are blocked on file://).
-if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
-  var swSource = `
-    self.addEventListener('install', e => self.skipWaiting());
-    self.addEventListener('activate', e => self.clients.claim());
-    self.addEventListener('fetch', e => {
-      e.respondWith(
-        caches.open('konnex-shell-v1').then(cache =>
-          cache.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-            cache.put(e.request, res.clone());
-            return res;
-          }).catch(() => cached))
-        )
-      );
-    });
-  `;
-  var swBlob = new Blob([swSource], {type: 'text/javascript'});
-  var swUrl = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swUrl).catch(function(){ /* non-critical */ });
+/* There was an app-shell service worker here, and it is gone on purpose.
+   It registered from a `blob:` URL, which browsers refuse, and the failure went
+   into a silent .catch() — so it never actually ran and the app has never had
+   offline support. That was the lucky part. Its fetch handler was cache-first
+   against a hardcoded cache name:
+
+     cache.match(request).then(cached => cached || fetch(request)…)
+
+   Once a file was in `konnex-shell-v1` it would have been served from there for
+   ever, with no revalidation and nothing anywhere to bump the version or evict
+   the entry. Every visitor who had opened the app once would have been frozen on
+   that build permanently, and refreshing would not have helped them — the worker
+   answers before the network is consulted. A dormant version of that is not worth
+   keeping for a feature nobody has.
+
+   Cloudflare already serves the page as `max-age=0, must-revalidate`, so an
+   ordinary refresh picks up a new deploy.
+
+   The cleanup below is for anyone whose browser did accept the blob (or an older
+   build that shipped a real file): it unregisters the worker and drops its cache,
+   so nobody is left stuck. Safe to remove once you are confident no such client
+   exists; harmless to keep, since it does nothing when there is nothing to undo.
+   If offline support is wanted later, write it network-first, keep the cache name
+   in step with the build, and delete stale caches on activate. */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){ r.unregister(); });
+  }).catch(function(){ /* nothing to undo */ });
+  if(window.caches && caches.keys){
+    caches.keys().then(function(names){
+      names.forEach(function(n){ if(/^konnex-/.test(n)) caches.delete(n); });
+    }).catch(function(){});
+  }
 }
 
 /* ===== Konnex line-icon system: swap emoji chrome for clean SVG icons (all pages) ===== */
