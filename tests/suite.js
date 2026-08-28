@@ -1155,6 +1155,82 @@
     });
   });
 
+  // ================================================ หน้าหลัก keeps up to date ===
+  /* The feed loaded once per page load and never again — `loaded` was set true
+     and nothing reset it, so leaving and coming back showed the same posts and
+     only F5 brought new ones. Every other page reloads on every visit. It now
+     reloads when what is on screen has gone stale, which keeps a quick there-
+     and-back from re-querying 60 rows and throwing away the scroll position. */
+  describe('kxRefreshFeedIfStale', function () {
+    /* The suite shares one window, so the feed may already be loaded and fresh
+       when this group runs. Rather than depend on that, these tests drive a
+       fake clock: feedIsStale() reads Date.now(), so pushing it forward is the
+       same as waiting, and every test starts from a known state. */
+    var offset = 0, realNow = null;
+    function clockOn(w) {
+      if (realNow) return;
+      realNow = w.Date.now;
+      w.Date.now = function () { return realNow.call(w.Date) + offset; };
+    }
+    function clockOff(w) { if (realNow) { w.Date.now = realNow; realNow = null; } }
+    function advance(ms) { offset += ms; }
+
+    async function loadStaleFeed(w) {
+      clockOn(w);
+      advance(60000);                    // whatever is on screen is now old
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.navigateTo('page-feed', true);
+      await new Promise(function (r) { setTimeout(r, 60); });
+      return sb;
+    }
+    function feedQueries(sb) {
+      return sb._calls.filter(function (c) { return c.table === 'posts'; }).length;
+    }
+    it('loads the feed when what is on screen has gone stale', async function (w) {
+      var sb = await loadStaleFeed(w);
+      clockOff(w); restore(w);
+      expect(feedQueries(sb)).toBe(1);
+    });
+    it('does not re-query when you step away and straight back', async function (w) {
+      var sb = await loadStaleFeed(w);
+      var n = feedQueries(sb);
+      await w.navigateTo('page-my-bids', true);
+      await w.navigateTo('page-feed', true);
+      await new Promise(function (r) { setTimeout(r, 60); });
+      clockOff(w); restore(w);
+      expect(feedQueries(sb)).toBe(n, '60 rows and your scroll position are not worth a tab switch');
+    });
+    it('re-queries once the data on screen has gone stale again', async function (w) {
+      var sb = await loadStaleFeed(w);
+      var n = feedQueries(sb);
+      advance(31000);
+      await w.navigateTo('page-my-bids', true);
+      await w.navigateTo('page-feed', true);
+      await new Promise(function (r) { setTimeout(r, 60); });
+      clockOff(w); restore(w);
+      expect(feedQueries(sb)).toBe(n + 1);
+    });
+    it('reports whether it decided to refresh', async function (w) {
+      await loadStaleFeed(w);
+      var fresh = w.kxRefreshFeedIfStale();
+      clockOff(w); restore(w);
+      expect(fresh).toBe(false, 'nothing to do while the feed is fresh');
+    });
+    it('a failed load does not wedge the loader for the session', async function (w) {
+      plan(w, { posts: { _: { data: null, error: { message: 'boom', code: 'XXX' } } } });
+      signIn(w);
+      await w.kxLoadFeed();
+      await new Promise(function (r) { setTimeout(r, 40); });
+      // the in-flight guard must have been cleared on the way out
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      await w.kxLoadFeed();
+      await new Promise(function (r) { setTimeout(r, 40); });
+      restore(w);
+      expect(feedQueries(sb)).toBe(1, 'one bad response would otherwise stop every later refresh');
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');

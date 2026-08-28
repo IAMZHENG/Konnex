@@ -21593,9 +21593,31 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   var loaded = false;
   var feedQaMissing = false;
+
+  /* หน้าหลัก used to load once per page load and never again: `loaded` was set
+     true and nothing reset it, so leaving the feed and coming back showed the
+     same posts, and only F5 brought new ones. Every other page reloads on every
+     visit. Reloading the feed that eagerly is wrong too — it is 60 rows, and a
+     query on every tab switch would throw away where you had scrolled to — so
+     it reloads when what is on screen has gone stale. */
+  var FEED_STALE_MS = 30000;
+  var feedLoadedAt = 0;
+  var feedLoading = false;
+  function feedIsStale(){ return !loaded || (Date.now() - feedLoadedAt) > FEED_STALE_MS; }
+  window.kxRefreshFeedIfStale = function(){
+    if(feedLoading || !feedIsStale()) return false;
+    window.kxLoadFeed();
+    return true;
+  };
+
   window.kxLoadFeed = async function(){
     var list = document.querySelector('#page-feed .feed-list');
     if(!list) return;
+    if(feedLoading) return;             // a second call while one is in flight
+    feedLoading = true;
+    // reloading replaces the whole list, so hold the reading position
+    var keepScroll = (document.querySelector('.app-page.active') || {}).id === 'page-feed'
+      ? (window.pageYOffset || document.documentElement.scrollTop || 0) : null;
     // profiles!posts_owner_id_fkey: posts also reaches profiles indirectly through
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
@@ -21610,7 +21632,9 @@ body.kx-auth .kx-burger{ display:none !important; }
       res = await sb.from('posts').select(feedBase)
         .eq('status', 'open').order('created_at', { ascending:false }).limit(60);
     }
-    if(res.error){ console.error('kxLoadFeed failed', res.error); return; }
+    // clear the in-flight flag on the way out, or a single failed load would
+    // stop the feed from ever refreshing again
+    if(res.error){ console.error('kxLoadFeed failed', res.error); feedLoading = false; return; }
     list.innerHTML = res.data.map(function(p){ return postCardHTML(p); }).join('');
     if(window.kxApplyIcons) window.kxApplyIcons(list);
     // reflect what is already saved on the cards that were just built
@@ -21643,14 +21667,19 @@ body.kx-auth .kx-burger{ display:none !important; }
     var more = document.getElementById('feedLoadMore');
     if(more) more.style.display = shown ? 'block' : 'none';
     loaded = true;
+    feedLoadedAt = Date.now();
+    feedLoading = false;
     if(typeof applyFeedFilters === 'function') applyFeedFilters();
     if(typeof kxRankFeed === 'function') kxRankFeed();
+    // put the reader back where they were, after the filters have run
+    if(keepScroll) window.scrollTo(0, keepScroll);
   };
 
   var _navFeed = window.navigateTo;
   window.navigateTo = function(id, skipHistory){
     var r = _navFeed(id, skipHistory);
-    if(id === 'page-feed' && !loaded) window.kxLoadFeed();
+    // was `!loaded`, which meant once per page load and never again
+    if(id === 'page-feed') window.kxRefreshFeedIfStale();
     if(id === 'page-rfq-offers') window.kxLoadMyPosts('rfq');
     if(id === 'page-my-offers') window.kxLoadMyPosts('offer');
     if(id === 'page-my-bids') window.kxLoadMyBids();
@@ -21690,6 +21719,16 @@ body.kx-auth .kx-burger{ display:none !important; }
     }else if(window.kxChatPollStop) window.kxChatPollStop();
     return r;
   };
+
+  /* Coming back to a tab that has been sitting open is the other moment the
+     feed is likely to be out of date, and the one where a person is least
+     likely to think of refreshing. Same staleness rule, so switching tabs
+     quickly costs nothing. */
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden) return;
+    var active = document.querySelector('.app-page.active');
+    if(active && active.id === 'page-feed') window.kxRefreshFeedIfStale();
+  });
 })();
 </script>
 <script>
