@@ -6114,7 +6114,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
 .dash-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:8px; }
 .dash-stat{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:13px 15px; cursor:pointer; position:relative; overflow:hidden; transition:box-shadow .15s ease, transform .12s ease; }
 .dash-stat:hover{ box-shadow:0 10px 26px rgba(12,63,115,.12); transform:translateY(-2px); }
-.dash-stat-num{ font-size:28px; font-weight:700; line-height:1; }
+.dash-stat-num{ font-size:28px; font-weight:700; line-height:1.25; }  /* line-height:1 gave a 28px box to a glyph needing 37, so the number sat on its own label */
 /* the three figures read as one set of numbers, not three states — the ผู้ซื้อ /
    ผู้ขาย pill under each one already says which is which */
 .dash-stat .dash-stat-num{ color:#1c1a18; }
@@ -14248,7 +14248,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   font-size:14px; font-weight:600; color:#052a7a;
 }
 #page-company-profile .kx-wall .pc-offers .offer-num{ font-size:15px; font-weight:700; color:#0a5bff; }
-#page-company-profile .kx-wall .pc-price{ display:flex; flex-direction:column; line-height:1.18; min-width:0; }
+#page-company-profile .kx-wall .pc-price{ display:flex; flex-direction:column; line-height:1.5; min-width:0; }  /* 1.18 clipped Thai tone marks: ราคาเริ่มต้น needed 19px in a 17px box */
 #page-company-profile .kx-wall .pc-price-lbl{ font-size:13px; font-weight:600; color:#565b6e; }
 #page-company-profile .kx-wall .pc-price-num{ font-size:20px; font-weight:700; color:#0a5bff; letter-spacing:-.2px; }
 
@@ -15184,7 +15184,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   font-size:14px; font-weight:600; color:#052a7a;
 }
 #page-feed .pc-offers .offer-num{ font-size:15px; font-weight:700; color:#0a5bff; }
-#page-feed .pc-price{ display:flex; flex-direction:column; line-height:1.18; min-width:0; }
+#page-feed .pc-price{ display:flex; flex-direction:column; line-height:1.5; min-width:0; }  /* 1.18 clipped Thai tone marks: ราคาเริ่มต้น needed 19px in a 17px box */
 #page-feed .pc-price-lbl{ font-size:13px; font-weight:600; color:#565b6e; }
 #page-feed .pc-price-num{ font-size:20px; font-weight:700; color:#0a5bff; letter-spacing:-.2px; }
 
@@ -15853,7 +15853,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 .ep-check li.done{ color:var(--ink,#1c1a18); }
 .ep-check li.done::before{ background:#15803d; }
 
-.kx-avatar-cap{ position:absolute; bottom:6px; left:0; right:0; text-align:center; font-size:12px; font-weight:600; line-height:1.1; padding:0 4px; }
+.kx-avatar-cap{ position:absolute; bottom:6px; left:0; right:0; text-align:center; font-size:12px; font-weight:600; line-height:1.35; padding:0 4px; }  /* Thai tone marks need the taller box */
 
 /* ===== Edit profile: cover + avatar upload ===== */
 .kx-cover-up{
