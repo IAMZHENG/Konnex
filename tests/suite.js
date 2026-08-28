@@ -1094,6 +1094,39 @@
     });
   });
 
+  // ============================ the fabricated quotation document is gone ===
+  /* ตัวอย่างใบเสนอราคา shipped a whole invented company — a name, a Sukhumvit
+     address, a tax number, three line items and a ฿98,440 total — and only the
+     document number and the recipient were ever filled in. It was also
+     unreachable: the button that opened it was gated on a docNo that was always
+     '', its other opener was never called, and the third added a button to rows
+     that did not exist yet. Removed rather than rebuilt, because the data model
+     has no line items to rebuild it from. */
+  describe('the demo quotation is gone', function () {
+    it('has no quotation modal left in the page', function (w) {
+      expect(w.document.getElementById('quotePdfModal')).toBeFalsy();
+      expect(w.document.getElementById('qpdfDoc')).toBeFalsy();
+      expect(w.document.getElementById('offerAttachModal')).toBeFalsy();
+    });
+    it('drops the functions that drove it', function (w) {
+      ['openQuotePdf', 'closeQuotePdf', 'printQuote', 'openOfferAttachments']
+        .forEach(function (fn) { expect(typeof w[fn]).toBe('undefined', fn + ' should be gone'); });
+    });
+    it('keeps the gallery lightbox, which shared its markup', function (w) {
+      expect(w.document.getElementById('oaLightbox')).toBeTruthy(
+        'the lightbox sat next to the removed modal and is the real one');
+      expect(w.document.getElementById('oaLightboxImg')).toBeTruthy();
+      expect(typeof w.kxLbReset).toBe('function');
+    });
+    it('carries none of the invented figures anywhere in the source', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      ['บางกอกพรีซิชั่น', '0105558', '98,440', 'KX-QT-', 'unsplash', 'งานชุบอโนไดซ์']
+        .forEach(function (s) {
+          expect(src.indexOf(s)).toBe(-1, '"' + s + '" is invented data');
+        });
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');

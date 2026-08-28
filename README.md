@@ -2929,14 +2929,145 @@ overflow, no clipped text, no JS errors.
 `localStorage`, not the `interest_events` table built for it in schema.sql).
 
 
+## The two detail pages become one layout
+
+ประกาศซื้อ and ประกาศขาย had drifted into two different pages. ประกาศซื้อ put the
+gallery inside its header card, between the meta row and the description; ประกาศขาย
+opened with the gallery, so the title, the seller and the price all sat below a
+screenful of photographs. Neither page said who had posted the thing you were reading:
+ประกาศซื้อ knew the owner — ส่งข้อความ has always been wired to them — and never showed
+it, and ประกาศขาย carried a seller card in the right-hand sidebar, which on a narrow
+screen stacks to the bottom of the page where nobody reads it.
+
+Both pages now run the same block, `.post-owner`, painted by the same function, and
+both read in the same order: status tag → who posted it → title → meta → gallery →
+description → buttons. The picture and name sit above the title, because who is asking
+is read before what they are asking for. The only difference left is that ประกาศขาย
+carries a price block; ประกาศซื้อ states a budget inside its meta row instead.
+
+Checking this by eye is what let the two drift apart in the first place, so a test now
+reads the order of the blocks that actually rendered on each page and requires them to
+match. When they do not, it prints both sequences side by side.
+
+## A new account lands on its own profile, and starts empty
+
+Signing up dropped you on the feed — the one page that says nothing about what to do
+next — with a profile you had never filled in. Worse, the profile was not empty: the row
+was created with `company_name` falling back to the display name the OAuth provider
+gave, and past that to the left-hand side of the email address. A brand-new account
+opened แก้ไขโปรไฟล์ and found a name it had never been told, which reads as another
+account's data left behind rather than as a starting point.
+
+A new account now starts genuinely empty — only what the person typed into the signup
+form survives, plus the profile picture the provider supplied, which is theirs and is
+not the confusing part — and `kxAuthLanding()` sends it to แก้ไขโปรไฟล์ instead of the
+feed, once, on its first sign-in. All three ways in share that function so they cannot
+drift.
+
+Signing out now empties the form as well as the session. `data` lives in the profile
+module's closure for as long as the page is open, so signing in as somebody else
+without reloading left the previous account's answers sitting in the fields until their
+row came back and overwrote them one column at a time — and any column that row did not
+carry was never overwritten at all.
+
+## ตรวจสอบการยืนยันตัวตน — the half that was missing
+
+`settings_and_account.sql` built the side of identity verification where a person
+files a request: the documents upload, a row lands in `verification_requests`, and the
+policies there let you read, file and withdraw your own. It left the deciding to "an
+administrator (service role, which bypasses RLS)". The app only ever holds the anon
+key, so there was no administrator. Every request filed sat there unanswerable, while
+the profile card told its owner that verifying would earn a buyer's trust and the
+sign-in page advertised "ผู้ให้บริการยืนยันตัวตน" as a feature. `profiles.is_verified`
+was read in six places and written in none.
+
+`database/verification_review.sql` adds the other half: `profiles.is_admin` and a
+`kx_is_admin()` that is `security definer`, so a policy can ask whether the caller is an
+administrator without recursing into `profiles`' own RLS; a second select policy on
+`verification_requests` that Postgres ORs with the existing owner-only one;
+`kx_decide_verification()`, which checks `kx_is_admin()` as its **first statement**
+because everything after that line writes rows the caller does not own, and which
+matches only rows still `pending` so pressing อนุมัติ twice is told so rather than
+silently re-deciding; and `kx_revoke_verification()`, because an approval that cannot
+be taken back is one that cannot safely be given. A rejection deliberately leaves
+`is_verified` alone — the applicant may hold a badge from an earlier round.
+
+The queue itself is a page in the rail, shown only to an administrator. That, and the
+page turning other accounts away, are tidiness rather than security: the boundary is
+the policy and that first statement, and calling the RPC by hand still returns 42501.
+
+### The documents were world-readable
+
+Building this surfaced the reason it had to be built carefully. `submitVerify()`
+uploaded to the `attachments` bucket, and `storage_policies.sql` grants select on that
+bucket `to public` — so a photograph of somebody's national ID card was readable by
+anyone holding the URL, signed out, forever. Verification documents now go to
+`verify-docs`, which has no public read at all: the only ways in are "it is your own
+folder" and "you are an administrator", and even then the page has to mint a signed URL
+that expires. The row stores the storage path, because a private bucket has no public
+URL to store.
+
+To tell a private bucket from a public one without the service key, ask for
+`/storage/v1/object/public/<bucket>/<anything>`: a public bucket answers `NoSuchKey`
+(it can see the bucket, just not the file), a private one answers `NoSuchBucket`.
+
+## The sign-in page stops promising what the app cannot do
+
+The left-hand panel carried three claims and a statistic. The statistic —
+"ผู้ประกอบการกว่า 12,000 รายใช้งาน Konnex อยู่ในขณะนี้" — was hardcoded and updated by
+nothing; the `profiles` table held four rows. Two of the three claims described
+features that do not exist: a ยืนยันตัวตน check that nothing could grant, and
+"เจรจาและปิดดีลในระบบ · ติดตามสถานะงาน", which was the winner-picking flow that
+`no_winner.sql` had deliberately removed. The first claim promised "คัดผู้ให้บริการ",
+and the เลือก button had been removed for the same reason.
+
+The count is gone and the three blocks now describe RFQs and comparing quotes, Connect,
+and talking to whoever posted a listing. The account-type cards on the signup form told
+the same untrue story — "ยืนยันตัวตนด้วยบัตรประชาชน", "ยืนยันด้วยหนังสือรับรองบริษัท",
+for a form that asks for no document — and now describe what the choice actually does.
+
+ผลงานสะสม and ผลงานล่าสุด went with them. Both listed the RFQs an account had been
+chosen for; `no_winner.sql` dropped the trigger behind `wins_count` and zeroed it, so
+the cards could only ever be empty while telling their owner "เมื่อคุณชนะการเสนอราคา
+งานจะมาแสดงที่นี่เอง". Their 171-line script queried `quotes` for `status = 'won'` on
+every profile open, which can no longer match anything.
+
+## The demo quotation, and the modal behind it
+
+ตัวอย่างใบเสนอราคา shipped an entire invented company: บริษัท บางกอกพรีซิชั่น จำกัด, an
+address on Sukhumvit, tax number 0105558xxxxxx, three line items, VAT, and a ฿98,440
+total. `openQuotePdf()` filled exactly two of those fields — the document number and the
+recipient — and `printQuote()` would print or download the rest as it stood. Beside it,
+the offer-attachments modal carried a matching fake document number and three
+stock photographs loaded from Unsplash.
+
+Neither was reachable. The button that opened the quotation was gated on a `docNo` that
+was always `''`; the second opener was never called from anywhere; the third added a
+button to `#page-my-bids` rows on `DOMContentLoaded`, before any row exists, and the
+list replaces its `innerHTML` wholesale on every render anyway. Both are removed rather
+than rebuilt, because the data model has no line items to rebuild a quotation from — a
+real one would show the quoted amount and the note the bidder actually wrote. The
+gallery lightbox that sat next to them in the markup is the app's real one and stays.
+
+## Thai text stops sitting on the line below it
+
+A sweep of all 18 pages compared every text box against the height its own text
+actually needs. Three rules gave Thai too little room: the feed's price block at
+`line-height:1.18` put a 19px string in a 17px box, so ราคาเริ่มต้น was drawn across the
+price underneath it; the dashboard's figures at `line-height:1` gave a 28px box to a
+glyph needing 37 and overlapped their labels by 4px; and the avatar upload caption was
+tight enough to clip its tone marks. Latin text fits at those values, which is why they
+looked fine when they were written.
+
 ## Known wrinkles
 
 - `assets/img/konnex-mark-1.png` is served as the favicon at 512×512 (~307 KB). The
   design project calls this file `konnex-favicon-64.png`, but it is not 64px. Resizing
   a real 64×64 copy for `rel="icon"` would save ~300 KB per load with no visual change.
-- Three `oaLightbox(...)` handlers on the offer-detail page open full-size Unsplash
-  URLs. These were authored that way in the source — the bundler only ever captured
-  the thumbnails — so they still need network access. Their thumbnails are local.
+- ~~Three `oaLightbox(...)` handlers on the offer-detail page open full-size Unsplash
+  URLs.~~ **Resolved** — those handlers were on the offer-attachments modal, which
+  turned out to be unreachable and full of invented data. It is gone, and with it the
+  last request this page made to a third-party host.
 - A `<link rel="preconnect">` to `fonts.googleapis.com` is left over from before the
   fonts were self-hosted. Harmless, now pointless.
 - ~~At **320px** a handful of small text overflows remain.~~ **Resolved** — the

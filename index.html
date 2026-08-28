@@ -721,8 +721,6 @@ h1, h2, h3, h4, h5, h6{ font-weight:600; }
     width:100% !important; max-width:280px; height:auto !important; aspect-ratio:4/3;
   }
   /* wide tables (PDF quote) scroll inside their card instead of the page */
-  .qpdf-table, .qpdf-sum{ width:100% !important; }
-  .qpdf-wrap, .qpdf-body{ overflow-x:auto; }
   /* ===== stronger universal guard: let every flex/grid child shrink ===== */
   .app-page *{ min-width:0 !important; }
   .app-page img, .app-page video, .app-page canvas, .app-page table, .app-page pre{ max-width:100% !important; }
@@ -6169,27 +6167,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #verifyModal .vf-doc-s{ font-size:13px; color:var(--ink-soft); margin-top:1px; }
 #verifyModal .vf-up{ font-size:14px; font-weight:600; color:var(--blue-700); background:var(--blue-50); border-radius:8px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
 /* quote pdf */
-#quotePdfModal .qpdf-toolbar{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line); font-weight:600; font-size:15px; }
-#quotePdfModal .qpdf-doc{ padding:26px 30px 30px; max-height:66vh; overflow-y:auto; font-size:14px; }
-.qpdf-head{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--blue-900); padding-bottom:16px; margin-bottom:16px; }
-.qpdf-logo{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:18px; color:var(--blue-900); margin-bottom:8px; }
 /* the real mark, not a letter in a box — this document goes out to a customer */
-.qpdf-logo img{ width:26px; height:26px; border-radius:7px; object-fit:contain; display:block; }
-.qpdf-from{ font-size:13px; color:var(--ink-soft); line-height:1.6; }
-.qpdf-title{ text-align:right; font-size:20px; font-weight:700; color:var(--blue-900); line-height:1.2; }
-.qpdf-title span{ font-size:13px; font-weight:600; color:var(--ink-faint); letter-spacing:1px; }
-.qpdf-meta{ display:flex; gap:30px; margin-bottom:14px; }
-.qpdf-meta div{ display:flex; flex-direction:column; gap:2px; }
-.qpdf-lbl{ font-size:12px; color:var(--ink-faint); }
-.qpdf-to{ display:flex; flex-direction:column; gap:2px; background:var(--bg); border-radius:9px; padding:10px 13px; margin-bottom:16px; }
-.qpdf-table{ width:100%; border-collapse:collapse; margin-bottom:14px; }
-.qpdf-table th{ text-align:left; font-size:13px; color:var(--ink-soft); border-bottom:1.5px solid var(--line); padding:8px 6px; }
-.qpdf-table th:nth-child(2),.qpdf-table th:nth-child(3),.qpdf-table th:nth-child(4),.qpdf-table td:nth-child(2),.qpdf-table td:nth-child(3),.qpdf-table td:nth-child(4){ text-align:right; }
-.qpdf-table td{ padding:9px 6px; border-bottom:1px solid var(--line); }
-.qpdf-sum{ margin-left:auto; width:260px; }
-.qpdf-sum-row{ display:flex; justify-content:space-between; padding:6px 0; font-size:14px; }
-.qpdf-sum-row.total{ border-top:2px solid var(--blue-900); margin-top:4px; padding-top:10px; font-size:16px; font-weight:700; color:var(--blue-900); }
-.qpdf-foot{ font-size:12px; color:var(--ink-soft); line-height:1.7; border-top:1px solid var(--line); padding-top:14px; margin-top:20px; }
 /* advanced search (feed) */
 #page-feed .adv-toggle{ font-weight:600; color:var(--blue-700); }
 #page-feed .adv-panel{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; box-shadow:0 4px 14px rgba(12,63,115,.06); }
@@ -6212,8 +6190,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
 .feed-empty .empty-ic, .list-empty .empty-ic{ font-size:44px; opacity:.5; }
 .feed-empty .empty-title, .list-empty .empty-title{ font-size:18px; font-weight:700; margin:14px 0 6px; }
 .feed-empty .empty-sub, .list-empty .empty-sub{ font-size:15px; color:var(--ink-soft); max-width:360px; margin:0 auto 18px; line-height:1.6; }
-.btn-quote-pdf{ background:#fff; border:1.5px solid var(--line); color:var(--blue-700); border-radius:9px; padding:6px 12px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; margin-top:6px; transition:background .15s ease; }
-.btn-quote-pdf:hover{ background:var(--blue-50); }
 #page-dashboard .btn{ display:inline-flex; align-items:center; gap:6px; border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:10px; padding:10px 16px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; transition:background .15s ease, box-shadow .15s ease; }
 #page-dashboard .btn:hover{ background:var(--bg); }
 #page-dashboard .btn-primary{ background:var(--blue-600); border-color:var(--blue-700); color:#fff; box-shadow:0 4px 12px rgba(27,127,212,.28); }
@@ -11301,7 +11277,7 @@ html, body{
 
         var status = got
           ? '<span class="status-pill won"><span class="dot"></span>ได้รับแล้ว</span>' +
-              (r.docNo ? '<button class="btn-view-rfq" onclick="event.stopPropagation();openQuotePdf(\'' + r.docNo + '\',\'' + seller + '\')">📄 ดูใบเสนอราคา</button>' : '')
+              ''
           : '<span class="status-pill pending"><span class="dot"></span>รอราคา</span>' +
               (r.sellerId
                 ? '<button class="btn-view-rfq" onclick="event.stopPropagation();kxStartChat(\'' + r.sellerId + '\',\'' + (r.postId || '') + '\')">💬 แชทกับผู้ขาย</button>'
@@ -11376,7 +11352,6 @@ html, body{
           // quotation they sent back
           myFiles:    (r.quote_request_files || []).filter(function(f){ return f.side !== 'reply'; }),
           replyFiles: (r.quote_request_files || []).filter(function(f){ return f.side === 'reply'; }),
-          docNo: ''
         };
       });
       renderMyRequests();
@@ -11970,26 +11945,6 @@ html, body{
   </div>
 </div>
 
-<div class="pf-modal-ov" id="offerAttachModal">
-  <div class="pf-modal" id="offerAttachBox" style="max-width:520px;">
-    <button class="pf-x" onclick="closeOfferAttachments()">✕</button>
-    <h3 id="oaTitle">ใบเสนอราคาและไฟล์แนบ</h3>
-    <div class="pf-sub" id="oaSub">เอกสารและรูปที่ผู้เสนอแนบมาพร้อมข้อเสนอ</div>
-    <div class="oa-doc" id="oaQuoteRow">
-      <div class="oa-doc-ic">📄</div>
-      <div class="oa-doc-body"><div class="oa-doc-t">ใบเสนอราคา (PDF)</div><div class="oa-doc-s" id="oaDocNo">KX-QT-2567-00218 · มี VAT</div></div>
-      <button class="oa-open" id="oaOpenQuote">เปิดดู</button>
-    </div>
-    <div class="oa-files-label">ไฟล์แนบอื่น ๆ</div>
-    <div class="oa-files">
-      <div class="oa-file" onclick="oaLightbox('https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=900')"><img src="assets/img/oa-file-1.jpg"><span>ตัวอย่างงาน 1.jpg</span></div>
-      <div class="oa-file" onclick="oaLightbox('https://images.unsplash.com/photo-1565043666747-69f6646db940?w=900')"><img src="assets/img/pfportfolio-1.jpg"><span>ตัวอย่างงาน 2.jpg</span></div>
-      <div class="oa-file" onclick="oaLightbox('https://images.unsplash.com/photo-1595079676601-f1adf5be5dee?w=900')"><img src="assets/img/pfportfolio-3.jpg"><span>หน้างาน.jpg</span></div>
-      <div class="oa-file oa-file-doc" onclick="document.getElementById('oaOpenQuote').click()"><div class="oa-file-doc-ic">📑</div><span>สเปกงาน.pdf</span></div>
-    </div>
-    <div class="pf-actions"><button class="pf-btn ghost" onclick="closeOfferAttachments()">ปิด</button><button class="pf-btn primary" onclick="navigateTo('page-company-profile');closeOfferAttachments()">ดูโปรไฟล์ผู้เสนอ</button></div>
-  </div>
-</div>
 <div class="oa-lightbox" id="oaLightbox" onclick="this.classList.remove('open');window.kxLbReset&&window.kxLbReset()"><img id="oaLightboxImg" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""><div class="lb-hint">ดับเบิลคลิกหรือเลื่อนล้อเพื่อซูม · สองนิ้วเพื่อย่อ-ขยาย</div><div id="lbNav" class="lb-nav" style="display:none"><button class="lb-arrow" onclick="lbStep(-1,event)">‹</button><span id="lbCount" class="lb-count"></span><button class="lb-arrow" onclick="lbStep(1,event)">›</button></div></div>
 
 <div class="pf-modal-ov" id="filesListModal">
@@ -12012,58 +11967,6 @@ html, body{
   </div>
 </div>
 
-<div class="pf-modal-ov" id="quotePdfModal">
-  <div class="pf-modal quote-pdf-wrap" id="quotePdfBox" style="max-width:600px;padding:0;">
-    <button class="pf-x" onclick="closeQuotePdf()" style="z-index:5">✕</button>
-    <div class="qpdf-toolbar"><span>ตัวอย่างใบเสนอราคา</span><button class="pf-btn primary" onclick="printQuote()" style="padding:8px 16px">⬇ ดาวน์โหลด / พิมพ์ PDF</button></div>
-    <div class="qpdf-doc" id="qpdfDoc">
-      <div class="qpdf-head">
-        <div><div class="qpdf-logo"><img src="assets/img/konnex-mark-3.png" alt="Konnex">KONNEX</div><div class="qpdf-from">บริษัท บางกอกพรีซิชั่น จำกัด<br>123 ถ.สุขุมวิท กรุงเทพฯ 10110<br>เลขผู้เสียภาษี 0105558xxxxxx</div></div>
-        <div class="qpdf-title">ใบเสนอราคา<br><span>QUOTATION</span></div>
-      </div>
-      <div class="qpdf-meta">
-        <div><span class="qpdf-lbl">เลขที่เอกสาร</span><b id="qpdfNo">KX-QT-2567-00218</b></div>
-        <div><span class="qpdf-lbl">วันที่</span><b>19 ก.ค. 2569</b></div>
-        <div><span class="qpdf-lbl">ยืนราคาถึง</span><b>02 ส.ค. 2569</b></div>
-      </div>
-      <div class="qpdf-to"><span class="qpdf-lbl">เสนอให้</span><b id="qpdfTo"></b></div>
-      <table class="qpdf-table">
-        <thead><tr><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>รวม</th></tr></thead>
-        <tbody>
-          <tr><td>งานกลึง CNC ตามแบบ (Aluminum 6061)</td><td>500 ชิ้น</td><td>160.00</td><td>80,000.00</td></tr>
-          <tr><td>ค่าตั้งเครื่อง / โปรแกรม CAM</td><td>1</td><td>6,000.00</td><td>6,000.00</td></tr>
-          <tr><td>งานชุบอโนไดซ์</td><td>500 ชิ้น</td><td>12.00</td><td>6,000.00</td></tr>
-        </tbody>
-      </table>
-      <div class="qpdf-sum">
-        <div class="qpdf-sum-row"><span>รวมเป็นเงิน</span><b>92,000.00</b></div>
-        <div class="qpdf-sum-row"><span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span><b>6,440.00</b></div>
-        <div class="qpdf-sum-row total"><span>ยอดสุทธิ (บาท)</span><b>98,440.00</b></div>
-      </div>
-      <div class="qpdf-foot">เงื่อนไข: ส่งมอบภายใน 15 วันหลังยืนยันสั่งซื้อ · ชำระเงิน 50% มัดจำ · ราคานี้ยังไม่รวมค่าขนส่ง<br>เอกสารนี้จัดทำผ่าน Konnex — การเจรจาและการชำระเงินเป็นข้อตกลงระหว่างคู่ค้าโดยตรง</div>
-    </div>
-    <script type="text/plain" id="qpdfStyle">
-.qpdf-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #052a7a;padding-bottom:16px;margin-bottom:16px}
-.qpdf-logo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:18px;color:#052a7a;margin-bottom:8px}
-.qpdf-logo img{width:26px;height:26px;border-radius:7px;object-fit:contain;display:block}
-.qpdf-from{font-size:13px;color:#565b6e;line-height:1.6}
-.qpdf-title{text-align:right;font-size:20px;font-weight:700;color:#052a7a;line-height:1.2}
-.qpdf-title span{font-size:13px;font-weight:600;color:#565b6e;letter-spacing:1px}
-.qpdf-meta{display:flex;gap:30px;margin-bottom:14px;font-size:14px}
-.qpdf-meta div{display:flex;flex-direction:column;gap:2px}
-.qpdf-lbl{font-size:12px;color:#565b6e}
-.qpdf-to{display:flex;flex-direction:column;gap:2px;background:#f6f8fc;border-radius:9px;padding:10px 13px;margin-bottom:16px;font-size:14px}
-.qpdf-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:14px}
-.qpdf-table th{text-align:left;font-size:13px;color:#565b6e;border-bottom:1.5px solid #e6e7f0;padding:8px 6px}
-.qpdf-table th:nth-child(n+2),.qpdf-table td:nth-child(n+2){text-align:right}
-.qpdf-table td{padding:9px 6px;border-bottom:1px solid #e6e7f0}
-.qpdf-sum{margin-left:auto;width:260px}
-.qpdf-sum-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
-.qpdf-sum-row.total{border-top:2px solid #052a7a;margin-top:4px;padding-top:10px;font-size:16px;font-weight:700;color:#052a7a}
-.qpdf-foot{font-size:12px;color:#565b6e;line-height:1.7;border-top:1px solid #e6e7f0;padding-top:14px;margin-top:20px}
-.pf-x{display:none}
-    </script>
-  </div>
 </div>
 
 <script>
@@ -12183,15 +12086,6 @@ html, body{
   }
   document.getElementById('verifyModal').addEventListener('click', function(e){ if(e.target.id==='verifyModal') closeVerify(); });
 
-  function openOfferAttachments(name, docNo){
-    document.getElementById('oaTitle').textContent = 'ใบเสนอราคาและไฟล์แนบ — ' + name;
-    document.getElementById('oaDocNo').textContent = docNo + ' · มี VAT';
-    var btn = document.getElementById('oaOpenQuote');
-    btn.onclick = function(){ closeOfferAttachments(); openQuotePdf(docNo, name); };
-    document.getElementById('offerAttachModal').classList.add('open');
-  }
-  function closeOfferAttachments(){ document.getElementById('offerAttachModal').classList.remove('open'); }
-  function oaLightbox(src){ document.getElementById('oaLightboxImg').src = src; document.getElementById('oaLightbox').classList.add('open'); }
   var DP_LABELS={pdf:'PDF',doc:'Word',xls:'Excel',dwg:'แบบ CAD'};
   function openDocPreview(el){
     var t=el.dataset.ftype||'pdf', name=el.dataset.fname||'เอกสาร', size=el.dataset.fsize||'';
@@ -12369,23 +12263,7 @@ html, body{
     if(e.key === 'ArrowLeft') lbStep(-1);
     else if(e.key === 'ArrowRight') lbStep(1);
   });
-  document.getElementById('offerAttachModal').addEventListener('click', function(e){ if(e.target.id==='offerAttachModal') closeOfferAttachments(); });
 
-  function openQuotePdf(docNo, to){
-    if(docNo) document.getElementById('qpdfNo').textContent = docNo;
-    if(to) document.getElementById('qpdfTo').textContent = to;
-    document.getElementById('quotePdfModal').classList.add('open');
-  }
-  function closeQuotePdf(){ document.getElementById('quotePdfModal').classList.remove('open'); }
-  function printQuote(){
-    var w = window.open('', '_blank');
-    // The new window is about:blank, so a relative src like assets/img/... has
-    // nothing to resolve against and the logo prints as a broken image. <base>
-    // points it back at the app, and covers every other relative URL too.
-    w.document.write('<html><head><title>ใบเสนอราคา</title><base href="'+location.href+'"><style>body{font-family:"IBM Plex Sans Thai",sans-serif;margin:32px;color:#1c1a18}'+document.getElementById('qpdfStyle').textContent+'</style></head><body>'+document.getElementById('qpdfDoc').outerHTML+'</body></html>');
-    w.document.close(); setTimeout(function(){ w.print(); }, 350);
-  }
-  document.getElementById('quotePdfModal').addEventListener('click', function(e){ if(e.target.id==='quotePdfModal') closeQuotePdf(); });
 
   // ===== Advanced search (feed) =====
   function toggleAdvSearch(){
@@ -12475,19 +12353,6 @@ html, body{
 
   // ===== PDF quote buttons + empty states on load =====
   document.addEventListener('DOMContentLoaded', function(){
-    // add "PDF" button to every my-bids row
-    document.querySelectorAll('#page-my-bids .bid-row').forEach(function(row){
-      var col = row.querySelector('.bid-status-col');
-      if(col && !col.querySelector('.btn-quote-pdf')){
-        var buyer = (row.querySelector('.bid-buyer')||{}).textContent || '';
-        buyer = buyer.replace('ผู้ซื้อ:','').trim();
-        var b = document.createElement('button');
-        b.className = 'btn-quote-pdf';
-        b.textContent = '📄 ใบเสนอราคา PDF';
-        b.setAttribute('onclick', "event.stopPropagation();openQuotePdf('', '"+buyer.replace(/'/g,'')+"')");
-        col.appendChild(b);
-      }
-    });
     // my-bids search → empty state
     var bidSearch = document.querySelector('#page-my-bids .search-bid input');
     if(bidSearch){
@@ -14937,17 +14802,6 @@ body.kx-auth .kx-burger{ display:none !important; }
   color:var(--blue-700) !important; font-weight:600 !important;
 }
 /* the PDF is the utility — grey, like แก้ไขประกาศ */
-#page-my-bids .bid-status-col > .btn-quote-pdf,
-#page-my-requests .bid-status-col > .btn-quote-pdf{
-  background:#fff !important; border:1.5px solid var(--line) !important;
-  color:#565b6e !important; font-weight:600 !important;
-  transition:border-color .15s ease, color .15s ease;
-}
-#page-my-bids .bid-status-col > .btn-quote-pdf:hover,
-#page-my-requests .bid-status-col > .btn-quote-pdf:hover{
-  background:#fff !important;
-  border-color:var(--blue-600) !important; color:var(--blue-700) !important;
-}
 
 @media (max-width: 1024px){
   /* the card is one stacked column here, so the actions sit side by side */
@@ -15560,8 +15414,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   }
   #page-rfq-offers .rfq-status-col .btn-edit-offer{ margin-top:0 !important; }
   #page-rfq-offers .rfq-status-col .btn-detail,
-  #page-my-bids .bid-status-col .btn-quote-pdf,
-  #page-my-requests .bid-status-col .btn-quote-pdf{ width:100%; justify-content:center; margin-top:4px; }
+  #page-my-requests .bid-status-col .btn-detail{ width:100%; justify-content:center; margin-top:4px; }
   #page-my-bids .bid-status-col,
   #page-my-requests .bid-status-col{ display:flex; flex-direction:column; gap:6px; align-items:stretch; }
 }
