@@ -1231,6 +1231,77 @@
     });
   });
 
+  // ================================= every RFQ is sealed; there is no choice ===
+  /* เลือกประเภทการเสนอราคา offered ปิดราคา or เปิดราคา. Sealed was the recommended
+     one and the mechanism the rest of the app is built around, so the step was
+     asking a question with one sensible answer. `posts.bid_type` stays in the
+     schema and is written 'sealed', so old rows still read true. */
+  describe('the bid-type step is gone', function () {
+    it('is not in the create form', function (w) {
+      expect(w.document.getElementById('cpBidStep')).toBeFalsy();
+      expect(w.document.querySelectorAll('input[name="cpBid"]').length).toBe(0);
+    });
+    it('writes sealed for every RFQ it publishes', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(src).toContain("bid_type: isRfq ? 'sealed' : null",
+        'the column keeps one value rather than being read back from a control that is gone');
+      expect(/bidRadios/.test(src)).toBe(false);
+    });
+    it('covers the prices without consulting the column', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(src).toContain('var sealed = !isClosed && !isExpired;');
+      expect(/bid_type === 'open'/.test(src)).toBe(false, 'nothing decides on the old value now');
+    });
+  });
+
+  // =========================================== the detail header, re-ordered ===
+  describe('detail header order and บันทึกไว้', function () {
+    var POST = {
+      id: 'H1', kind: 'rfq', owner_id: OTHER, title: 'ต้องการซื้อของ', province: 'เชียงใหม่',
+      status: 'open', deadline: '2099-01-01T00:00:00Z', post_images: [], post_attachments: [],
+      quotes: [], profiles: { company_name: 'บจก. ผู้ซื้อ', avatar_url: null }
+    };
+    async function open(w, post, kind, page) {
+      plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
+      signIn(w);
+      await w.kxOpenPost(post.id, kind);
+      for (var i = 0; i < 80; i++) {
+        var el = w.document.querySelector('#' + page + ' .post-owner-name');
+        if (el && el.textContent === post.profiles.company_name) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
+    }
+    function order(w, sel) {
+      var box = w.document.querySelector(sel);
+      return Array.prototype.map.call(box.children, function (c) {
+        return (c.className || c.tagName).toString().split(' ')[0];
+      });
+    }
+    it('puts where and when above the title on ต้องการซื้อ', async function (w) {
+      await open(w, POST, 'rfq', 'page-rfq-detail');
+      var kids = order(w, '#page-rfq-detail .header-info');
+      expect(kids.indexOf('meta-row') < kids.indexOf('H1')).toBe(true, kids.join(' → '));
+      expect(kids.indexOf('post-owner') < kids.indexOf('meta-row')).toBe(true, 'who still leads');
+    });
+    it('offers บันทึกไว้ wired to the post', async function (w) {
+      await open(w, POST, 'rfq', 'page-rfq-detail');
+      var btn = w.document.getElementById('rfqSaveBtn');
+      expect(btn).toBeTruthy();
+      expect(btn.getAttribute('data-post-id')).toBe('H1');
+      expect(btn.className).toContain('bookmark-ic',
+        'kxApplySavedMarks finds it by that class, so its state matches the cards');
+    });
+    it('does the same on ประกาศขาย', async function (w) {
+      var offer = JSON.parse(JSON.stringify(POST));
+      offer.id = 'H2'; offer.kind = 'offer'; offer.price_high = 500;
+      await open(w, offer, 'offer', 'page-offer-detail');
+      var kids = order(w, '#page-offer-detail .offer-header-card');
+      expect(kids.indexOf('offer-meta-row') < kids.indexOf('H1')).toBe(true, kids.join(' → '));
+      expect(w.document.getElementById('offerSaveBtn').getAttribute('data-post-id')).toBe('H2');
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');

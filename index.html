@@ -2394,8 +2394,37 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-rfq-detail .tag-row {
     display: flex;
+    align-items: center;
     gap: 8px;
     margin-bottom: 14px
+    }
+/* บันทึกไว้ on the detail pages. It carries .bookmark-ic and a data-post-id, so
+   kxApplySavedMarks paints its saved state along with every card in the app and
+   kxToggleSave already knows what to do with a click. */
+#page-rfq-detail .detail-save,
+#page-offer-detail .detail-save {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--card, #fff);
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .15s ease, color .15s ease;
+    }
+#page-rfq-detail .detail-save:hover,
+#page-offer-detail .detail-save:hover { border-color: var(--blue-600); color: var(--blue-700); }
+#page-rfq-detail .detail-save[data-saved="1"],
+#page-offer-detail .detail-save[data-saved="1"] {
+    border-color: var(--blue-600);
+    background: var(--blue-50);
+    color: var(--blue-700);
     }
 #page-rfq-detail .head-tag {
     font-size: 14px;
@@ -7113,6 +7142,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-offer-detail .offer-tags-row {
     display: flex;
+    align-items: center;
     gap: 8px;
     margin-bottom: 14px;
     flex-wrap: wrap
@@ -8383,16 +8413,19 @@ html, body{
     <div class="header-card">
       <div class="tag-row">
         <span class="head-tag closed" id="rfqStatusTag"></span>
+        <!-- same class and data attribute the feed cards use, so
+             kxApplySavedMarks paints its state here too -->
+        <span class="bookmark-ic detail-save" id="rfqSaveBtn"></span>
       </div>
       <div class="header-top">
         <div class="header-info">
-          <!-- who posted it comes first, above the title -->
+          <!-- who posted it comes first, then where and when, then the title -->
           <div class="post-owner" id="rfqOwner" style="display:none">
             <span class="post-owner-av"></span>
             <span class="post-owner-name"></span>
           </div>
-          <h1></h1>
           <div class="meta-row"></div>
+          <h1></h1>
         </div>
         <img class="header-thumb" alt="" style="display:none">
       </div>
@@ -9813,18 +9846,8 @@ html, body{
           <div style="font-size:13px;color:#565b6e;margin-top:6px;">ไม่ระบุก็ได้ — ใส่ไว้ช่วยให้ผู้ขายเสนอราคาได้ตรงกว่า และจะแสดงบนหน้าประกาศ</div>
         </div>
 
-        <div id="cpBidStep"><div style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">2</span><span style="font-size:18px;font-weight:700;color:var(--ink);">เลือกประเภทการเสนอราคา <span style="color:var(--red)">*</span></span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;">
-          <label style="position:relative;border:2px solid var(--blue-600);background:var(--blue-50);border-radius:14px;padding:16px;cursor:pointer;"><input type="radio" name="cpBid" checked="" style="accent-color:var(--blue-700);">
-            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#eaf1ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--blue-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">เสนอราคาแบบปิด (ปิดราคา)</span><span style="font-size:12px;font-weight:600;color:#fff;background: var(--blue-600);padding:2px 9px;border-radius:999px;">แนะนำ</span></div>
-            <div style="font-size:14px;color:var(--ink-soft);line-height:1.55;padding-left:2px;">ผู้ให้บริการไม่เห็นราคาของรายอื่น เหมาะกับงานที่ต้องการความเป็นส่วนตัว</div>
-          </label>
-          <label style="position:relative;border:2px solid var(--line);background:#fff;border-radius:14px;padding:16px;cursor:pointer;"><input type="radio" name="cpBid" style="accent-color:var(--blue-700);">
-            <div style="display:flex;align-items:center;gap:11px;margin:8px 0 6px;"><span style="width:38px;height:38px;border-radius:10px;background:#ecfdf3;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span><span style="font-size:15px;font-weight:700;color:var(--ink);">เสนอราคาแบบเปิด (เปิดราคา)</span></div>
-            <div style="font-size:14px;color:var(--ink-soft);line-height:1.55;padding-left:2px;">ผู้ให้บริการเห็นราคาแบบเรียลไทม์ เหมาะกับงานทั่วไป</div>
-          </label>
-        </div>
-        </div>
+        <!-- "เลือกประเภทการเสนอราคา" (ปิดราคา / เปิดราคา) stood here. Every RFQ is
+             sealed now, so there was nothing left to choose: see renderRfqDetail. -->
 
         <div id="cpProvCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
           <label for="cpProv" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">จังหวัดของงานนี้</label>
@@ -10868,14 +10891,15 @@ html, body{
           <div class="offer-tags-row">
             <span class="offer-cat-tag">📦 ข้อเสนอขาย</span>
             <span class="offer-status-tag">🟢 กำลังแสดง</span>
+            <span class="bookmark-ic detail-save" id="offerSaveBtn"></span>
           </div>
-          <!-- who posted it comes first, above the title -->
+          <!-- who posted it comes first, then where and when, then the title -->
           <div class="post-owner" id="offerOwner" style="display:none">
             <span class="post-owner-av"></span>
             <span class="post-owner-name"></span>
           </div>
-          <h1></h1>
           <div class="offer-meta-row"></div>
+          <h1></h1>
           <div class="offer-price-block">
             <div class="offer-price-num"></div>
             <div class="offer-price-unit">เริ่มต้น / ขึ้นอยู่กับสเปคงาน</div>
@@ -12653,12 +12677,10 @@ function selectPostType(t){
    What an Offer does need is the starting price, which the feed card has always shown
    and the form never asked for, so every Offer posted from the app read ยังไม่มี. */
 function kxPostTypeForm(isRfq){
-  var bid = document.getElementById('cpBidStep');
   var dl  = document.getElementById('cpDeadlineCard');
   var pr  = document.getElementById('cpPriceCard');
   var bud = document.getElementById('cpBudgetCard');
   var lbl = document.getElementById('cpDescLabel');
-  if(bid) bid.hidden = !isRfq;
   if(dl)  dl.hidden  = !isRfq;
   if(pr)  pr.hidden  =  isRfq;
   // the mirror of ราคาเริ่มต้น: a seller opens at a price, a buyer states a budget
@@ -14036,9 +14058,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .kx-wall .pc-sub{ font-size:14px; color:#565b6e; }
 #page-company-profile .kx-wall .pc-kind{
   flex:none; align-self:flex-start;
-  font-size:13px; font-weight:600; border-radius:999px; padding:5px 11px;
-  background:var(--blue-50); color:var(--blue-700); white-space:nowrap;
+  font-size:14px; font-weight:700; border-radius:999px; padding:6px 13px;
+  letter-spacing:.1px; white-space:nowrap;
+  background:var(--blue-600); color:#fff;
 }
+#page-company-profile .kx-wall .pc-kind.sell{ background:#0f7a43; }
 
 /* what they said */
 #page-company-profile .kx-wall .pc-text{ padding:0 16px 12px; }
@@ -14930,11 +14954,19 @@ body.kx-auth .kx-burger{ display:none !important; }
   fill:none; stroke-linecap:round; stroke-linejoin:round;
 }
 #page-feed .pc-sub{ font-size:14px; color:#565b6e; }
+/* The kind badge is the one thing on a card that says which side of the
+   market you are looking at, so it is the label that has to survive a glance
+   down a long feed. It was 13px/600 in the palest blue the app owns, which put
+   it behind the poster's name and the title. Solid ground, heavier text, and
+   buy and sell no longer the same colour — the two now differ by hue as well as
+   wording, so the answer arrives before the reading does. */
 #page-feed .pc-kind{
   flex:none; align-self:flex-start;
-  font-size:13px; font-weight:600; border-radius:999px; padding:5px 11px;
-  background:var(--blue-50); color:var(--blue-700);
+  font-size:14px; font-weight:700; border-radius:999px; padding:6px 13px;
+  letter-spacing:.1px; white-space:nowrap;
+  background:var(--blue-600); color:#fff;
 }
+#page-feed .pc-kind.sell{ background:#0f7a43; }
 
 /* what they said */
 #page-feed .pc-text{ padding:0 16px 12px; }
@@ -15866,7 +15898,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-sub,
 #page-company-profile .kx-wall .pc-sub{ font-size:14px; font-weight:400; }
 #page-feed .pc-kind,
-#page-company-profile .kx-wall .pc-kind{ font-size:14px; font-weight:600; }
+#page-company-profile .kx-wall .pc-kind{ font-size:14px; font-weight:700; }
 
 /* 16/500. Same size as the name above it, one rung lighter — enough to sit
    below it without disappearing into the description under it. */
@@ -17994,12 +18026,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
     cpFillProvinces(post.province || 'ไม่ระบุ');
 
-    // radio group has no ids — index 0 is สealed, index 1 is open
-    var bidRadios = document.querySelectorAll('#cpBidStep input[name="cpBid"]');
-    if(bidRadios.length >= 2){
-      bidRadios[0].checked = post.bid_type !== 'open';
-      bidRadios[1].checked = post.bid_type === 'open';
-    }
 
     (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); })
       .forEach(function(im){
@@ -18286,8 +18312,6 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     var dlEl = document.getElementById('cpDeadline');
     var chosenDeadline = dlEl && dlEl.value ? new Date(dlEl.value + 'T23:59:59').toISOString() : null;
-    var bidRadios = document.querySelectorAll('#cpBidStep input[name="cpBid"]');
-    var bidType = (bidRadios.length >= 2 && bidRadios[1].checked) ? 'open' : 'sealed';
 
     try{
       // entries with a `file` are new picks; the rest are rows already on the
@@ -18323,7 +18347,8 @@ body.kx-auth .kx-burger{ display:none !important; }
         })(),
         price_low:  isRfq ? budLow : null,
         price_high: isRfq ? budHigh : num,
-        bid_type: isRfq ? bidType : null,
+        // every RFQ is sealed; the column is kept so old rows still read true
+        bid_type: isRfq ? 'sealed' : null,
         deadline: chosenDeadline || new Date(Date.now() + days * 86400000).toISOString()
       };
 
@@ -20405,6 +20430,18 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   /* เจ้าของประกาศ — the picture and name of whoever posted this, on both
      detail pages. Same markup, same block, so the two pages cannot drift. */
+  /* บันทึกไว้ on a detail page. The button reuses the feed's machinery whole —
+     .bookmark-ic + data-post-id is what kxApplySavedMarks looks for, and
+     kxToggleSave writes the row and repaints every mark on the page — so the
+     saved state here and on the card you arrived from can never disagree. */
+  function paintSaveButton(elId, post){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    el.setAttribute('data-post-id', post.id);
+    el.onclick = function(e){ e.stopPropagation(); kxToggleSave(el, post.id); };
+    if(window.kxApplySavedMarks) window.kxApplySavedMarks(el.parentElement || document);
+  }
+
   function paintPostOwner(elId, post){
     var el = document.getElementById(elId);
     if(!el) return;
@@ -20482,7 +20519,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(statusTag){
       statusTag.textContent = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
         : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
-        : (post.bid_type === 'open' ? '🔓 เสนอราคาแบบเปิด' : '🔒 เสนอราคาแบบปิด');
+        : '🔒 เสนอราคาแบบปิด';
     }
 
     renderQa('rfqQaBlock', post, isOwner);
@@ -20494,7 +20531,9 @@ body.kx-auth .kx-burger{ display:none !important; }
        average, which is what a sealed auction does publish, stays. */
     var prices = quotes.map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avgPrice = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
-    var sealed = post.bid_type !== 'open' && !isClosed && !isExpired;
+    // Always sealed. The เลือกประเภทการเสนอราคา step is gone, so bid_type has
+    // nothing left to vary — prices stay covered until the deadline passes.
+    var sealed = !isClosed && !isExpired;
 
     var banner = document.getElementById('sealedBanner');
     if(banner){
@@ -20566,6 +20605,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       }
     }
     paintPostOwner('rfqOwner', post);
+    paintSaveButton('rfqSaveBtn', post);
     window.kxCurrentDetailPostId    = post.id;
     window.kxCurrentDetailOwnerId   = post.owner_id;
     window.kxCurrentDetailOwnerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
@@ -20607,6 +20647,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     renderQa('offerQaBlock', post, !!(window.kxSession && post.owner_id === window.kxSession.user.id));
 
     paintPostOwner('offerOwner', post);
+    paintSaveButton('offerSaveBtn', post);
     var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
     var sellerAv = root.querySelector('.seller-av');
     if(sellerAv){ sellerAv.style.overflow = 'hidden'; sellerAv.innerHTML = avatarInner(owner, ownerName); }
@@ -21161,7 +21202,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var docs = post.post_attachments || [];
     var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
-    var lockLabel = post.bid_type === 'open' ? '🔓 เปิดราคา' : '🔒 ปิดราคา';
+    var lockLabel = '🔒 ปิดราคา';
     /* Same call rfqBucket makes, so a card's own label can never disagree with
        the tab it gets filed under — a post whose deadline has quietly passed
        reads ปิดรับแล้ว here even if nobody has touched its status in the
