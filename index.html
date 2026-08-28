@@ -7758,10 +7758,6 @@ html, body{
 .file-chip.xls .fc-ic{ background:#217346; }
 .file-chip .fc-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .file-chip .fc-size{ color:var(--ink-faint); font-weight:500; }
-#docPreviewModal .dp-ic{ width:70px; height:70px; border-radius:16px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; font-weight:700; margin:6px auto 14px; }
-#docPreviewModal .dp-ic.pdf{ background:#e0322f; } #docPreviewModal .dp-ic.doc{ background:#2b579a; } #docPreviewModal .dp-ic.xls{ background:#217346; } #docPreviewModal .dp-ic.dwg{ background:#b45309; }
-#docPreviewModal .dp-name{ text-align:center; font-size:16px; font-weight:600; word-break:break-all; }
-#docPreviewModal .dp-meta{ text-align:center; font-size:14px; color:var(--ink-soft); margin:4px 0 18px; }
 </style>
 <style id="declutter-3-4">
 /* 9b: dashboard tabbed lists */
@@ -11957,15 +11953,6 @@ html, body{
   </div>
 </div>
 
-<div class="pf-modal-ov" id="docPreviewModal">
-  <div class="pf-modal" id="docPreviewBox" style="max-width:380px;">
-    <button class="pf-x" onclick="closeDocPreview()">✕</button>
-    <div class="dp-ic" id="dpIc">PDF</div>
-    <div class="dp-name" id="dpName">เอกสาร.pdf</div>
-    <div class="dp-meta" id="dpMeta">PDF · 1.2 MB</div>
-    <div class="pf-actions"><button class="pf-btn ghost" onclick="closeDocPreview()">ปิด</button><button class="pf-btn primary" onclick="closeDocPreview()">เปิด / ดาวน์โหลด</button></div>
-  </div>
-</div>
 
 </div>
 
@@ -12086,23 +12073,6 @@ html, body{
   }
   document.getElementById('verifyModal').addEventListener('click', function(e){ if(e.target.id==='verifyModal') closeVerify(); });
 
-  var DP_LABELS={pdf:'PDF',doc:'Word',xls:'Excel',dwg:'แบบ CAD'};
-  function openDocPreview(el){
-    var t=el.dataset.ftype||'pdf', name=el.dataset.fname||'เอกสาร', size=el.dataset.fsize||'';
-    var ic=document.getElementById('dpIc'); ic.className='dp-ic '+t; ic.textContent=(t==='pdf'?'PDF':t==='doc'?'W':t==='dwg'?'DWG':'X');
-    document.getElementById('dpName').textContent=name;
-    document.getElementById('dpMeta').textContent=(DP_LABELS[t]||'ไฟล์')+(size?' · '+size:'');
-    document.getElementById('docPreviewModal').classList.add('open');
-  }
-  function closeDocPreview(){ document.getElementById('docPreviewModal').classList.remove('open'); }
-  function openFilesList(el){
-    var data = el.querySelector('.files-data');
-    document.getElementById('flList').innerHTML = data ? data.innerHTML : '';
-    document.getElementById('filesListModal').classList.add('open');
-  }
-  function closeFilesList(){ document.getElementById('filesListModal').classList.remove('open'); }
-  document.getElementById('filesListModal').addEventListener('click', function(e){ if(e.target.id==='filesListModal') closeFilesList(); });
-  document.getElementById('docPreviewModal').addEventListener('click', function(e){ if(e.target.id==='docPreviewModal') closeDocPreview(); });
   // gallery lightbox state
   var lbImgs = [], lbIdx = 0;
   function lbShow(i){
@@ -20163,7 +20133,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       '<div class="files-data" style="display:none">' + docs.map(function(d){
         return '<a class="file-chip ' + d.file_kind + '" target="_blank" rel="noopener"' +
           ' href="' + esc(d.file_url) + '" onclick="event.stopPropagation()"' +
-          ' data-ftype="' + d.file_kind + '" data-fname="' + esc(d.file_name) + '" data-fsize="' + fileSize(d.file_size) + '">' +
+          '>' +
           '<span class="fc-ic">' + fileKindTag(d.file_kind) + '</span>' +
           '<span class="fc-name">' + esc(d.file_name) + '</span></a>';
       }).join('') + '</div>' +
@@ -20386,8 +20356,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var fileBtn = files.length
       ? '<button class="btn-view" onclick="openFilesList(this)">📎 ไฟล์แนบ (' + files.length + ')' +
           '<span class="files-data" style="display:none">' + files.map(function(f){
-            return '<a class="file-chip ' + f.file_kind + '" target="_blank" rel="noopener" href="' + esc(f.file_url) + '"' +
-              ' data-ftype="' + f.file_kind + '" data-fname="' + esc(f.file_name) + '" data-fsize="' + fileSize(f.file_size) + '">' +
+            return '<a class="file-chip ' + f.file_kind + '" target="_blank" rel="noopener" href="' + esc(f.file_url) + '">' +
               '<span class="fc-ic">' + fileKindTag(f.file_kind) + '</span>' +
               '<span class="fc-name">' + esc(f.file_name) + '</span></a>';
           }).join('') + '</span></button>'
@@ -20490,7 +20459,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         var grid = attach.querySelector('.rfq-attach-grid');
         if(grid) grid.innerHTML = docs.map(function(d){
           return '<a class="file-chip ' + d.file_kind + '" target="_blank" rel="noopener" href="' + esc(d.file_url) + '"' +
-            ' data-ftype="' + d.file_kind + '" data-fname="' + esc(d.file_name) + '" data-fsize="' + fileSize(d.file_size) + '">' +
+            '>' +
             '<span class="fc-ic">' + fileKindTag(d.file_kind) + '</span><span class="fc-name">' + esc(d.file_name) + '</span></a>';
         }).join('');
       } else attach.style.display = 'none';
