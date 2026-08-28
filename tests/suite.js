@@ -928,10 +928,14 @@
       expect(html).notToContain('ประมูล',
         'Konnex gathers quotes; it does not run an auction and picks no winner');
     });
-    it('still names the two pricing modes', function (w) {
+    /* There used to be two pricing modes and this asserted the page named both.
+       There is one behaviour now — a price goes to the post owner and to nobody
+       else, enforced by the select policy on `quotes` — so naming a mode is
+       naming a choice the poster does not have. */
+    it('names no pricing mode, because there is only one behaviour', function (w) {
       var html = w.document.documentElement.innerHTML;
-      expect(html).toContain('เสนอราคาแบบปิด');
-      expect(html).toContain('เสนอราคาแบบเปิด');
+      expect(html).notToContain('เสนอราคาแบบเปิด');
+      expect(html).notToContain('เสนอราคาแบบปิด');
     });
   });
 
@@ -1247,10 +1251,10 @@
         'the column keeps one value rather than being read back from a control that is gone');
       expect(/bidRadios/.test(src)).toBe(false);
     });
-    it('covers the prices without consulting the column', async function (w) {
+    it('branches on the old column nowhere', async function (w) {
       var src = await (await fetch('../index.html')).text();
-      expect(src).toContain('var sealed = !isClosed && !isExpired;');
       expect(/bid_type === 'open'/.test(src)).toBe(false, 'nothing decides on the old value now');
+      expect(/bid_type !== 'open'/.test(src)).toBe(false);
     });
   });
 
@@ -1288,22 +1292,26 @@
       expect(kids.indexOf('meta-row') < kids.indexOf('H1')).toBe(true, kids.join(' → '));
       expect(kids.indexOf('post-owner') < kids.indexOf('meta-row')).toBe(true, 'who still leads');
     });
-    /* The tag read "🔒 เสนอราคาแบบปิด" on every open listing. That was worth
-       saying while a poster could choose sealed or open; now that every RFQ is
-       sealed it distinguished a listing from nothing. */
-    it('says nothing about an open listing', async function (w) {
+    /* Two badges, top left: which side of the market, then whether you can
+       still act on it. The status one used to read "🔒 เสนอราคาแบบปิด" while
+       open, which said nothing once every RFQ became sealed. */
+    it('marks an open listing ต้องการซื้อ and เปิดรับ', async function (w) {
       await open(w, POST, 'rfq', 'page-rfq-detail');
-      var tag = w.document.getElementById('rfqStatusTag');
-      expect(tag.textContent.trim()).toBe('');
-      expect(tag.style.display).toBe('none', 'an empty pill still draws a box');
+      var tags = w.document.querySelectorAll('#page-rfq-detail .tag-row .head-tag');
+      var text = Array.prototype.map.call(tags, function (t) { return t.textContent; }).join(' | ');
+      expect(text).toContain('ต้องการซื้อ');
+      expect(text).toContain('เปิดรับ');
+      expect(w.document.getElementById('rfqStatusTag').className).toContain('open');
     });
-    it('still reports a listing that has closed or run out of time', async function (w) {
+    it('still reports a listing that has run out of time', async function (w) {
       var done = JSON.parse(JSON.stringify(POST));
       done.id = 'H3'; done.deadline = '2020-01-01T00:00:00Z';
       await open(w, done, 'rfq', 'page-rfq-detail');
       var tag = w.document.getElementById('rfqStatusTag');
       expect(tag.textContent).toContain('หมดเขต');
-      expect(tag.style.display).notToContain('none');
+      expect(tag.className).toContain('closed');
+      // and the kind badge does not change with the state
+      expect(w.document.querySelector('#page-rfq-detail .head-tag.kind').textContent).toContain('ต้องการซื้อ');
     });
     it('offers บันทึกไว้ wired to the post', async function (w) {
       await open(w, POST, 'rfq', 'page-rfq-detail');
@@ -1320,6 +1328,63 @@
       var kids = order(w, '#page-offer-detail .offer-header-card');
       expect(kids.indexOf('offer-meta-row') < kids.indexOf('H1')).toBe(true, kids.join(' → '));
       expect(w.document.getElementById('offerSaveBtn').getAttribute('data-post-id')).toBe('H2');
+    });
+  });
+
+  // ============================ the offers list: no blur, no price ranking ===
+  /* Who may read a price is settled by the select policy on `quotes`: a row
+     goes to its bidder and to the post owner, nobody else. The page used to
+     blur the numbers on top of that, which hid them from the one person
+     entitled to read them — the owner comparing offers. */
+  describe('เปรียบเทียบข้อเสนอ', function () {
+    var POST = {
+      id: 'C1', kind: 'rfq', owner_id: ME, title: 'ทดสอบ', province: 'เชียงใหม่',
+      status: 'open', deadline: '2099-01-01T00:00:00Z',
+      post_images: [], post_attachments: [],
+      profiles: { company_name: 'ผู้ซื้อ', avatar_url: null },
+      quotes: [
+        { id: 'q1', price: 1200000, note: 'ส่งใน 30 วัน', status: 'pending',
+          created_at: '2026-08-20T00:00:00Z', bidder_id: OTHER, quote_attachments: [],
+          profiles: { company_name: 'ผู้เสนอ A', avatar_url: null } },
+        { id: 'q2', price: 900000, note: 'รวมติดตั้ง', status: 'pending',
+          created_at: '2026-08-22T00:00:00Z', bidder_id: THIRD, quote_attachments: [],
+          profiles: { company_name: 'ผู้เสนอ B', avatar_url: null } }
+      ]
+    };
+    async function openAsOwner(w) {
+      plan(w, { posts: { _: { data: POST, error: null } }, _: { data: [], error: null } });
+      signIn(w, ME);
+      await w.kxOpenPost(POST.id, 'rfq');
+      for (var i = 0; i < 120; i++) {
+        if (w.document.querySelectorAll('#offerList .price-num').length === 2) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
+    }
+    it('shows the prices rather than blurring them', async function (w) {
+      await openAsOwner(w);
+      var nums = w.document.querySelectorAll('#offerList .price-num');
+      expect(nums.length).toBe(2);
+      Array.prototype.forEach.call(nums, function (n) {
+        expect(w.getComputedStyle(n).filter).toBe('none', 'the owner is who the numbers are for');
+      });
+      expect(w.document.getElementById('offerList').className).notToContain('sealed');
+    });
+    it('lists them in the order they arrived, not cheapest first', async function (w) {
+      await openAsOwner(w);
+      var nums = Array.prototype.map.call(
+        w.document.querySelectorAll('#offerList .price-num'), function (n) { return n.textContent; });
+      expect(nums[0]).toContain('1,200,000');
+      expect(nums[1]).toContain('900,000');
+    });
+    it('has no sealed banner and no sort control', async function (w) {
+      await openAsOwner(w);
+      expect(w.document.getElementById('sealedBanner')).toBeFalsy();
+      expect(w.document.querySelector('#page-rfq-detail .sort-select')).toBeFalsy();
+    });
+    it('still states the average, which describes the set', async function (w) {
+      await openAsOwner(w);
+      expect(w.document.getElementById('rfqCompareSub').textContent).toContain('เฉลี่ย');
     });
   });
 

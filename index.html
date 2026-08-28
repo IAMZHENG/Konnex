@@ -581,20 +581,6 @@ body.kx-show-back .nav-back{ display:inline-flex; }
 .an-cat{ display:flex; justify-content:space-between; font-size:15px; padding-bottom:11px; border-bottom:1px solid var(--line); }
 .an-cat:last-child{ border-bottom:none; }
 .an-upsell{ margin-top:14px; background:var(--blue-50); color:var(--blue-700); border-radius:11px; padding:12px 14px; font-size:14px; font-weight:600; cursor:pointer; text-align:center; }
-/* sealed auction */
-#page-rfq-detail .sealed-banner{ display:flex; align-items:center; gap:14px; background:linear-gradient(100deg,#eaf1ff,#dae6ff); border:1px solid #c2d6ff; border-radius:13px; padding:14px 16px; margin-bottom:16px; }
-#page-rfq-detail .sealed-ic{ width:42px; height:42px; border-radius:11px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
-#page-rfq-detail .sealed-body{ flex:1; min-width:0; }
-#page-rfq-detail .sealed-title{ font-size:15px; font-weight:600; }
-#page-rfq-detail .sealed-sub{ font-size:14px; color:var(--ink-soft); margin-top:2px; line-height:1.5; }
-#page-rfq-detail .sealed-count{ text-align:center; flex-shrink:0; }
-#page-rfq-detail .sealed-count-lbl{ display:block; font-size:12px; color:var(--ink-faint); }
-#page-rfq-detail .sealed-count b{ font-size:18px; font-variant-numeric:tabular-nums; color:var(--blue-700); }
-#page-rfq-detail .sealed-reveal{ flex-shrink:0; background:var(--blue-600); color:#fff; border:none; border-radius:9px; padding:10px 14px; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; }
-#page-rfq-detail .offer-list.sealed .price-num{ filter:blur(9px); user-select:none; pointer-events:none; }
-#page-rfq-detail .offer-list.sealed .price-sub{ visibility:hidden; }
-#page-rfq-detail .offer-list.sealed .btn-choose{ opacity:.45; pointer-events:none; }
-#page-rfq-detail .offer-list.sealed .offer-col:first-of-type::after{ content:"🔒 ปิดราคา"; display:block; font-size:12px; font-weight:600; color:var(--ink-faint); margin-top:2px; }
 /* poster row on feed cards */
 .post-poster{ display:inline-flex; align-items:center; gap:8px; margin-bottom:8px; cursor:pointer; width:fit-content; }
 .post-poster .pp-av{ width:26px; height:26px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; flex-shrink:0; }
@@ -2428,9 +2414,20 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-rfq-detail .head-tag {
     font-size: 14px;
-    font-weight: 600;
-    padding: 4px 11px;
-    border-radius: 999px
+    font-weight: 700;
+    padding: 6px 13px;
+    border-radius: 999px;
+    white-space: nowrap
+    }
+/* the same pair of colours the feed cards use for ต้องการซื้อ / ประกาศขาย, so a
+   listing reads the same whether you are looking at the card or the page */
+#page-rfq-detail .head-tag.kind {
+    background: var(--blue-600);
+    color: #fff
+    }
+#page-rfq-detail .head-tag.open {
+    background: var(--green-bg, #ecfdf3);
+    color: var(--green, #15803d)
     }
 #page-rfq-detail .head-tag.cat {
     background: var(--purple-bg);
@@ -8412,6 +8409,8 @@ html, body{
     <!-- HEADER -->
     <div class="header-card">
       <div class="tag-row">
+        <!-- which side of the market this is, then what state it is in -->
+        <span class="head-tag kind">🛒 ต้องการซื้อ</span>
         <span class="head-tag closed" id="rfqStatusTag"></span>
         <!-- same class and data attribute the feed cards use, so
              kxApplySavedMarks paints its state here too -->
@@ -8449,19 +8448,11 @@ html, body{
     <div id="compareOffersSection">
     <div class="compare-head">
       <div class="compare-title">📊 เปรียบเทียบข้อเสนอที่ได้รับ</div>
-      <div class="sort-select">เรียงตาม: ราคาต่ำ-สูง ⌄</div>
     </div>
     <div class="compare-sub" id="rfqCompareSub"></div>
 
-    <div class="sealed-banner" id="sealedBanner">
-      <div class="sealed-ic">🔒</div>
-      <div class="sealed-body">
-        <div class="sealed-title">เสนอราคาแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้</div>
-        <div class="sealed-sub"></div>
-      </div>
-          </div>
 
-    <div class="offer-list sealed" id="offerList">
+    <div class="offer-list" id="offerList">
     </div>
 
     <div class="load-more-offers" style="display:none"></div>
@@ -15548,7 +15539,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 .prem-badge, .sh-tab.active, .bubble-row.out .bubble,
 /* found later by widening the sweep to elements whose only children are icons —
    these carry white labels and were still on the lighter brand blue at 3.80 */
-.btn-create, .btn-edit-offer, .sealed-reveal, .btn-choose, .pf-btn.primary,
+.btn-create, .btn-edit-offer, .btn-choose, .pf-btn.primary,
 .chat-send, .btn-submit-quote, .mr-btn.primary{ background: var(--blue-600) !important; }
 
 /* my own control: 9.5px was too small to read in Thai */
@@ -15863,10 +15854,6 @@ body.kx-auth .kx-burger{ display:none !important; }
   .sh-scard > .sh-sact{ flex:1 0 100%; }
   .sh-scard > img, .sh-scard > .sh-sthumb{ flex:none; }
 
-  /* sealed-bid banner on the RFQ detail page: title collapsed to 0 */
-  .sealed-banner{ flex-wrap:wrap; }
-  .sealed-banner > .sealed-body{ flex:1 1 140px; min-width:0; }
-  .sealed-banner > .sealed-reveal{ flex:1 0 100%; }
 
   /* offer-comparison grid is 586px of fixed columns in a 283px card, and was
      spilling out over the page. Keep the columns aligned, swipe to compare. */
@@ -16649,7 +16636,6 @@ body.kx-auth .kx-burger{ display:none !important; }
   var SORT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h8M4 17h4M17 5v14M17 19l3-3M17 19l-3-3"></path></svg>';
 
   function rfq(){ return document.getElementById('page-rfq-detail'); }
-  function isSealed(){ return !!window.kxCurrentDetailSealed; }
   /* Was reading the demo "04:16:14" out of the hidden countdown element, so the
      modal quoted a fixed number of hours on every post forever. The deadline is
      a real date and is stated as one. */
@@ -16660,44 +16646,28 @@ body.kx-auth .kx-burger{ display:none !important; }
     var t = new Date(d);
     return t.getDate() + ' ' + TH[t.getMonth()] + ' ' + (t.getFullYear() + 543);
   }
-  function sortRule(){
-    var p = rfq(); if(!p) return '';
-    var el = p.querySelector('.sort-select');
-    return el ? el.textContent.replace(/\s+/g,' ').replace(/^เรียงตาม:\s*/,'').trim() : '';
-  }
   function bidderCount(){ return window.kxCurrentDetailQuoteCount || 0; }
 
   function row(icon, html, live){
     return '<div class="kx-rule' + (live ? ' kx-rule--live' : '') + '">' + icon + '<div>' + html + '</div></div>';
   }
 
-  /* This panel is a promise, so it has to describe the post in front of you.
-     It used to say "ราคาของคุณถูกปิดไว้ ... เปิดพร้อมกันทุกรายใน 04:16:14" on
-     every listing including เสนอราคาแบบเปิด, where the price is on show the
-     moment it is sent — a bidder was told their number was private and then it
-     was not. It also claimed every bidder is identity-verified, which nothing
-     in the app enforces. */
+  /* This panel is a promise, so every line has to be one the app keeps. What it
+     can promise is exactly what the select policy on `quotes` enforces: a price
+     reaches its bidder and the post owner, and nobody else. Earlier versions
+     promised more — a reveal at a deadline that only held for some listings,
+     and identity-verified bidders, which nothing checks. */
   function panel(kind){
     var rows = [];
-    var when = untilWhen();
     if(kind === 'bid'){
-      if(isSealed()){
-        rows.push(row(LOCK, 'เสนอราคาแบบปิด — ราคาของคุณถูกซ่อนไว้ ผู้เสนอรายอื่นไม่เห็น' +
-          (when ? ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ (<b>' + when + '</b>)'
-                : ' และจะเปิดพร้อมกันทุกรายเมื่อหมดเวลารับข้อเสนอ'), true));
-      }else{
-        rows.push(row(LOCK, 'เสนอราคาแบบเปิด — <b>ราคาที่คุณเสนอจะแสดงให้ผู้ซื้อเห็นทันที</b>' +
-          ' หากต้องการให้ราคาเป็นความลับ ให้เลือกงานที่เป็นเสนอราคาแบบปิด'));
-      }
-      rows.push(row(SCALE, 'ผู้เสนอทุกรายเห็นรายละเอียดงานชุดเดียวกัน <b>ลำดับการแสดงผลซื้อไม่ได้</b>'));
-      rows.push(row(SHIELD, 'ไฟล์ใบเสนอราคาที่คุณแนบ เห็นได้เฉพาะคุณกับผู้ซื้อเท่านั้น'));
+      rows.push(row(LOCK, 'ราคาที่คุณเสนอ เห็นได้เฉพาะเจ้าของประกาศเท่านั้น ' +
+        'ผู้เสนอรายอื่นไม่เห็นราคาของคุณ และคุณก็ไม่เห็นของเขา'));
+      rows.push(row(SCALE, 'ผู้เสนอทุกรายเห็นรายละเอียดงานชุดเดียวกัน'));
+      rows.push(row(SHIELD, 'ไฟล์ใบเสนอราคาที่คุณแนบ เห็นได้เฉพาะคุณกับเจ้าของประกาศ'));
     } else {
-      var n = bidderCount(), s = sortRule();
-      if(s) rows.push(row(SORT, 'รายการนี้เรียงด้วยเกณฑ์ <b>' + s + '</b> เกณฑ์เดียวกับที่ผู้เสนอเห็น'));
+      rows.push(row(SORT, 'รายการนี้เรียง<b>ตามลำดับที่เสนอเข้ามา</b> ไม่ได้จัดอันดับตามราคา'));
       rows.push(row(SHIELD, 'ผู้เสนอแต่ละรายเห็นเฉพาะข้อเสนอของตัวเอง ไม่เห็นของรายอื่น'));
-      rows.push(row(LOCK, isSealed()
-        ? 'ราคาทุกรายถูกซ่อนไว้จนหมดเวลารับข้อเสนอ' + (when ? ' (<b>' + when + '</b>)' : '')
-        : 'ผลการเลือกจะถูกบันทึกและแจ้งผู้เสนอทุกรายพร้อมกัน'));
+      rows.push(row(LOCK, 'ราคาทุกรายเห็นได้เฉพาะคุณในฐานะเจ้าของประกาศ'));
     }
     return '<div class="kx-rules" role="note" aria-label="กติกาของรายการนี้">' + rows.join('') + '</div>';
   }
@@ -20515,53 +20485,33 @@ body.kx-auth .kx-burger{ display:none !important; }
     var decided   = false;
     var canPick   = false;
 
-    /* The tag says what state the listing is in, and an open one has nothing to
-       report. It used to read "🔒 เสนอราคาแบบปิด" while open — that was worth
-       saying when a poster could choose between sealed and open bidding, but
-       every RFQ is sealed now, so the label distinguished a listing from nothing
-       and sat where the reader looks first. */
+    /* Beside the ต้องการซื้อ badge, what state the listing is in. An open one
+       says เปิดรับ rather than nothing: next to a kind badge the pair reads as
+       "what this is, and whether you can still act on it". */
     var statusTag = document.getElementById('rfqStatusTag');
     if(statusTag){
-      var stateLabel = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
+      var done = isClosed || isExpired;
+      statusTag.textContent = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
         : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
-        : '';
-      statusTag.textContent = stateLabel;
-      statusTag.style.display = stateLabel ? '' : 'none';
+        : '🟢 เปิดรับ';
+      statusTag.classList.toggle('closed', done);
+      statusTag.classList.toggle('open', !done);
+      statusTag.style.display = '';
     }
 
     renderQa('rfqQaBlock', post, isOwner);
 
-    /* Sealed bidding, honoured. The page has always promised that on a
-       เสนอราคาแบบปิด every bidder's price is revealed at the same moment when
-       the clock runs out — and then the list showed each price the moment it
-       arrived. The individual numbers are covered until bidding is over; the
-       average, which is what a sealed auction does publish, stays. */
+    /* Who may see a price is settled in the database, not here. The select
+       policy on quotes (schema.sql) hands a row only to its bidder and to the
+       post owner, so a rival never receives the number in the first place.
+       This page used to blur them on top of that, which hid them from the one
+       person entitled to read them — the owner, who is comparing offers — until
+       the deadline passed. The blur is gone; the average stays, because it is
+       the one figure worth stating about the set as a whole. */
     var prices = quotes.map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avgPrice = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
-    // Always sealed. The เลือกประเภทการเสนอราคา step is gone, so bid_type has
-    // nothing left to vary — prices stay covered until the deadline passes.
-    var sealed = !isClosed && !isExpired;
-
-    var banner = document.getElementById('sealedBanner');
-    if(banner){
-      if(sealed && prices.length){
-        banner.style.display = '';
-        var bTitle = banner.querySelector('.sealed-title');
-        var bSub   = banner.querySelector('.sealed-sub');
-        var bCount = banner.querySelector('.sealed-count');
-        var bBtn   = banner.querySelector('.sealed-reveal');
-        if(bTitle) bTitle.textContent = 'เสนอราคาแบบปิด — ราคาแต่ละเจ้าถูกซ่อนไว้';
-        if(bSub) bSub.innerHTML = 'ตอนนี้เห็นเฉพาะ <b>ราคาเฉลี่ย ' + esc(money(avgPrice)) +
-          '</b> · ราคาของผู้เสนอทุกเจ้าจะเปิดเผยพร้อมกันเมื่อหมดเวลารับข้อเสนอ (' + esc(fmtDateBE(post.deadline)) + ')';
-        // the demo's countdown and its "จำลองหมดเวลา" button have nothing real
-        // behind them, and the deadline is now stated in the line above
-        if(bCount) bCount.style.display = 'none';
-        if(bBtn) bBtn.style.display = 'none';
-      } else banner.style.display = 'none';
-    }
 
     var offerListEl = root.querySelector('#offerList');
-    if(offerListEl) offerListEl.classList.toggle('sealed', sealed);
 
     var sub = document.getElementById('rfqCompareSub');
     if(sub){
@@ -20587,7 +20537,10 @@ body.kx-auth .kx-burger{ display:none !important; }
           '</div>'
         : '';
       offerListEl.innerHTML = waitNote + (quotes.length
-        ? quotes.slice().sort(function(a, b){ return a.price - b.price; })
+        // in the order they were sent, not ranked by price — the list is a
+        // record of who offered what, and ordering it by price makes the page
+        // look like a leaderboard for a decision Konnex does not make
+        ? quotes.slice().sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); })
             .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick, avgPrice, pickHint); }).join('')
         : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>');
     }
@@ -20619,7 +20572,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     window.kxCurrentDetailCanBid    = canBid;
     // the fairness panel in the bid modal describes this post; it was reading
     // the demo countdown element and telling every bidder their price was hidden
-    window.kxCurrentDetailSealed    = sealed;
     window.kxCurrentDetailDeadline  = post.deadline || null;
     window.kxCurrentDetailQuoteCount = quotes.length;
   }
