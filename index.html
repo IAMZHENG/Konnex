@@ -18377,9 +18377,14 @@ body.kx-auth .kx-burger{ display:none !important; }
      rather than a broken image. */
   window.kxSignedUrl = async function(bucket, path, seconds){
     if(!path) return null;
-    var res = await sb.storage.from(bucket).createSignedUrl(path, seconds || 300);
-    if(res.error){ console.error('createSignedUrl failed', res.error); return null; }
-    return res.data.signedUrl;
+    // try/catch as well as the error branch: a caller that gets no URL shows a
+    // placeholder, so there is nothing here worth turning into an unhandled
+    // rejection if the storage client is missing or the request never lands.
+    try{
+      var res = await sb.storage.from(bucket).createSignedUrl(path, seconds || 300);
+      if(res.error){ console.error('createSignedUrl failed', res.error); return null; }
+      return res.data.signedUrl;
+    }catch(e){ console.error('createSignedUrl threw', e); return null; }
   };
   var kxUploadFile = window.kxUploadFile;
 
