@@ -20515,11 +20515,18 @@ body.kx-auth .kx-burger{ display:none !important; }
     var decided   = false;
     var canPick   = false;
 
+    /* The tag says what state the listing is in, and an open one has nothing to
+       report. It used to read "🔒 เสนอราคาแบบปิด" while open — that was worth
+       saying when a poster could choose between sealed and open bidding, but
+       every RFQ is sealed now, so the label distinguished a listing from nothing
+       and sat where the reader looks first. */
     var statusTag = document.getElementById('rfqStatusTag');
     if(statusTag){
-      statusTag.textContent = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
+      var stateLabel = isClosed ? '🔒 ปิดรับข้อเสนอแล้ว'
         : isExpired ? '⏰ หมดเขตรับข้อเสนอแล้ว'
-        : '🔒 เสนอราคาแบบปิด';
+        : '';
+      statusTag.textContent = stateLabel;
+      statusTag.style.display = stateLabel ? '' : 'none';
     }
 
     renderQa('rfqQaBlock', post, isOwner);

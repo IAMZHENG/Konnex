@@ -1261,13 +1261,17 @@
       status: 'open', deadline: '2099-01-01T00:00:00Z', post_images: [], post_attachments: [],
       quotes: [], profiles: { company_name: 'บจก. ผู้ซื้อ', avatar_url: null }
     };
+    /* Wait for this post's own id to land, not for the owner name — two posts
+       here share an owner, so the name matches whatever the previous test left
+       on screen and the wait falls straight through. */
     async function open(w, post, kind, page) {
       plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
       signIn(w);
+      var btnId = kind === 'rfq' ? 'rfqSaveBtn' : 'offerSaveBtn';
       await w.kxOpenPost(post.id, kind);
-      for (var i = 0; i < 80; i++) {
-        var el = w.document.querySelector('#' + page + ' .post-owner-name');
-        if (el && el.textContent === post.profiles.company_name) break;
+      for (var i = 0; i < 120; i++) {
+        var btn = w.document.getElementById(btnId);
+        if (btn && btn.getAttribute('data-post-id') === post.id) break;
         await new Promise(function (r) { setTimeout(r, 10); });
       }
       restore(w);
@@ -1283,6 +1287,23 @@
       var kids = order(w, '#page-rfq-detail .header-info');
       expect(kids.indexOf('meta-row') < kids.indexOf('H1')).toBe(true, kids.join(' → '));
       expect(kids.indexOf('post-owner') < kids.indexOf('meta-row')).toBe(true, 'who still leads');
+    });
+    /* The tag read "🔒 เสนอราคาแบบปิด" on every open listing. That was worth
+       saying while a poster could choose sealed or open; now that every RFQ is
+       sealed it distinguished a listing from nothing. */
+    it('says nothing about an open listing', async function (w) {
+      await open(w, POST, 'rfq', 'page-rfq-detail');
+      var tag = w.document.getElementById('rfqStatusTag');
+      expect(tag.textContent.trim()).toBe('');
+      expect(tag.style.display).toBe('none', 'an empty pill still draws a box');
+    });
+    it('still reports a listing that has closed or run out of time', async function (w) {
+      var done = JSON.parse(JSON.stringify(POST));
+      done.id = 'H3'; done.deadline = '2020-01-01T00:00:00Z';
+      await open(w, done, 'rfq', 'page-rfq-detail');
+      var tag = w.document.getElementById('rfqStatusTag');
+      expect(tag.textContent).toContain('หมดเขต');
+      expect(tag.style.display).notToContain('none');
     });
     it('offers บันทึกไว้ wired to the post', async function (w) {
       await open(w, POST, 'rfq', 'page-rfq-detail');
