@@ -1475,6 +1475,43 @@
       expect(sb._calls.filter(function (c) { return c.rpc === 'kx_post_bidders'; }).length)
         .toBe(0, 'the owner already has the rows; asking again would be a second query for less');
     });
+    /* The count used to come from the rows the viewer received. A bidder gets
+       exactly one — their own — so the line read "1 ราย" above a list of two. */
+    it('counts every bidder, not the rows this viewer was given', async function (w) {
+      var asBidder = post({
+        id: 'N5', quote_count: 2,
+        quotes: [{ id: 'q2', price: 9300000, note: 'x', status: 'pending',
+          created_at: '2026-08-22T00:00:00Z', bidder_id: ME, quote_attachments: [],
+          profiles: { company_name: 'ฉันเอง', avatar_url: null } }]
+      });
+      await openAs(w, ME, asBidder);
+      expect(w.document.getElementById('rfqCompareSub').textContent).toContain('2 ราย');
+    });
+    /* A bidder knows their own price, so on a two-offer listing the average
+       plus their own number gives away the other person's exactly. */
+    it('keeps the average from anyone who could work backwards from it', async function (w) {
+      var asBidder = post({
+        id: 'N6', quote_count: 2,
+        quotes: [{ id: 'q2', price: 9300000, note: 'x', status: 'pending',
+          created_at: '2026-08-22T00:00:00Z', bidder_id: ME, quote_attachments: [],
+          profiles: { company_name: 'ฉันเอง', avatar_url: null } }]
+      });
+      await openAs(w, ME, asBidder);
+      var subEl = w.document.getElementById('rfqCompareSub');
+      expect(subEl.textContent).notToContain('เฉลี่ย');
+      expect(subEl.querySelector('.kx-avg')).toBeFalsy();
+    });
+    it('shows the owner the average, since they hold every price already', async function (w) {
+      var mine = post({ id: 'N7', owner_id: ME, quote_count: 2, quotes: [
+        { id: 'q1', price: 9000000, note: 'a', status: 'pending', created_at: '2026-08-20T00:00:00Z',
+          bidder_id: OTHER, quote_attachments: [], profiles: { company_name: 'A', avatar_url: null } },
+        { id: 'q2', price: 9300000, note: 'b', status: 'pending', created_at: '2026-08-22T00:00:00Z',
+          bidder_id: THIRD, quote_attachments: [], profiles: { company_name: 'B', avatar_url: null } } ] });
+      await openAs(w, ME, mine);
+      var subEl = w.document.getElementById('rfqCompareSub');
+      expect(subEl.textContent).toContain('9,150,000');
+      expect(subEl.querySelector('.kx-avg')).toBeTruthy('the average gets its own emphasis');
+    });
     it('names the migration when it has not been run', async function (w) {
       await openAs(w, ME, post({ id: 'N3' }),
         { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
@@ -1507,6 +1544,27 @@
       var block = w.document.getElementById('rfqQaBlock');
       expect(block.querySelector('.kx-askin')).toBeFalsy();
       expect(block.textContent).toContain('จะมาแสดงที่นี่');
+    });
+  });
+
+  /* View counts are gone: a number nobody acts on, and on a new listing "0 วิว"
+     reads as "nobody is interested" rather than "this was posted an hour ago". */
+  describe('no view counts', function () {
+    it('shows none anywhere in the page', function (w) {
+      expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
+    });
+    it('does not render one on a listing', async function (w) {
+      var offer = { id: 'V9', kind: 'offer', owner_id: OTHER, title: 'ขายของ',
+        province: 'เชียงใหม่', status: 'open', price_high: 500, view_count: 0,
+        post_images: [], post_attachments: [], quotes: [], quote_requests: [],
+        profiles: { company_name: 'ผู้ขาย', avatar_url: null } };
+      plan(w, { posts: { _: { data: offer, error: null } }, _: { data: [], error: null } });
+      signIn(w);
+      await w.kxOpenPost(offer.id, 'offer');
+      await new Promise(function (r) { setTimeout(r, 80); });
+      restore(w);
+      expect(w.document.querySelector('#page-offer-detail .offer-meta-row').textContent)
+        .notToContain('วิว');
     });
   });
 

@@ -2589,10 +2589,26 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-weight: 600
     }
 #page-rfq-detail .compare-sub {
-    font-size: 14px;
-    color: var(--ink-faint);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-soft);
     margin: 2px 0 16px
     }
+#page-rfq-detail .compare-sub b { font-weight: 700; color: var(--ink); }
+/* the average is the one figure that describes the whole set, so it is the one
+   the eye should land on */
+#page-rfq-detail .kx-avg {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    background: var(--blue-50, #eaf1ff);
+    border: 1px solid #dae6ff;
+    border-radius: 999px;
+    padding: 3px 12px;
+    margin-left: 4px;
+    color: var(--blue-700)
+    }
+#page-rfq-detail .kx-avg b { color: var(--blue-700); font-size: 16px; font-variant-numeric: tabular-nums; }
 #page-rfq-detail .sort-select {
     display: flex;
     align-items: center;
@@ -20547,11 +20563,26 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     var offerListEl = root.querySelector('#offerList');
 
+    /* The count comes from posts.quote_count, which a trigger keeps, not from
+       the rows this viewer happened to receive. A bidder is handed exactly one
+       quote — their own — so counting those said "1 ราย" above a list of two.
+
+       The average is shown to the owner alone, and not because of tidiness: a
+       bidder knows their own price, so on a listing with two offers the average
+       and their own number give away the other person's price exactly. It was
+       being computed from the one row they could see and labelled เฉลี่ย, which
+       was false as well as unsafe. */
     var sub = document.getElementById('rfqCompareSub');
     if(sub){
-      sub.textContent = prices.length
-        ? 'มีผู้เสนอราคาเข้ามา ' + prices.length + ' ราย • เฉลี่ย ' + money(avgPrice)
-        : 'ยังไม่มีผู้เสนอราคาเข้ามา';
+      var nBidders = post.quote_count != null ? post.quote_count : prices.length;
+      if(!nBidders){
+        sub.innerHTML = 'ยังไม่มีผู้เสนอราคาเข้ามา';
+      }else{
+        sub.innerHTML = 'มีผู้เสนอราคาเข้ามา <b>' + nBidders + ' ราย</b>' +
+          (isOwner && avgPrice != null
+            ? ' · <span class="kx-avg">เฉลี่ย <b>' + esc(money(avgPrice)) + '</b></span>'
+            : '');
+      }
     }
     if(offerListEl){
       // tell the owner why the เลือก button is greyed out, rather than leaving
@@ -20645,7 +20676,10 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     var h1 = root.querySelector('.offer-header-card h1'); if(h1) h1.textContent = post.title;
     var meta = root.querySelector('.offer-meta-row');
-    if(meta) meta.innerHTML = '<span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span>👁️ ' + (post.view_count || 0) + ' วิว</span>';
+    // no view count: it was a number nobody acts on, and on a new listing it
+    // read '0 วิว', which says the listing is being ignored rather than that it
+    // is new
+    if(meta) meta.innerHTML = '<span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span>';
     var priceNum = root.querySelector('.offer-price-num'); if(priceNum) priceNum.textContent = post.price_high != null ? money(post.price_high) : 'ติดต่อสอบถาม';
     var desc = root.querySelector('.offer-desc'); if(desc) desc.textContent = post.description || '';
 
@@ -21309,7 +21343,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       cardThumbHTML(images, 'offer-thumb') +
       '<div class="offer-body">' +
         '<div class="offer-title">' + esc(post.title) + '</div>' +
-        '<div class="offer-stats-row"><span>👁️ ' + (post.view_count || 0) + ' วิว</span>' +
+        '<div class="offer-stats-row">' +
           '<span class="quote-badge" style="cursor:pointer;" onclick="event.stopPropagation();openQuoteRequestsModal(\'' + post.id + '\')">🧾 ' + reqs + ' คำขอราคา</span>' +
           '<span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
       '</div>' +
