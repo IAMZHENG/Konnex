@@ -20261,7 +20261,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var actionLabel = isRfq
       ? (mine ? 'ดูข้อเสนอ' : 'เสนอราคา')
       : (mine ? 'ดูคำขอใบเสนอราคา' : 'ขอใบเสนอราคา');
-    var askCount = (post.post_questions || []).length;
+    var askCount = (post.post_questions || []).filter(function(q){ return !q.parent_id; }).length;
     return '<div class="post-card" data-type="' + (isRfq ? 'buy' : 'sell') + '"' +
       ' data-cat="' + esc(post.category_id || 'other') + '" data-deadline="' + daysLeft(post.deadline) + '"' +
       ' data-location="' + esc(loc) + '"' +
@@ -20720,7 +20720,49 @@ body.kx-auth .kx-burger{ display:none !important; }
      the price, which is a separate thing (see the sealed handling in
      renderRfqDetail). A question with a face and a name is also worth more to
      the person answering it. */
-  function qaItemHTML(q, isOwner, ownerName, ownerProfile){
+  /* Everything said after the first answer: the follow-up questions and the
+     replies to them, oldest first, and the box to add another. Only the two
+     people in the conversation may add to it — the person who asked and the
+     owner who answered. Anyone else with something to ask starts their own
+     thread in the box at the foot of the block, where it can be found. */
+  function qaThreadHTML(root, followUps, isOwner, ownerName, ownerProfile, postStatus){
+    var me = window.kxSession && window.kxSession.user.id;
+    var mineToContinue = isOwner || (me && root.asker_id === me);
+    var answered = !!(root.answer && root.answer.trim());
+    // nothing to follow up on until the owner has said something
+    if(!answered) return '';
+
+    var msgs = followUps.map(function(f){
+      var byOwner = !!(ownerProfile && f.asker_id && ownerProfile.id === f.asker_id);
+      var who = byOwner ? ownerName
+        : ((f.profiles && f.profiles.company_name) || 'ผู้ใช้ Konnex');
+      var pic = byOwner ? ownerProfile : (f.profiles || null);
+      return '<div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">' +
+        '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;' +
+          'display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden;">' +
+          avatarInner(pic, who) + '</div>' +
+        '<div style="flex:1;' + (byOwner ? 'background:var(--blue-50);border:1px solid #dae6ff;' : 'background:var(--bg);border:1px solid var(--line);') +
+          'border-radius:11px;padding:10px 13px;">' +
+          '<div style="font-size:15px;font-weight:500;color:var(--ink);">' +
+            '<span style="font-weight:600;">' + esc(who) + '</span>' +
+            (byOwner ? ' <span style="font-size:12px;font-weight:600;color:var(--blue-700);background:#fff;border:1px solid #c2d6ff;padding:1px 8px;border-radius:999px;">เจ้าของประกาศ</span>' : '') +
+            ' <span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· ' + relTime(f.created_at) + '</span></div>' +
+          '<div style="font-size:15px;font-weight:500;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(f.body) + '</div>' +
+        '</div></div>';
+    }).join('');
+
+    var box = (mineToContinue && postStatus === 'open')
+      ? '<div style="display:flex;gap:8px;margin:10px 0 0 42px;">' +
+          '<input type="text" class="kx-followin" data-parent="' + esc(root.id) + '" ' +
+            'placeholder="' + (isOwner ? 'ตอบเพิ่มเติม...' : 'ถามต่อจากคำตอบนี้...') + '" ' +
+            'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;font-weight:500;font-family:inherit;outline:none;color:var(--ink);">' +
+          '<button type="button" onclick="kxAskFollowUp(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ส่ง</button>' +
+        '</div>'
+      : '';
+    return msgs + box;
+  }
+
+  function qaItemHTML(q, isOwner, ownerName, ownerProfile, followUps, postStatus){
     var answered = !!(q.answer && q.answer.trim());
     var mine = !!(window.kxSession && q.asker_id === window.kxSession.user.id);
     var asker = q.profiles || null;
@@ -20754,7 +20796,7 @@ body.kx-auth .kx-burger{ display:none !important; }
             '<span style="color:var(--ink-faint);font-weight:400;font-size:14px;">· ' + relTime(q.created_at) + '</span></div>' +
           '<div style="font-size:15px;font-weight:500;color:var(--ink);margin-top:3px;white-space:pre-wrap;">' + esc(q.body) + '</div>' +
         '</div>' +
-      '</div>' + reply +
+      '</div>' + reply + qaThreadHTML(q, followUps || [], isOwner, ownerName, ownerProfile, postStatus) +
     '</div>';
   }
 
@@ -20842,8 +20884,18 @@ body.kx-auth .kx-burger{ display:none !important; }
   function renderQa(blockId, post, isOwner){
     var block = document.getElementById(blockId);
     if(!block) return;
-    var qs = (post.post_questions || []).slice()
+    /* A thread is a question with parent_id null, plus every row pointing at it
+       in the order they were written. A follow-up is a question that knows what
+       it follows (database/question_threads.sql), so the same table, and the
+       same policies, carry the whole conversation. */
+    var all = (post.post_questions || []).slice()
       .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
+    var kids = {};
+    all.forEach(function(q){
+      if(!q.parent_id) return;
+      (kids[q.parent_id] = kids[q.parent_id] || []).push(q);
+    });
+    var qs = all.filter(function(q){ return !q.parent_id; });
     var ownerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
     var canAsk = !isOwner && post.status === 'open';
 
@@ -20854,7 +20906,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<span style="color:var(--ink-faint);font-weight:600;">(' + qs.length + ')</span></div>' +
       (qs.length
         ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
-            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.profiles); }).join('') + '</div>'
+            qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.profiles, kids[q.id] || [], post.status); }).join('') + '</div>'
         : '<div style="font-size:15px;color:var(--ink-faint);padding:6px 0 2px;">' +
             // the owner gets no ask box — you do not question your own listing —
             // so say what the empty block is waiting for rather than leaving it bare
@@ -20890,6 +20942,37 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
     input.value = '';
     kxToast('ส่งคำถามแล้ว');
+    await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
+  };
+
+  /* A follow-up is a question that knows which one it follows, so it is written
+     to the same table by the same insert — with parent_id set. Whoever sends it
+     is the asker_id, which is how the thread knows an owner's reply from the
+     person who asked. */
+  window.kxAskFollowUp = async function(btn){
+    var block = btn.closest('[data-post-id]');
+    var input = btn.parentElement.querySelector('.kx-followin');
+    var body = ((input && input.value) || '').trim();
+    if(!body){ if(input){ input.classList.add('bad'); input.focus(); } kxToast('พิมพ์ข้อความก่อนกดส่ง'); return; }
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    input.classList.remove('bad');
+    btn.disabled = true;
+    var res = await sb.from('post_questions').insert({
+      post_id: block.dataset.postId,
+      asker_id: window.kxSession.user.id,
+      body: body,
+      parent_id: input.dataset.parent
+    });
+    btn.disabled = false;
+    if(res.error){
+      console.error('kxAskFollowUp failed', res.error);
+      kxToast(/parent_id/i.test(res.error.message || '') || res.error.code === '42703'
+        ? 'ยังถามต่อไม่ได้ (ยังไม่ได้รัน database/question_threads.sql)'
+        : 'ส่งไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    input.value = '';
+    kxToast('ส่งแล้ว');
     await kxLoadPostDetail(block.dataset.postId, window.kxCurrentDetailKind || 'rfq');
   };
 
@@ -21262,7 +21345,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     return null;
   };
 
-  var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id,profiles!post_questions_asker_id_fkey(id,company_name,avatar_url))';
+  var QA_SELECT = ', post_questions(id,body,answer,answered_at,created_at,asker_id,parent_id,profiles!post_questions_asker_id_fkey(id,company_name,avatar_url))';
   var QR_SELECT = ', quote_requests(id)';
   var qaTableMissing = false;
   var qrTableMissing = false;

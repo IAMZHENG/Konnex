@@ -1559,6 +1559,98 @@
     });
     /* You do not question your own listing, so the owner gets no box — but the
        block then sat empty with no hint of what it was for. */
+    /* One question, one answer, and the conversation ended there — to ask
+       anything further you started a fresh question with nothing tying it to
+       the answer it was about. A follow-up is a question that knows which one
+       it follows (database/question_threads.sql). */
+    function threaded(owner) {
+      return { id: 'T9', kind: 'rfq', owner_id: owner, title: 'ทดสอบ', province: 'เชียงใหม่',
+        status: 'open', deadline: '2099-01-01T00:00:00Z', quote_count: 0,
+        post_images: [], post_attachments: [], quotes: [],
+        profiles: { id: owner, company_name: 'เจ้าของ', avatar_url: null },
+        post_questions: [
+          { id: 'q1', body: 'ถามข้อแรก', answer: 'ตอบข้อแรก', answered_at: '2026-08-24T00:00:00Z',
+            created_at: '2026-08-23T00:00:00Z', asker_id: OTHER, parent_id: null,
+            profiles: { id: OTHER, company_name: 'ผู้ถาม', avatar_url: null } },
+          { id: 'q2', body: 'ถามต่อ', answer: null, answered_at: null,
+            created_at: '2026-08-25T00:00:00Z', asker_id: OTHER, parent_id: 'q1',
+            profiles: { id: OTHER, company_name: 'ผู้ถาม', avatar_url: null } }
+        ] };
+    }
+    async function openThread(w, uid, p) {
+      plan(w, { posts: { _: { data: p, error: null } }, _: { data: [], error: null } });
+      signIn(w, uid);
+      await w.kxOpenPost(p.id, 'rfq');
+      await new Promise(function (r) { setTimeout(r, 90); });
+      restore(w);
+      return w.document.getElementById('rfqQaBlock');
+    }
+    function bodies(block) {
+      return Array.prototype.map.call(
+        block.querySelectorAll('[style*="white-space:pre-wrap"]'),
+        function (e) { return e.textContent.trim(); });
+    }
+    it('keeps a follow-up under the answer it follows', async function (w) {
+      var block = await openThread(w, OTHER, threaded(ME));
+      expect(bodies(block)).toEqual(['ถามข้อแรก', 'ตอบข้อแรก', 'ถามต่อ']);
+    });
+    it('counts conversations, not messages', async function (w) {
+      var block = await openThread(w, OTHER, threaded(ME));
+      expect(block.textContent).toContain('(1)', 'three messages, one question');
+    });
+    it('offers the box to the person who asked', async function (w) {
+      var block = await openThread(w, OTHER, threaded(ME));
+      expect(block.querySelector('.kx-followin').placeholder).toContain('ถามต่อ');
+    });
+    it('offers it to the owner as well, worded as a reply', async function (w) {
+      var block = await openThread(w, ME, threaded(ME));
+      expect(block.querySelector('.kx-followin').placeholder).toContain('ตอบเพิ่มเติม');
+    });
+    /* A bystander reads the exchange but does not join it — their own question
+       belongs in the box at the foot of the block, where it can be found. */
+    it('gives no box to anyone else', async function (w) {
+      var block = await openThread(w, THIRD, threaded(ME));
+      expect(block.querySelector('.kx-followin')).toBeFalsy();
+      expect(bodies(block).length).toBe(3, 'they still read the whole thread');
+    });
+    it('has nothing to follow until the owner has answered', async function (w) {
+      var p = threaded(ME);
+      p.post_questions = [Object.assign({}, p.post_questions[0], { answer: null, answered_at: null })];
+      var block = await openThread(w, OTHER, p);
+      expect(block.querySelector('.kx-followin')).toBeFalsy();
+    });
+    it('writes the follow-up against the question it answers', async function (w) {
+      var sb = plan(w, { posts: { _: { data: threaded(ME), error: null } }, _: { data: [], error: null } });
+      signIn(w, OTHER);
+      await w.kxOpenPost('T9', 'rfq');
+      await new Promise(function (r) { setTimeout(r, 90); });
+      var input = w.document.querySelector('#rfqQaBlock .kx-followin');
+      input.value = 'ถามต่ออีกที';
+      input.parentElement.querySelector('button').click();
+      await new Promise(function (r) { setTimeout(r, 90); });
+      restore(w);
+      var row = sb._writes.filter(function (x) { return x.table === 'post_questions'; })[0].row;
+      expect(row.parent_id).toBe('q1');
+      expect(row.body).toBe('ถามต่ออีกที');
+      expect(row.asker_id).toBe(OTHER, 'whoever sent it is the author');
+    });
+    it('names the migration if it has not been run', async function (w) {
+      plan(w, { posts: { _: { data: threaded(ME), error: null } },
+                post_questions: { insert: { data: null, error: { code: '42703', message: 'column parent_id does not exist' } } },
+                _: { data: [], error: null } });
+      signIn(w, OTHER);
+      await w.kxOpenPost('T9', 'rfq');
+      await new Promise(function (r) { setTimeout(r, 90); });
+      var said = [];
+      var realToast = w.kxToast; w.kxToast = function (m) { said.push(m); };
+      var input = w.document.querySelector('#rfqQaBlock .kx-followin');
+      input.value = 'x';
+      input.parentElement.querySelector('button').click();
+      await new Promise(function (r) { setTimeout(r, 90); });
+      w.kxToast = realToast;
+      restore(w);
+      expect(said.join(' ')).toContain('question_threads.sql');
+    });
     it('tells the owner what the empty block is waiting for', async function (w) {
       await openAs(w, ME, post(ME));
       var block = w.document.getElementById('rfqQaBlock');
