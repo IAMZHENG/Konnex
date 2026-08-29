@@ -14,8 +14,18 @@
 <meta name="apple-mobile-web-app-title" content="Konnex">
 <meta name="format-detection" content="telephone=no">
 
-<!-- App icon (inline SVG, no external file needed) -->
-<link rel="icon" type="image/png" href="assets/img/konnex-mark-3.png">
+<!-- The tab icon, drawn at the sizes a tab actually uses.
+     One 192px file used to serve every size, and the browser squeezed it down
+     to 16px: the king is a tall narrow shape drawn at 78% of the height and 41%
+     of the width, so what survived that reduction was a blue square with a
+     smudge in it. These are rendered at their real size instead of downscaled,
+     and the king is pushed to 94% of the height — about half again as large as
+     before. It still cannot fill the tile the way a letterform does; a chess
+     king is twice as tall as it is wide, and cropping to the crown to gain the
+     width was tried and read as an abstract blob rather than as the mark. -->
+<link rel="icon" type="image/png" sizes="48x48" href="assets/img/konnex-favicon-48.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/konnex-favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/img/konnex-favicon-16.png">
 <link rel="apple-touch-icon" href="assets/img/konnex-mark-3.png">
 
 <!-- Web app manifest (embedded, so the whole app still ships as one file) -->

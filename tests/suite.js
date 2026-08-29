@@ -1796,6 +1796,33 @@
     });
   });
 
+  /* One 192px file used to serve every icon size, and the browser squeezed it
+     to 16px for the tab: the king is drawn at 41% of the width, so what came
+     through was a blue square with a smudge. */
+  describe('the tab icon', function () {
+    it('ships a file for each size a tab uses', function (w) {
+      var links = w.document.querySelectorAll('link[rel~="icon"]');
+      var sizes = Array.prototype.map.call(links, function (l) { return l.getAttribute('sizes'); });
+      ['16x16', '32x32', '48x48'].forEach(function (s) {
+        expect(sizes.indexOf(s) > -1).toBe(true, s + ' should be declared');
+      });
+    });
+    it('points each one at a file drawn at that size', async function (w) {
+      var links = w.document.querySelectorAll('link[rel~="icon"]');
+      for (var i = 0; i < links.length; i++) {
+        var want = parseInt(links[i].getAttribute('sizes'), 10);
+        var href = links[i].getAttribute('href');
+        var got = await new Promise(function (res) {
+          var im = new w.Image();
+          im.onload = function () { res(im.naturalWidth); };
+          im.onerror = function () { res(-1); };
+          im.src = '../' + href;
+        });
+        expect(got).toBe(want, href + ' should be ' + want + 'px, not scaled from a larger file');
+      }
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
@@ -2150,6 +2177,12 @@
       w.kxCurrentUser = { id: ME, company_name: 'ผู้ดูแล', is_admin: !!yes };
     }
     async function loadQueue(w, data) {
+      /* kxDecideVerify asks confirm() before it writes. Stubbing that per test
+         and putting it back left a window where a real dialog could open, and a
+         native dialog blocks the page — the whole suite stops, which is a worse
+         failure than any assertion. It stays stubbed for this group; the app
+         window is a fixture, not something to hand back pristine. */
+      w.confirm = function () { return true; };
       var sb = plan(w, { verification_requests: { _: { data: data, error: null } } });
       // the documents sit in a private bucket; the real helper asks storage for
       // a signed URL, which the fake sb has no storage to answer. Put the real
@@ -2207,11 +2240,9 @@
     it('refuses to reject without a reason, and asks nothing of the server', async function (w) {
       asAdmin(w, true);
       var sb = await loadQueue(w, [PENDING]);
-      var confirmWas = w.confirm; w.confirm = function () { return true; };
       sb._calls.length = 0;
       w.document.querySelector('#avList .av-actions .btn-outline').click();
       await new Promise(function (r) { setTimeout(r, 60); });
-      w.confirm = confirmWas;
       restore(w);
       expect(sb._calls.filter(function (c) { return c.rpc; }).length).toBe(0,
         'the note is what the applicant is told, so a blank one helps nobody');
@@ -2219,11 +2250,9 @@
     it('sends the decision, the request id and the reason', async function (w) {
       asAdmin(w, true);
       var sb = await loadQueue(w, [PENDING]);
-      var confirmWas = w.confirm; w.confirm = function () { return true; };
       w.document.querySelector('#avList .av-reason').value = 'เอกสารไม่ชัด';
       w.document.querySelector('#avList .av-actions .btn-outline').click();
       await new Promise(function (r) { setTimeout(r, 80); });
-      w.confirm = confirmWas;
       restore(w);
       var call = sb._calls.filter(function (c) { return c.rpc === 'kx_decide_verification'; })[0];
       expect(call).toBeTruthy();
@@ -2232,10 +2261,8 @@
     it('approves with approve:true and no reason required', async function (w) {
       asAdmin(w, true);
       var sb = await loadQueue(w, [PENDING]);
-      var confirmWas = w.confirm; w.confirm = function () { return true; };
       w.document.querySelector('#avList .av-actions .btn-primary').click();
       await new Promise(function (r) { setTimeout(r, 80); });
-      w.confirm = confirmWas;
       restore(w);
       var call = sb._calls.filter(function (c) { return c.rpc === 'kx_decide_verification'; })[0];
       expect(call.args.approve).toBe(true);
