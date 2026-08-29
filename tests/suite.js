@@ -1650,6 +1650,60 @@
     });
   });
 
+  /* Money fields are text inputs precisely so they can carry separators, and
+     every place that reads one already strips them. They just were not being
+     put in: 9000000 with no grouping is the figure people are asked to check
+     before they send it. */
+  describe('money fields group their digits', function () {
+    function typeInto(w, id, keys) {
+      var el = w.document.getElementById(id);
+      el.value = '';
+      keys.split('').forEach(function (ch) {
+        el.value += ch;
+        el.dispatchEvent(new w.Event('input', { bubbles: true }));
+      });
+      return el.value;
+    }
+    it('groups as you type', function (w) {
+      expect(typeInto(w, 'cpPrice', '9000000')).toBe('9,000,000');
+      expect(typeInto(w, 'cpBudgetLow', '500')).toBe('500');
+      expect(typeInto(w, 'cpBudgetHigh', '1250000')).toBe('1,250,000');
+      w.document.getElementById('cpPrice').value = '';
+      w.document.getElementById('cpBudgetLow').value = '';
+      w.document.getElementById('cpBudgetHigh').value = '';
+    });
+    /* Rewriting the value on every keystroke sends the caret to the end, which
+       throws you to the far right the moment you correct a digit in the middle. */
+    it('leaves the caret where the typist put it', function (w) {
+      var el = w.document.getElementById('cpPrice');
+      typeInto(w, 'cpPrice', '1234567');
+      var v = el.value;
+      el.setSelectionRange(1, 1);
+      el.value = v.slice(0, 1) + '9' + v.slice(1);
+      el.setSelectionRange(2, 2);
+      el.dispatchEvent(new w.Event('input', { bubbles: true }));
+      expect(el.value).toBe('19,234,567');
+      expect((el.value.slice(0, el.selectionStart).match(/\d/g) || []).length)
+        .toBe(2, 'two digits typed, two digits behind the caret');
+      el.value = '';
+    });
+    it('strips anything that is not a digit', function (w) {
+      expect(typeInto(w, 'cpPrice', '1a2b3c4567')).toBe('1,234,567');
+      w.document.getElementById('cpPrice').value = '';
+    });
+    /* The parsers already strip separators — this is what makes the above safe,
+       so it is worth a test of its own. */
+    it('is read back with the separators removed', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      ['offerPrice', 'cpPrice', 'qrBudget'].forEach(function (id) {
+        expect(src.indexOf("getElementById('" + id + "')") > -1)
+          .toBe(true, id + ' should still exist');
+      });
+      expect((src.match(/replace\(\/\[, \]\/g, ''\)/g) || []).length >= 3).toBe(true,
+        'every money field is parsed through a separator strip');
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
