@@ -1626,6 +1626,30 @@
     });
   });
 
+  /* Pictures you can open showed a magnifier (zoom-in). Everything else you can
+     click in the app shows a hand, and a photograph that opens a viewer is a
+     click like any other. */
+  describe('a picture you can open shows a hand', function () {
+    it('uses pointer on gallery cells and their images', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(/\.kx-gcell\{[^}]*cursor:pointer/.test(src.replace(/\s+/g, ''))
+          || /min-width:0;min-height:0;background:var\(--bg\);cursor:pointer/.test(src.replace(/\s+/g, '')))
+        .toBe(true, 'the gallery cell is the surface that opens the viewer');
+    });
+    it('leaves no zoom-in cursor outside the viewer itself', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var hits = (src.match(/cursor:\s*zoom-in/g) || []).length;
+      expect(hits).toBe(1,
+        'the one left is the lightbox image, where the cursor really does mean zoom');
+    });
+    it('does not put a hand on a picture that opens nothing', function (w) {
+      // the profile cover is decoration; a hand there would promise an action
+      var cover = w.document.querySelector('#page-company-profile .hero-banner .cover');
+      if (!cover) return;                       // not rendered without a profile
+      expect(w.getComputedStyle(cover).cursor).notToContain('pointer');
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
