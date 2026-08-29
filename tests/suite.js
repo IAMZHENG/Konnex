@@ -1441,6 +1441,30 @@
       expect(list.querySelectorAll('.files-sum, .btn-view').length).toBe(0);
       expect(list.textContent).toContain('เห็นได้เฉพาะเจ้าของประกาศ');
     });
+    /* RLS hands a bidder their own row, which used to be the entire list they
+       saw — one card, their own, on a listing with three offers. They get the
+       whole list now, with their own number on their own line. */
+    it('shows a bidder every rival, and their own price on their own row', async function (w) {
+      var asBidder = post({
+        id: 'N4', quote_count: 2,
+        quotes: [{ id: 'q2', price: 9300000, note: 'ราคารวมติดตั้ง', status: 'pending',
+          created_at: '2026-08-22T00:00:00Z', bidder_id: ME, quote_attachments: [],
+          profiles: { company_name: 'ฉันเอง', avatar_url: null } }]
+      });
+      await openAs(w, ME, asBidder, { data: [
+        BIDDERS[0],
+        { quote_id: 'q2', bidder_id: ME, created_at: '2026-08-22T00:00:00Z',
+          company_name: 'ฉันเอง', avatar_url: null, province: 'ลำพูน',
+          is_verified: false, rating_avg: null, rating_count: 0 }
+      ], error: null });
+      var list = w.document.getElementById('offerList');
+      expect(list.querySelectorAll('.offer-card').length).toBe(2, 'both bidders, not just mine');
+      var prices = list.querySelectorAll('.price-num');
+      expect(prices.length).toBe(1, 'exactly one price: my own');
+      expect(prices[0].textContent).toContain('9,300,000');
+      expect(list.querySelector('.kx-q-mine .kx-mine-tag')).toBeTruthy();
+      expect(list.textContent).toContain('เห็นได้เฉพาะเจ้าของประกาศ');
+    });
     it('leaves the owner’s own view alone', async function (w) {
       var mine = post({ id: 'N2', owner_id: ME, quote_count: 1, quotes: [
         { id: 'q9', price: 777000, note: 'หมายเหตุ', status: 'pending',

@@ -2437,6 +2437,21 @@ input[type="number"]:focus, textarea:focus, select:focus{
     margin-bottom: 12px;
     line-height: 1.55
     }
+#page-rfq-detail .kx-q-mine {
+    border-color: var(--blue-600);
+    background: var(--blue-50, #eaf1ff)
+    }
+#page-rfq-detail .kx-mine-tag {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue-700);
+    background: #fff;
+    border: 1px solid var(--blue-600);
+    border-radius: 999px;
+    padding: 2px 9px;
+    white-space: nowrap
+    }
 #page-rfq-detail .kx-hidden-price {
     font-size: 13px;
     font-weight: 600;
@@ -20541,7 +20556,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(offerListEl){
       // tell the owner why the เลือก button is greyed out, rather than leaving
       // them to guess whether it is broken
-      var pickHint = '';
+      var pickHint = 'ยังเปิดรับข้อเสนออยู่ — ปิดรับตอนนี้ได้ถ้าคุณมีข้อเสนอที่ต้องการแล้ว';
       /* And a way out of waiting. An owner who has the offers they need had no
          way to choose before the deadline except editing the post's date, which
          is a strange thing to have to work out. Closing early is offered here,
@@ -20562,8 +20577,11 @@ body.kx-auth .kx-burger{ display:none !important; }
          database/public_bidders.sql) returns who offered and when, and nothing
          about what they offered, so the list can be honest both ways. It is
          asked for separately because it is a different query, not a wider one. */
-      var needsBidderList = !isOwner && !quotes.length && (post.quote_count || 0) > 0;
-      if(needsBidderList) kxRenderBidderList(offerListEl, post);
+      /* Anyone who is not the owner gets the full list, including a bidder —
+         RLS hands them their own row, which used to be the whole list they saw.
+         Their own quote is passed through so their own price still shows. */
+      var needsBidderList = !isOwner && (post.quote_count || 0) > 0;
+      if(needsBidderList) kxRenderBidderList(offerListEl, post, quotes);
       else offerListEl.innerHTML = waitNote + (quotes.length
         // in the order they were sent, not ranked by price — the list is a
         // record of who offered what, and ordering it by price makes the page
@@ -20722,7 +20740,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   /* Who has offered, for everyone who is not the owner. The prices are not in
      this data at all — kx_post_bidders() never selects them — so there is
      nothing here to accidentally reveal. */
-  window.kxRenderBidderList = async function(listEl, post){
+  window.kxRenderBidderList = async function(listEl, post, myQuotes){
     listEl.innerHTML = '<div class="kx-empty" style="padding:22px"><div class="kx-empty-sub">กำลังโหลด…</div></div>';
     var res = await sb.rpc('kx_post_bidders', { pid: post.id });
     if(res.error){
@@ -20740,23 +20758,36 @@ body.kx-auth .kx-burger{ display:none !important; }
         '<div class="kx-empty-title">ยังไม่มีข้อเสนอ</div></div>';
       return;
     }
+    /* Your own quote came back through RLS, so your own price is yours to see.
+       Everyone else's is not in this data at all. */
+    var mine = {};
+    (myQuotes || []).forEach(function(q){ if(q && q.bidder_id) mine[q.bidder_id] = q; });
+    var iBid = Object.keys(mine).length > 0;
+
     listEl.innerHTML =
       '<div class="kx-bidnote">👀 คุณเห็นว่ามีใครเสนอราคาเข้ามาบ้าง ' +
-        'ส่วนราคาและใบเสนอราคาที่แนบมา เห็นได้เฉพาะเจ้าของประกาศ</div>' +
+        (iBid ? 'ราคาที่คุณเสนอแสดงอยู่ในรายการของคุณ ส่วนราคาของรายอื่น'
+              : 'ส่วนราคา') +
+        'และใบเสนอราคาที่แนบมา เห็นได้เฉพาะเจ้าของประกาศ</div>' +
       rows.map(function(b){
         var who = b.company_name || 'ผู้ใช้ Konnex';
         var open = b.bidder_id ? 'kxViewProfile(&quot;' + esc(b.bidder_id) + '&quot;)' : '';
-        return '<div class="offer-card kx-q">' +
+        var q = mine[b.bidder_id];
+        return '<div class="offer-card kx-q' + (q ? ' kx-q-mine' : '') + '">' +
           '<div class="offer-av"' + (open ? ' style="cursor:pointer;overflow:hidden" onclick="' + open + '"' : ' style="overflow:hidden"') + '>' +
             avatarInner(b, who) + '</div>' +
           '<div class="offer-main">' +
             '<div class="offer-name-row"><span' + (open ? ' style="cursor:pointer" onclick="' + open + '"' : '') + '>' +
-              esc(who) + '</span></div>' +
+              esc(who) + '</span>' + (q ? '<span class="kx-mine-tag">ข้อเสนอของคุณ</span>' : '') + '</div>' +
             '<div class="offer-loc">' + esc(b.province || 'ไม่ระบุจังหวัด') + ' · ' + relTime(b.created_at) + '</div>' +
             quoteStatsHTML(b) +
+            (q && q.note ? '<div class="kx-qnote">' + esc(q.note) + '</div>' : '') +
           '</div>' +
           '<div class="offer-col"><div class="col-label">ราคาเสนอ</div>' +
-            '<div class="kx-hidden-price">เห็นได้เฉพาะเจ้าของประกาศ</div></div>' +
+            (q
+              ? '<div class="price-num">' + money(q.price) + '</div>'
+              : '<div class="kx-hidden-price">เห็นได้เฉพาะเจ้าของประกาศ</div>') +
+          '</div>' +
         '</div>';
       }).join('');
     if(window.kxApplyIcons) window.kxApplyIcons(listEl);
