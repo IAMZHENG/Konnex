@@ -12814,8 +12814,14 @@ document.addEventListener('keydown', function(e){
       background_color: "#f6f8fc",
       theme_color: "#0a5bff",
       icons: [
-        // the file is 512 square; declaring 192 made the manifest lie about it
-        { src: icon, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        /* the file is 512 square; declaring 192 made the manifest lie about it.
+           "any", not "any maskable": a maskable icon is cropped to a circle of
+           80% width, and this artwork draws the king at the proportion the brand
+           sheet uses — 78% of the height — which puts the tip of the cross and
+           the corners of the base outside that circle. Measured at 2.5% of the
+           mark shaved off. Claiming maskable would hand Android permission to
+           make that cut; "any" asks it to place the icon whole. */
+        { src: icon, sizes: "512x512", type: "image/png", purpose: "any" }
       ]
     };
     var blob = new Blob([JSON.stringify(manifest)], {type: "application/manifest+json"});
