@@ -15924,9 +15924,9 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   /* the post pages */
   #page-rfq-detail .desc-text,
-  #page-offer-detail .offer-desc{ font-size:15px; line-height:1.75; }
+  #page-offer-detail .offer-desc{ font-size:15px; font-weight:500; line-height:1.75; }
   #page-rfq-detail .meta-row span,
-  #page-offer-detail .offer-meta-row span{ font-size:15px; }
+  #page-offer-detail .offer-meta-row span{ font-size:14px; }
   #page-rfq-detail .offer-card.kx-q .offer-loc,
   #page-rfq-detail .offer-card.kx-q .offer-stats{ font-size:14px; }
   #page-rfq-detail .offer-card.kx-q .offer-name-row{ font-size:16px; }
@@ -16196,6 +16196,21 @@ body.kx-auth .kx-burger{ display:none !important; }
     flex:none; width:100% !important; height:auto !important; aspect-ratio:16/9;
   }
 }
+/* ===== the detail header reads at the same size as the card =====
+   A listing looks the same whether you meet it in the feed or open it: the
+   poster's name, the meta line, the title and the description all take the
+   card's values. Measured off .pp-name / .pc-sub / .post-title / .post-desc
+   rather than chosen, so the two cannot drift by eye. */
+#page-rfq-detail .post-owner-name,
+#page-offer-detail .post-owner-name { font-size: 16px; font-weight: 600; }
+#page-rfq-detail .meta-row,
+#page-rfq-detail .meta-row span,
+#page-offer-detail .offer-meta-row,
+#page-offer-detail .offer-meta-row span { font-size: 14px; font-weight: 400; }
+#page-rfq-detail .header-info h1,
+#page-offer-detail .offer-header-card h1 { font-size: 16px; font-weight: 500; line-height: 1.5; }
+#page-rfq-detail .desc-text,
+#page-offer-detail .offer-desc { font-size: 15px; font-weight: 500; }
 </style>
 
 <div class="kx-scrim" id="kxScrim"></div>
@@ -20185,17 +20200,28 @@ body.kx-auth .kx-burger{ display:none !important; }
     var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var docs = post.post_attachments || [];
     var quotePrices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
-    /* posts.quote_count / posts.request_count rather than the length of the
-       embed. Both source tables are private — quotes to the bidder and post
-       owner, quote_requests to the requester and seller — so the embed comes
-       back empty for anyone else, and the feed showed 0 on every card to
-       everyone not already involved. The counters are public; the rows behind
-       them are not. (The average below still comes from the embed, so it stays
-       visible only to people entitled to the prices.) */
+    /* posts.quote_count / posts.request_count / posts.quote_avg rather than
+       anything derived from the embed. All three source tables are private —
+       quotes to the bidder and post owner, quote_requests to the requester and
+       seller — so the embed carries the viewer's own rows and nothing else.
+       Counting those showed 0 on every card to anyone not already involved, and
+       averaging them showed a bidder their own price labelled as everyone's.
+       The three columns are public and a trigger keeps each of them; the rows
+       behind them stay private (post_counters.sql, quote_avg_column.sql). */
+    var mine = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
     var offerCount = isRfq
       ? (post.quote_count != null ? post.quote_count : quotePrices.length)
       : (post.request_count != null ? post.request_count : 0);
-    var avg = quotePrices.length ? quotePrices.reduce(function(a, b){ return a + b; }, 0) / quotePrices.length : null;
+    /* quote_avg is the only figure here that is right for everyone. Falling
+       back to the embed would put the old bug back for anyone but the owner —
+       their own price, labelled as everyone's — so the fallback is only taken
+       when the embed is complete, which is to say when this listing is yours.
+       Until quote_avg_column.sql is run, a visitor sees no average rather than
+       a wrong one. */
+    var avg = post.quote_avg != null ? Number(post.quote_avg)
+      : (mine && quotePrices.length
+          ? quotePrices.reduce(function(a, b){ return a + b; }, 0) / quotePrices.length
+          : null);
     var priceText = isRfq
       ? (avg != null ? money(avg) : 'ยังไม่มี')
       : (post.price_high != null ? money(post.price_high) : 'ยังไม่มี');
@@ -20209,7 +20235,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     // The action reads from the viewer's side, not the post's: on someone
     // else's Offer you are asking them for a quote, and on their RFQ you are
     // giving one. Only the owner is the one reviewing what came in.
-    var mine = !!(window.kxSession && post.owner_id === window.kxSession.user.id);
     var actionLabel = isRfq
       ? (mine ? 'ดูข้อเสนอ' : 'เสนอราคา')
       : (mine ? 'ดูคำขอใบเสนอราคา' : 'ขอใบเสนอราคา');

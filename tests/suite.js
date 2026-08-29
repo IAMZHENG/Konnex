@@ -1584,6 +1584,48 @@
     });
   });
 
+  // ================================= the card's average is everyone's average ===
+  /* The feed card computed ราคาเฉลี่ย from the embedded quotes(price). That
+     embed is behind the select policy, so it carries the viewer's own offer and
+     nothing else — a bidder scrolling the feed saw their own price labelled as
+     the average of everyone's. posts.quote_avg is a column a trigger keeps
+     (quote_avg_column.sql), public the way quote_count is. */
+  describe('postCardHTML — ราคาเฉลี่ย', function () {
+    function card(w, post) {
+      var el = w.document.createElement('div');
+      el.innerHTML = w.kxPostCardHTML(post);
+      return el;
+    }
+    function rfq(over) {
+      return Object.assign({
+        id: 'F1', kind: 'rfq', owner_id: OTHER, title: 'ทดสอบ', province: 'เชียงใหม่',
+        status: 'open', deadline: '2099-01-01T00:00:00Z', created_at: '2026-08-20T00:00:00Z',
+        post_images: [], post_attachments: [], quotes: [], quote_count: 2,
+        profiles: { company_name: 'ผู้ซื้อ', avatar_url: null }
+      }, over || {});
+    }
+    it('reads the average off the column, not the rows it was handed', function (w) {
+      signIn(w, ME);
+      // the embed carries only this viewer's own offer, as RLS would give it
+      var el = card(w, rfq({ quote_avg: 9150000,
+        quotes: [{ price: 9300000 }] }));
+      var num = el.querySelector('.pc-price-num');
+      expect(num.textContent).toContain('9,150,000');
+      expect(num.textContent).notToContain('9,300,000', 'that is their own offer, not the average');
+    });
+    it('shows no average at all rather than a wrong one', function (w) {
+      signIn(w, ME);
+      // quote_avg missing (migration not run) and the listing is not mine
+      var el = card(w, rfq({ quotes: [{ price: 9300000 }] }));
+      expect(el.querySelector('.pc-price-num').textContent).toBe('ยังไม่มี');
+    });
+    it('still averages locally on your own listing, where the embed is complete', function (w) {
+      signIn(w, ME);
+      var el = card(w, rfq({ owner_id: ME, quotes: [{ price: 9000000 }, { price: 9300000 }] }));
+      expect(el.querySelector('.pc-price-num').textContent).toContain('9,150,000');
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
