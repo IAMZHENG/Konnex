@@ -516,8 +516,8 @@ body.kx-show-back .nav-back{ display:inline-flex; }
 .rev-ca-track{ flex:1; height:6px; background:#eceef5; border-radius:999px; overflow:hidden; }
 .rev-ca-fill{ height:100%; background:var(--amber,#f59e0b); border-radius:999px; }
 /* ===== Premium & Analytics ===== */
-#page-premium, #page-analytics{ --blue-900:#052a7a; --blue-700:#0846c7; --blue-600:#0a5bff; --blue-50:#eaf1ff; --ink:#1c1a18; --ink-soft:#565b6e; --ink-faint:#565b6e; --line:#e6e7f0; --bg:#f6f8fc; --card:#fff; --green:#15803d; --green-bg:#ecfdf3; --amber:#b45309; --red:#dc2626; background:var(--bg); font-family:"IBM Plex Sans Thai","IBM Plex Sans",sans-serif; color:var(--ink); font-weight:400; }
-#page-premium .dash-av, #page-analytics .dash-av{ width:32px; height:32px; border-radius:50%; background:var(--blue-600); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
+#page-premium{ --blue-900:#052a7a; --blue-700:#0846c7; --blue-600:#0a5bff; --blue-50:#eaf1ff; --ink:#1c1a18; --ink-soft:#565b6e; --ink-faint:#565b6e; --line:#e6e7f0; --bg:#f6f8fc; --card:#fff; --green:#15803d; --green-bg:#ecfdf3; --amber:#b45309; --red:#dc2626; background:var(--bg); font-family:"IBM Plex Sans Thai","IBM Plex Sans",sans-serif; color:var(--ink); font-weight:400; }
+#page-premium .dash-av{ width:32px; height:32px; border-radius:50%; background:var(--blue-600); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
 .prem-wrap{ max-width:1040px; margin:0 auto; padding:36px 32px 48px; }
 .prem-hero{ text-align:center; margin-bottom:34px; }
 .prem-crown{ font-size:44px; }
@@ -550,23 +550,6 @@ body.kx-show-back .nav-back{ display:inline-flex; }
 .an-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; gap:16px; }
 .an-head h1{ font-size:26px; margin:0 0 5px; }
 .an-head p{ font-size:15px; color:var(--ink-soft); margin:0; }
-.an-range{ border:1.5px solid var(--line); border-radius:10px; padding:9px 13px; font-size:15px; font-family:inherit; color:var(--ink); background:#fff; }
-.an-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
-.an-kpi{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
-.an-kpi-lbl{ font-size:14px; color:var(--ink-soft); }
-.an-kpi-num{ font-size:27px; font-weight:700; margin:6px 0 4px; }
-.an-kpi-delta{ font-size:13px; font-weight:600; }
-.an-kpi-delta.up{ color:var(--green); }
-.an-kpi-delta.down{ color:var(--blue-700); }
-.an-card{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:16px; }
-.an-card-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.an-card-head h3{ font-size:16px; margin:0; }
-.an-legend{ font-size:13px; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
-.an-dot{ width:9px; height:9px; border-radius:50%; background:var(--blue-600); display:inline-block; }
-.an-bars{ display:flex; align-items:flex-end; gap:14px; height:170px; padding-top:10px; }
-.an-bar{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
-.an-bar-fill{ width:100%; max-width:46px; background:linear-gradient(180deg,var(--blue-600),var(--blue-900)); border-radius:8px 8px 0 0; }
-.an-bar span{ font-size:13px; color:var(--ink-faint); }
 .an-two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .an-funnel{ display:flex; flex-direction:column; gap:14px; }
 .an-fn-row{ display:flex; align-items:center; gap:10px; font-size:14px; }
@@ -713,7 +696,7 @@ h1, h2, h3, h4, h5, h6{ font-weight:600; }
   /* collapse EVERY multi-column grid to a single column on phones */
   .app-page .layout, .app-page .content, .app-page .set-wrap,
   .app-page .profile-layout, .app-page .sh-layout, .app-page .prem-grid,
-  .app-page .an-two, .app-page .an-kpis, .app-page [style*="grid-template-columns"]{
+  .app-page [style*="grid-template-columns"]{
     grid-template-columns: minmax(0,1fr) !important;
   }
   /* any hard pixel width becomes fluid */
@@ -2594,21 +2577,43 @@ input[type="number"]:focus, textarea:focus, select:focus{
     color: var(--ink-soft);
     margin: 2px 0 16px
     }
-#page-rfq-detail .compare-sub b { font-weight: 700; color: var(--ink); }
-/* the average is the one figure that describes the whole set, so it is the one
-   the eye should land on */
+#page-rfq-detail .compare-sub {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap
+    }
+/* how many offers came in — a count, so it reads as a chip rather than prose */
+#page-rfq-detail .kx-count-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--blue-700);
+    background: var(--blue-50, #eaf1ff);
+    border: 1.5px solid #cfdfff;
+    border-radius: 999px;
+    padding: 6px 16px;
+    white-space: nowrap
+    }
+/* the average is the one figure describing the whole set, so it carries the
+   weight: a small label over a large number */
 #page-rfq-detail .kx-avg {
     display: inline-flex;
-    align-items: baseline;
-    gap: 4px;
-    background: var(--blue-50, #eaf1ff);
-    border: 1px solid #dae6ff;
-    border-radius: 999px;
-    padding: 3px 12px;
-    margin-left: 4px;
-    color: var(--blue-700)
+    flex-direction: column;
+    line-height: 1.25
     }
-#page-rfq-detail .kx-avg b { color: var(--blue-700); font-size: 16px; font-variant-numeric: tabular-nums; }
+#page-rfq-detail .kx-avg-lbl {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft)
+    }
+#page-rfq-detail .kx-avg b {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--blue-700);
+    font-variant-numeric: tabular-nums
+    }
 #page-rfq-detail .sort-select {
     display: flex;
     align-items: center;
@@ -7562,7 +7567,6 @@ body > #quoteModal .success-ic{ font-size:44px; margin-bottom:12px; }
 }
 @media (max-width: 768px){
   .prem-grid{ grid-template-columns:1fr !important; }
-  .an-kpis{ grid-template-columns:1fr 1fr !important; }
   .an-two{ grid-template-columns:1fr !important; }
   .an-head{ flex-direction:column; align-items:stretch; }
   #page-create-post .content,
@@ -12475,66 +12479,10 @@ html, body{
   </div>
 </div>
 
-<div id="page-analytics" class="app-page">
-  <div class="navbar sh-nav">
-    <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-dashboard');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
-      <div class="search" onclick="navigateTo('page-feed')">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
-    </div>
-    <div class="nav-right">
-      <div class="icon-btn" onclick="navigateTo('page-notifications')">🔔<span class="badge" style="display:none">0</span></div>
-      <div class="icon-btn" onclick="navigateTo('page-messages')">💬</div>
-      <div class="icon-btn" onclick="navigateTo('page-saved')">🔖</div>
-      <div class="avatar-chip"><span class="av-usericon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>▾</div>
-    </div>
-  </div>
-  <div class="layout sh-layout">
-    <div><div class="side-card"><div class="side-nav" data-sh-nav=""></div></div></div>
-    <div>
-      <div class="an-head">
-        <div><h1>สถิติผู้ขาย</h1><p>ภาพรวมผลงานการเสนอราคาและการมองเห็นของคุณ</p></div>
-        <select class="an-range"><option>30 วันล่าสุด</option><option>7 วันล่าสุด</option><option>ไตรมาสนี้</option><option>ปีนี้</option></select>
-      </div>
-      <div class="an-kpis">
-        <div class="an-kpi"><div class="an-kpi-lbl">ยอดวิว RFQ/โพสต์</div><div class="an-kpi-num">12,480</div><div class="an-kpi-delta up">▲ 18% จากช่วงก่อน</div></div>
-        <div class="an-kpi"><div class="an-kpi-lbl">ใบเสนอราคาที่ส่ง</div><div class="an-kpi-num">86</div><div class="an-kpi-delta up">▲ 9%</div></div>
-        <div class="an-kpi"><div class="an-kpi-lbl">อัตราชนะ</div><div class="an-kpi-num">32%</div><div class="an-kpi-delta up">▲ 4%</div></div>
-        <div class="an-kpi"><div class="an-kpi-lbl">เวลาตอบเฉลี่ย</div><div class="an-kpi-num">2.4 ชม.</div><div class="an-kpi-delta down">▼ เร็วขึ้น 15%</div></div>
-      </div>
-      <div class="an-card">
-        <div class="an-card-head"><h3>ยอดวิวรายสัปดาห์</h3><span class="an-legend"><span class="an-dot"></span>การเข้าชม</span></div>
-        <div class="an-bars">
-          <div class="an-bar"><div class="an-bar-fill" style="height:44%"></div><span>ส1</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:58%"></div><span>ส2</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:50%"></div><span>ส3</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:72%"></div><span>ส4</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:66%"></div><span>ส5</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:88%"></div><span>ส6</span></div>
-          <div class="an-bar"><div class="an-bar-fill" style="height:100%"></div><span>ส7</span></div>
-        </div>
-      </div>
-      <div class="an-two">
-        <div class="an-card">
-          <div class="an-card-head"><h3>สถานะใบเสนอราคา</h3></div>
-          <div class="an-funnel">
-            <div class="an-fn-row"><span>ชนะ (ได้รับเลือก)</span><div class="an-fn-track"><div class="an-fn-fill win" style="width:32%"></div></div><b>32%</b></div>
-            <div class="an-fn-row"><span>รอผลพิจารณา</span><div class="an-fn-track"><div class="an-fn-fill wait" style="width:26%"></div></div><b>26%</b></div>
-            <div class="an-fn-row"><span>ไม่ได้รับเลือก</span><div class="an-fn-track"><div class="an-fn-fill lost" style="width:42%"></div></div><b>42%</b></div>
-          </div>
-        </div>
-        <div class="an-card">
-          <div class="an-card-head"><h3>หมวดที่ชนะบ่อย</h3></div>
-          <div class="an-cats">
-            <div class="an-cat"><span>งานผลิต &amp; เครื่องจักร</span><b>18 ดีล</b></div>
-            <div class="an-cat"><span>ก่อสร้าง &amp; รับเหมา</span><b>7 ดีล</b></div>
-            <div class="an-cat"><span>ขนส่ง &amp; โลจิสติกส์</span><b>3 ดีล</b></div>
-          </div>
-          <div class="an-upsell">🔒 ปลดล็อกสถิติเชิงลึกเพิ่มเติมด้วย Premium ›</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<!-- The สถิติ page stood here. Four headline figures and a bar chart, every one
+     of them a literal in the markup — including a win rate, for a thing the app
+     stopped doing. Nothing linked to the page, so nobody ever saw it. Removed. A
+     real one would read the same tables the dashboard already reads. -->
 
 <script>
   function premCycle(btn, cyc){
@@ -16764,8 +16712,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     'page-create-post':'โพสต์ประกาศ', 'page-notifications':'แจ้งเตือน', 'page-my-bids':'ใบเสนอราคา',
     'page-my-offers':'ประกาศขายของฉัน', 'page-offer-detail':'ประกาศขาย',
     'page-my-requests':'ใบเสนอราคาที่ขอ', 'page-settings':'ตั้งค่า', 'page-saved':'บันทึกไว้',
-    'page-history':'ประวัติการเข้าชม', 'page-dashboard':'แดชบอร์ด', 'page-premium':'Premium',
-    'page-analytics':'สถิติ'
+    'page-history':'ประวัติการเข้าชม', 'page-dashboard':'แดชบอร์ด', 'page-premium':'Premium'
   };
   // Root pages: anything reachable from the main menu, the bottom bar, or a
   // section's own tab strip. These are destinations in their own right, never a
@@ -20564,25 +20511,17 @@ body.kx-auth .kx-burger{ display:none !important; }
     var offerListEl = root.querySelector('#offerList');
 
     /* The count comes from posts.quote_count, which a trigger keeps, not from
-       the rows this viewer happened to receive. A bidder is handed exactly one
+       the rows this viewer happened to receive: a bidder is handed exactly one
        quote — their own — so counting those said "1 ราย" above a list of two.
 
-       The average is shown to the owner alone, and not because of tidiness: a
-       bidder knows their own price, so on a listing with two offers the average
-       and their own number give away the other person's price exactly. It was
-       being computed from the one row they could see and labelled เฉลี่ย, which
-       was false as well as unsafe. */
+       The average is shown to everyone. The owner already holds every price, so
+       it is computed here; anyone else gets it from kx_post_avg_price() (see
+       database/public_avg_price.sql), because the prices themselves never reach
+       them. What that publishes is written out in full in that file. */
     var sub = document.getElementById('rfqCompareSub');
     if(sub){
       var nBidders = post.quote_count != null ? post.quote_count : prices.length;
-      if(!nBidders){
-        sub.innerHTML = 'ยังไม่มีผู้เสนอราคาเข้ามา';
-      }else{
-        sub.innerHTML = 'มีผู้เสนอราคาเข้ามา <b>' + nBidders + ' ราย</b>' +
-          (isOwner && avgPrice != null
-            ? ' · <span class="kx-avg">เฉลี่ย <b>' + esc(money(avgPrice)) + '</b></span>'
-            : '');
-      }
+      kxPaintCompareSummary(sub, nBidders, isOwner ? avgPrice : null, post.id);
     }
     if(offerListEl){
       // tell the owner why the เลือก button is greyed out, rather than leaving
@@ -20774,6 +20713,31 @@ body.kx-auth .kx-burger{ display:none !important; }
   /* Who has offered, for everyone who is not the owner. The prices are not in
      this data at all — kx_post_bidders() never selects them — so there is
      nothing here to accidentally reveal. */
+  /* The two figures above the offers: how many came in, and what they average.
+     `avg` is passed in when the caller already holds every price (the owner);
+     otherwise it is fetched, because a viewer who is not the owner never
+     receives the prices this would be computed from. */
+  window.kxPaintCompareSummary = async function(el, count, avg, postId){
+    function paint(a){
+      if(!count){ el.innerHTML = 'ยังไม่มีผู้เสนอราคาเข้ามา'; return; }
+      el.innerHTML =
+        '<span class="kx-count-pill">' + count + ' ข้อเสนอ</span>' +
+        (a != null
+          ? '<span class="kx-avg"><span class="kx-avg-lbl">ราคาเฉลี่ย</span>' +
+              '<b>' + esc(money(a)) + '</b></span>'
+          : '');
+    }
+    paint(avg);
+    if(avg != null || !count) return;
+    var res = await sb.rpc('kx_post_avg_price', { pid: postId });
+    if(res.error){
+      // the count still stands on its own; no figure is better than a wrong one
+      console.error('kx_post_avg_price failed', res.error);
+      return;
+    }
+    if(res.data != null) paint(Number(res.data));
+  };
+
   window.kxRenderBidderList = async function(listEl, post, myQuotes){
     listEl.innerHTML = '<div class="kx-empty" style="padding:22px"><div class="kx-empty-sub">กำลังโหลด…</div></div>';
     var res = await sb.rpc('kx_post_bidders', { pid: post.id });

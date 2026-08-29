@@ -1485,32 +1485,52 @@
           profiles: { company_name: 'ฉันเอง', avatar_url: null } }]
       });
       await openAs(w, ME, asBidder);
-      expect(w.document.getElementById('rfqCompareSub').textContent).toContain('2 ราย');
+      expect(w.document.querySelector('#rfqCompareSub .kx-count-pill').textContent)
+        .toContain('2 ข้อเสนอ', 'the count is of every offer, not of the rows RLS handed over');
     });
-    /* A bidder knows their own price, so on a two-offer listing the average
-       plus their own number gives away the other person's exactly. */
-    it('keeps the average from anyone who could work backwards from it', async function (w) {
+    /* Everyone sees the average. A viewer who is not the owner never receives
+       the prices, so it comes from kx_post_avg_price() rather than being
+       computed here. What that publishes is set out in
+       database/public_avg_price.sql. */
+    it('shows a bidder the real average, fetched rather than guessed', async function (w) {
       var asBidder = post({
         id: 'N6', quote_count: 2,
         quotes: [{ id: 'q2', price: 9300000, note: 'x', status: 'pending',
           created_at: '2026-08-22T00:00:00Z', bidder_id: ME, quote_attachments: [],
           profiles: { company_name: 'ฉันเอง', avatar_url: null } }]
       });
-      await openAs(w, ME, asBidder);
+      var sb = plan(w, {
+        posts: { _: { data: asBidder, error: null } }, _: { data: [], error: null },
+        _rpc: { kx_post_bidders: { data: BIDDERS, error: null },
+                kx_post_avg_price: { data: 9150000, error: null } }
+      });
+      signIn(w, ME);
+      await w.kxOpenPost(asBidder.id, 'rfq');
+      for (var i = 0; i < 120; i++) {
+        if (w.document.querySelector('#rfqCompareSub .kx-avg')) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      restore(w);
       var subEl = w.document.getElementById('rfqCompareSub');
-      expect(subEl.textContent).notToContain('เฉลี่ย');
-      expect(subEl.querySelector('.kx-avg')).toBeFalsy();
+      expect(subEl.querySelector('.kx-avg b').textContent).toContain('9,150,000');
+      expect(subEl.textContent).notToContain('9,300,000',
+        'their own price is not the average, which is what the old code showed');
+      expect(sb._calls.filter(function (c) { return c.rpc === 'kx_post_avg_price'; }).length)
+        .toBe(1, 'the prices it averages never reach this page');
     });
-    it('shows the owner the average, since they hold every price already', async function (w) {
+    it('shows the owner the average without a second query', async function (w) {
       var mine = post({ id: 'N7', owner_id: ME, quote_count: 2, quotes: [
         { id: 'q1', price: 9000000, note: 'a', status: 'pending', created_at: '2026-08-20T00:00:00Z',
           bidder_id: OTHER, quote_attachments: [], profiles: { company_name: 'A', avatar_url: null } },
         { id: 'q2', price: 9300000, note: 'b', status: 'pending', created_at: '2026-08-22T00:00:00Z',
           bidder_id: THIRD, quote_attachments: [], profiles: { company_name: 'B', avatar_url: null } } ] });
-      await openAs(w, ME, mine);
+      var sb = await openAs(w, ME, mine);
       var subEl = w.document.getElementById('rfqCompareSub');
       expect(subEl.textContent).toContain('9,150,000');
       expect(subEl.querySelector('.kx-avg')).toBeTruthy('the average gets its own emphasis');
+      expect(subEl.querySelector('.kx-count-pill').textContent).toContain('2 ข้อเสนอ');
+      expect(sb._calls.filter(function (c) { return c.rpc === 'kx_post_avg_price'; }).length)
+        .toBe(0, 'the owner holds every price already');
     });
     it('names the migration when it has not been run', async function (w) {
       await openAs(w, ME, post({ id: 'N3' }),
@@ -1549,6 +1569,21 @@
 
   /* View counts are gone: a number nobody acts on, and on a new listing "0 วิว"
      reads as "nobody is interested" rather than "this was posted an hour ago". */
+  /* สถิติ shipped four headline figures and a bar chart, all literals in the
+     markup — including a win rate for a thing the app no longer does. Nothing
+     linked to it, so nobody ever saw it. */
+  describe('the สถิติ page is gone', function () {
+    it('is not in the document', function (w) {
+      expect(w.document.getElementById('page-analytics')).toBeFalsy();
+    });
+    it('takes its invented figures with it', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      ['12,480', 'อัตราชนะ', '2.4 ชม.'].forEach(function (s) {
+        expect(src.indexOf(s)).toBe(-1, '"' + s + '" was a literal, not a measurement');
+      });
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
