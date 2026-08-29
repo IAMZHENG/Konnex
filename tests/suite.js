@@ -1388,6 +1388,104 @@
     });
   });
 
+  // =========================== who offered is public; what they offered is not ===
+  /* The select policy on `quotes` gives a third party no rows, so a listing
+     whose card said "2 ราย" opened onto an empty section. kx_post_bidders()
+     returns identity and nothing else, so the list can show who without
+     showing what. */
+  describe('the bidder list a non-owner sees', function () {
+    var BIDDERS = [
+      { quote_id: 'q1', bidder_id: OTHER, created_at: '2026-08-20T00:00:00Z',
+        company_name: 'ผู้เสนอ A', avatar_url: null, province: 'เชียงใหม่',
+        is_verified: true, rating_avg: 5, rating_count: 1 },
+      { quote_id: 'q2', bidder_id: THIRD, created_at: '2026-08-22T00:00:00Z',
+        company_name: 'ผู้เสนอ B', avatar_url: null, province: 'ลำพูน',
+        is_verified: false, rating_avg: null, rating_count: 0 }
+    ];
+    function post(over) {
+      return Object.assign({
+        id: 'N1', kind: 'rfq', owner_id: OTHER, title: 'ทดสอบ', province: 'เชียงใหม่',
+        status: 'open', deadline: '2099-01-01T00:00:00Z', quote_count: 2,
+        post_images: [], post_attachments: [], post_questions: [], quotes: [],
+        profiles: { company_name: 'ผู้ซื้อ', avatar_url: null }
+      }, over || {});
+    }
+    async function openAs(w, uid, p, rpcResult) {
+      var sb = plan(w, {
+        posts: { _: { data: p, error: null } }, _: { data: [], error: null },
+        _rpc: { kx_post_bidders: rpcResult || { data: BIDDERS, error: null } }
+      });
+      signIn(w, uid);
+      await w.kxOpenPost(p.id, 'rfq');
+      for (var i = 0; i < 120; i++) {
+        var l = w.document.getElementById('offerList');
+        if (l && !/กำลังโหลด/.test(l.textContent)) break;
+        await new Promise(function (r) { setTimeout(r, 10); });
+      }
+      await new Promise(function (r) { setTimeout(r, 40); });
+      restore(w);
+      return sb;
+    }
+    it('names everyone who has offered', async function (w) {
+      await openAs(w, ME, post());
+      var list = w.document.getElementById('offerList');
+      expect(list.querySelectorAll('.offer-card').length).toBe(2);
+      expect(list.textContent).toContain('ผู้เสนอ A');
+      expect(list.textContent).toContain('ผู้เสนอ B');
+    });
+    it('shows no price and no quotation file', async function (w) {
+      await openAs(w, ME, post());
+      var list = w.document.getElementById('offerList');
+      expect(list.querySelectorAll('.price-num').length).toBe(0);
+      expect(/[0-9],[0-9]{3}/.test(list.textContent)).toBe(false, 'no figure that could be a price');
+      expect(list.querySelectorAll('.files-sum, .btn-view').length).toBe(0);
+      expect(list.textContent).toContain('เห็นได้เฉพาะเจ้าของประกาศ');
+    });
+    it('leaves the owner’s own view alone', async function (w) {
+      var mine = post({ id: 'N2', owner_id: ME, quote_count: 1, quotes: [
+        { id: 'q9', price: 777000, note: 'หมายเหตุ', status: 'pending',
+          created_at: '2026-08-20T00:00:00Z', bidder_id: OTHER, quote_attachments: [],
+          profiles: { company_name: 'ผู้เสนอ A', avatar_url: null } } ] });
+      var sb = await openAs(w, ME, mine);
+      expect(w.document.querySelector('#offerList .price-num').textContent).toContain('777,000');
+      expect(sb._calls.filter(function (c) { return c.rpc === 'kx_post_bidders'; }).length)
+        .toBe(0, 'the owner already has the rows; asking again would be a second query for less');
+    });
+    it('names the migration when it has not been run', async function (w) {
+      await openAs(w, ME, post({ id: 'N3' }),
+        { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } });
+      expect(w.document.getElementById('offerList').textContent).toContain('public_bidders.sql');
+    });
+  });
+
+  describe('คำถามเกี่ยวกับงานนี้', function () {
+    function post(owner) {
+      return { id: 'Q9', kind: 'rfq', owner_id: owner, title: 'ทดสอบ', province: 'เชียงใหม่',
+        status: 'open', deadline: '2099-01-01T00:00:00Z', quote_count: 0,
+        post_images: [], post_attachments: [], post_questions: [], quotes: [],
+        profiles: { company_name: 'ผู้ซื้อ', avatar_url: null } };
+    }
+    async function openAs(w, uid, p) {
+      plan(w, { posts: { _: { data: p, error: null } }, _: { data: [], error: null } });
+      signIn(w, uid);
+      await w.kxOpenPost(p.id, 'rfq');
+      await new Promise(function (r) { setTimeout(r, 80); });
+      restore(w);
+    }
+    it('lets anyone but the owner ask', async function (w) {
+      await openAs(w, ME, post(OTHER));
+      expect(w.document.querySelector('#rfqQaBlock .kx-askin')).toBeTruthy();
+    });
+    /* You do not question your own listing, so the owner gets no box — but the
+       block then sat empty with no hint of what it was for. */
+    it('tells the owner what the empty block is waiting for', async function (w) {
+      await openAs(w, ME, post(ME));
+      var block = w.document.getElementById('rfqQaBlock');
+      expect(block.querySelector('.kx-askin')).toBeFalsy();
+      expect(block.textContent).toContain('จะมาแสดงที่นี่');
+    });
+  });
+
   describe('renderSidebars — the rail', function () {
     function items(w) {
       var nav = w.document.querySelector('#page-feed .side-nav');

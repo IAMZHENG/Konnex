@@ -2425,6 +2425,25 @@ input[type="number"]:focus, textarea:focus, select:focus{
     background: var(--blue-600);
     color: #fff
     }
+/* the bidder list a non-owner sees: who offered, never what */
+#page-rfq-detail .kx-bidnote {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    background: var(--bg, #f6f8fc);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 13px;
+    margin-bottom: 12px;
+    line-height: 1.55
+    }
+#page-rfq-detail .kx-hidden-price {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-faint, #8a90a2);
+    line-height: 1.4;
+    max-width: 130px
+    }
 #page-rfq-detail .head-tag.open {
     background: var(--green-bg, #ecfdf3);
     color: var(--green, #15803d)
@@ -20536,7 +20555,16 @@ body.kx-auth .kx-burger{ display:none !important; }
               'onclick="kxCloseBidding(\'' + post.id + '\')">🔒 ปิดรับข้อเสนอตอนนี้</button>' +
           '</div>'
         : '';
-      offerListEl.innerHTML = waitNote + (quotes.length
+      /* A viewer who is neither the bidder nor the owner receives no quote rows
+         at all — that is the select policy on `quotes` doing its job. But the
+         card above says how many people have offered, so an empty section
+         underneath reads as a broken page. kx_post_bidders() (see
+         database/public_bidders.sql) returns who offered and when, and nothing
+         about what they offered, so the list can be honest both ways. It is
+         asked for separately because it is a different query, not a wider one. */
+      var needsBidderList = !isOwner && !quotes.length && (post.quote_count || 0) > 0;
+      if(needsBidderList) kxRenderBidderList(offerListEl, post);
+      else offerListEl.innerHTML = waitNote + (quotes.length
         // in the order they were sent, not ranked by price — the list is a
         // record of who offered what, and ordering it by price makes the page
         // look like a leaderboard for a decision Konnex does not make
@@ -20691,6 +20719,49 @@ body.kx-auth .kx-burger{ display:none !important; }
     '</div>';
   }
 
+  /* Who has offered, for everyone who is not the owner. The prices are not in
+     this data at all — kx_post_bidders() never selects them — so there is
+     nothing here to accidentally reveal. */
+  window.kxRenderBidderList = async function(listEl, post){
+    listEl.innerHTML = '<div class="kx-empty" style="padding:22px"><div class="kx-empty-sub">กำลังโหลด…</div></div>';
+    var res = await sb.rpc('kx_post_bidders', { pid: post.id });
+    if(res.error){
+      console.error('kx_post_bidders failed', res.error);
+      listEl.innerHTML = '<div class="kx-empty"><div class="kx-empty-ic">🧾</div>' +
+        '<div class="kx-empty-title">' + (post.quote_count || 0) + ' รายเสนอราคาเข้ามาแล้ว</div>' +
+        '<div class="kx-empty-sub">' + (window.kxTableMissing(res.error)
+          ? 'ยังดูรายชื่อผู้เสนอไม่ได้ (ยังไม่ได้รัน database/public_bidders.sql)'
+          : 'โหลดรายชื่อผู้เสนอไม่สำเร็จ') + '</div></div>';
+      return;
+    }
+    var rows = res.data || [];
+    if(!rows.length){
+      listEl.innerHTML = '<div class="kx-empty"><div class="kx-empty-ic">🧾</div>' +
+        '<div class="kx-empty-title">ยังไม่มีข้อเสนอ</div></div>';
+      return;
+    }
+    listEl.innerHTML =
+      '<div class="kx-bidnote">👀 คุณเห็นว่ามีใครเสนอราคาเข้ามาบ้าง ' +
+        'ส่วนราคาและใบเสนอราคาที่แนบมา เห็นได้เฉพาะเจ้าของประกาศ</div>' +
+      rows.map(function(b){
+        var who = b.company_name || 'ผู้ใช้ Konnex';
+        var open = b.bidder_id ? 'kxViewProfile(&quot;' + esc(b.bidder_id) + '&quot;)' : '';
+        return '<div class="offer-card kx-q">' +
+          '<div class="offer-av"' + (open ? ' style="cursor:pointer;overflow:hidden" onclick="' + open + '"' : ' style="overflow:hidden"') + '>' +
+            avatarInner(b, who) + '</div>' +
+          '<div class="offer-main">' +
+            '<div class="offer-name-row"><span' + (open ? ' style="cursor:pointer" onclick="' + open + '"' : '') + '>' +
+              esc(who) + '</span></div>' +
+            '<div class="offer-loc">' + esc(b.province || 'ไม่ระบุจังหวัด') + ' · ' + relTime(b.created_at) + '</div>' +
+            quoteStatsHTML(b) +
+          '</div>' +
+          '<div class="offer-col"><div class="col-label">ราคาเสนอ</div>' +
+            '<div class="kx-hidden-price">เห็นได้เฉพาะเจ้าของประกาศ</div></div>' +
+        '</div>';
+      }).join('');
+    if(window.kxApplyIcons) window.kxApplyIcons(listEl);
+  };
+
   function renderQa(blockId, post, isOwner){
     var block = document.getElementById(blockId);
     if(!block) return;
@@ -20707,7 +20778,11 @@ body.kx-auth .kx-burger{ display:none !important; }
       (qs.length
         ? '<div style="display:flex;flex-direction:column;gap:16px;">' +
             qs.map(function(q){ return qaItemHTML(q, isOwner, ownerName, post.profiles); }).join('') + '</div>'
-        : '<div style="font-size:15px;color:var(--ink-faint);padding:6px 0 2px;">ยังไม่มีคำถามสำหรับงานนี้</div>') +
+        : '<div style="font-size:15px;color:var(--ink-faint);padding:6px 0 2px;">' +
+            // the owner gets no ask box — you do not question your own listing —
+            // so say what the empty block is waiting for rather than leaving it bare
+            (isOwner ? 'ยังไม่มีคำถาม — คำถามจากผู้ที่สนใจจะมาแสดงที่นี่ และคุณตอบได้จากตรงนี้'
+                     : 'ยังไม่มีคำถามสำหรับงานนี้') + '</div>') +
       (canAsk
         ? '<div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
             '<input type="text" class="kx-askin" placeholder="ถามเรื่องสเปก/เงื่อนไขงาน..." ' +
