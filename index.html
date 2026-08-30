@@ -12175,6 +12175,25 @@ html, body{
   }
   document.getElementById('verifyModal').addEventListener('click', function(e){ if(e.target.id==='verifyModal') closeVerify(); });
 
+  /* ไฟล์แนบ — the list behind the "N ไฟล์แนบ · กดเพื่อดู" pill. Each summary
+     carries its own chips in a hidden .files-data; opening the modal is a matter
+     of moving them into it.
+
+     These two were lost when the fabricated quotation preview was removed: they
+     sat in the same block, and the cut took them with it. The markup and all
+     four call sites stayed, so the pill kept inviting a click and then threw
+     ReferenceError. The audit that would have caught it was run before that
+     removal, not after. */
+  function openFilesList(el){
+    var data = el.querySelector('.files-data');
+    document.getElementById('flList').innerHTML = data ? data.innerHTML : '';
+    document.getElementById('filesListModal').classList.add('open');
+  }
+  function closeFilesList(){ document.getElementById('filesListModal').classList.remove('open'); }
+  document.getElementById('filesListModal').addEventListener('click', function(e){
+    if(e.target.id === 'filesListModal') closeFilesList();
+  });
+
   // gallery lightbox state
   var lbImgs = [], lbIdx = 0;
   function lbShow(i){

@@ -1867,6 +1867,68 @@
     });
   });
 
+  /* Removing the fabricated quotation preview took openFilesList and
+     closeFilesList with it — they sat in the same block. The modal and all four
+     call sites stayed, so "N ไฟล์แนบ · กดเพื่อดู" kept inviting a click and then
+     threw ReferenceError. Nothing failed loudly; the pill simply did nothing.
+     This walks every inline handler the app writes and checks the function on
+     the other end exists. */
+  describe('every inline handler resolves', function () {
+    var BUILTIN = ['if','for','while','return','function','typeof','switch','catch',
+      'alert','confirm','prompt','Number','String','Boolean','Array','Object','parseInt',
+      'parseFloat','JSON','Math','Date','setTimeout','encodeURIComponent','decodeURIComponent',
+      'click','getElementById','remove','querySelector','preventDefault','stopPropagation',
+      'contains','add','toggle','focus','blur'];
+    it('names no function that does not exist', async function (w) {
+      // drive the pages first: most handlers are written into cards by renderers
+      var pages = ['page-feed','page-rfq-offers','page-my-offers','page-my-bids',
+        'page-my-requests','page-company-profile','page-edit-profile','page-create-post',
+        'page-messages','page-notifications','page-settings','page-saved','page-history',
+        'page-dashboard','page-auth','page-admin-verify'];
+      signIn(w);
+      plan(w, { _: { data: [], error: null } });
+      for (var i = 0; i < pages.length; i++) {
+        await w.navigateTo(pages[i], true);
+        await new Promise(function (r) { setTimeout(r, 20); });
+      }
+      restore(w);
+
+      var attrs = ['onclick','onchange','oninput','onkeydown','onsubmit','onfocus','onblur'];
+      var dead = [];
+      Array.prototype.forEach.call(w.document.querySelectorAll('*'), function (el) {
+        attrs.forEach(function (a) {
+          var v = el.getAttribute && el.getAttribute(a);
+          if (!v) return;
+          (v.match(/([A-Za-z_$][\w$]*)\s*\(/g) || []).forEach(function (mm) {
+            var n = mm.slice(0, -1).trim();
+            if (BUILTIN.indexOf(n) > -1) return;
+            if (typeof w[n] === 'function') return;
+            if (dead.indexOf(n) === -1) dead.push(n);
+          });
+        });
+      });
+      expect(dead).toEqual([], 'these are called from markup but not defined');
+    });
+    it('can open the attachment list', function (w) {
+      expect(typeof w.openFilesList).toBe('function');
+      expect(typeof w.closeFilesList).toBe('function');
+      expect(w.document.getElementById('filesListModal')).toBeTruthy();
+    });
+    it('fills the modal from the summary it was clicked on', function (w) {
+      var host = w.document.createElement('div');
+      host.innerHTML = '<span class="files-data">' +
+        '<a class="file-chip pdf" href="http://x/a.pdf"><span class="fc-name">a.pdf</span></a></span>';
+      w.document.body.appendChild(host);
+      w.openFilesList(host);
+      var chips = w.document.querySelectorAll('#filesListModal .file-chip');
+      expect(chips.length).toBe(1);
+      expect(chips[0].getAttribute('href')).toBe('http://x/a.pdf');
+      w.closeFilesList();
+      expect(w.document.getElementById('filesListModal').className).notToContain('open');
+      host.remove();
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
