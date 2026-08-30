@@ -2374,14 +2374,20 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #page-rfq-detail .tag-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 14px
     }
 /* บันทึกไว้ on the detail pages. It carries .bookmark-ic and a data-post-id, so
    kxApplySavedMarks paints its saved state along with every card in the app and
    kxToggleSave already knows what to do with a click. */
+/* flex-shrink:0 because the row is a flex line: at 375px the two badges and
+   this button did not fit, and the button was the one that gave — squeezed to
+   35px, where border-radius:999px turns it into a circle with its own label
+   spilling out of it. That ring was the button, not a shadow. */
 #page-rfq-detail .detail-save,
 #page-offer-detail .detail-save {
+    flex-shrink: 0;
     margin-left: auto;
     display: inline-flex;
     align-items: center;
@@ -10066,9 +10072,17 @@ html, body{
     if((n.kind === 'connect_request' || n.kind === 'connect_accepted') && n.actor_id){
       return "kxViewProfile('" + n.actor_id + "')";
     }
+    /* The post's own kind decides which detail page opens. This used to read
+       `n.kind === 'new_request' ? 'offer' : 'rfq'` — a guess from the kind of
+       notification, which is a different thing entirely: a question answered on
+       a ประกาศขาย is not a new_request, so it opened the ต้องการซื้อ page and
+       showed whatever was there last. posts(kind) comes back with the row now;
+       when it is missing (an older row, or the post was deleted) the id is
+       still looked up rather than guessed. */
     if(n.link_post_id){
-      var kind = (n.kind === 'new_request') ? 'offer' : 'rfq';
-      return "kxOpenPost('" + n.link_post_id + "','" + kind + "')";
+      var pk = n.posts && n.posts.kind;
+      if(pk) return "kxOpenPost('" + n.link_post_id + "','" + pk + "')";
+      return "kxOpenPostById('" + n.link_post_id + "')";
     }
     return "navigateTo('page-feed')";
   }
@@ -10136,7 +10150,11 @@ html, body{
 
   window.kxLoadNotifications = async function(){
     if(!window.kxSession) return;
-    var cols = 'id,kind,body,link_post_id,is_read,created_at,actor_id';
+    /* posts(kind) rides along: a notification carries a post id but not what
+       kind of post it is, and the click has to pick a detail page before it can
+       load anything. Guessing rfq for everything sent every question and answer
+       about a ประกาศขาย to the wrong page. */
+    var cols = 'id,kind,body,link_post_id,is_read,created_at,actor_id,posts(kind)';
     var res = await sb.from('notifications')
       .select(cols)
       .eq('profile_id', window.kxSession.user.id)
@@ -10146,7 +10164,7 @@ html, body{
     // just routes to the feed as it did before, rather than the page erroring out
     if(res.error && /actor_id/i.test(res.error.message || '')){
       res = await sb.from('notifications')
-        .select('id,kind,body,link_post_id,is_read,created_at')
+        .select('id,kind,body,link_post_id,is_read,created_at,posts(kind)')
         .eq('profile_id', window.kxSession.user.id)
         .order('created_at', { ascending:false })
         .limit(100);
@@ -15575,8 +15593,11 @@ body.kx-auth .kx-burger{ display:none !important; }
     width:40px !important; height:40px !important; border-radius:50%;
     display:inline-flex !important; align-items:center; justify-content:center; flex:none;
   }
-  /* save/bookmark control inside feed cards was 21px wide */
-  .bookmark-ic{
+  /* save/bookmark control inside feed cards was 21px wide. :not(.detail-save)
+     because the button on the two detail pages carries the same class but has a
+     label beside its icon — forced to 36px square it became a circle with
+     "บันทึก" spilling out of it, which read as a stray ring. */
+  .bookmark-ic:not(.detail-save){
     width:36px !important; height:36px !important;
     display:inline-flex !important; align-items:center; justify-content:center;
   }
@@ -20225,6 +20246,21 @@ body.kx-auth .kx-burger{ display:none !important; }
     Array.prototype.forEach.call(dots, function(d, k){ d.classList.toggle('on', k === i); });
   };
 
+  /* The two kind badges, drawn rather than typed. The pass that turns an emoji
+     into an svg runs before the feed has any cards, so the emoji survived on
+     these — and an emoji is at the mercy of the system font: on Windows the
+     cart arrives as a hairline outline, which disappears on a saturated blue
+     pill. Drawn here, the stroke width is ours to set. */
+  function kindIconSVG(isRfq){
+    var p = isRfq
+      ? '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>' +
+        '<path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/>'
+      : '<path d="M20.6 13.4 12 4.8H4v8l8.6 8.6a2 2 0 0 0 2.8 0l5.2-5.2a2 2 0 0 0 0-2.8z"/>' +
+        '<circle cx="7.5" cy="7.5" r="1.2"/>';
+    return '<svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true" ' +
+      'style="width:16px;height:16px;stroke-width:2.4;vertical-align:-3px;margin-right:5px;">' + p + '</svg>';
+  }
+
   function postCardHTML(post){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
@@ -20288,7 +20324,13 @@ body.kx-auth .kx-burger{ display:none !important; }
           ' onclick="event.stopPropagation();kxViewProfile(\'' + post.owner_id + '\')">' + esc(ownerName) + '</span></span>' +
           '<span class="pc-sub">' + (isRfq ? 'ผู้ซื้อ' : 'ผู้ขาย') + (loc ? ' · ' + esc(loc) : '') +
             ' · ' + relTime(post.created_at) + '</span></span>' +
-        '<span class="pc-kind ' + (isRfq ? 'buy">🛒 ต้องการซื้อ' : 'sell">🏷️ ประกาศขาย') + '</span>' +
+        /* The icon is drawn here rather than left as an emoji for a later pass
+           to convert. The pass that does that runs before the feed has any cards,
+           so the emoji survived — and an emoji is at the mercy of the system font:
+           on Windows the cart came through as a hairline outline, invisible on a
+           saturated blue pill. An inline svg has a stroke width we control. */
+        '<span class="pc-kind ' + (isRfq ? 'buy' : 'sell') + '">' + kindIconSVG(isRfq) +
+          (isRfq ? 'ต้องการซื้อ' : 'ประกาศขาย') + '</span>' +
       '</div>' +
       '<div class="pc-text">' +
         '<div class="post-title">' + esc(post.title) + '</div>' +
@@ -21334,6 +21376,16 @@ body.kx-auth .kx-burger{ display:none !important; }
      existed in the argument to this call. It also means a listing can now be
      linked to and shared, which a marketplace rather needs.
      Written after navigateTo, which replaces the hash with the bare page id. */
+  /* Open a post when the caller has an id but not a kind. kxOpenPost has to
+     choose a page before it can load anything, so the kind is looked up first
+     rather than assumed. */
+  window.kxOpenPostById = async function(id){
+    if(!id) return;
+    var res = await sb.from('posts').select('kind').eq('id', id).maybeSingle();
+    if(res.error) console.error('kxOpenPostById failed', res.error);
+    kxOpenPost(id, (res.data && res.data.kind) || 'rfq');
+  };
+
   window.kxOpenPost = function(id, kind){
     var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
     navigateTo(page);

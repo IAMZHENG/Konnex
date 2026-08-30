@@ -1823,6 +1823,50 @@
     });
   });
 
+  // ============================ a notification opens the page it is about ===
+  /* notifTarget picked the detail page from the kind of *notification*:
+     `n.kind === 'new_request' ? 'offer' : 'rfq'`. A question answered on a
+     ประกาศขาย is not a new_request, so it opened ต้องการซื้อ and showed whichever
+     post that page held last. The post's own kind decides it now. */
+  describe('notification routing', function () {
+    var RFQ = '11111111-1111-1111-1111-111111111111';
+    var OFF = '22222222-2222-2222-2222-222222222222';
+    function notif(over) {
+      return Object.assign({ id: 'n1', kind: 'question_answered', body: 'x',
+        link_post_id: OFF, is_read: false, created_at: '2026-08-29T00:00:00Z',
+        actor_id: null, posts: { kind: 'offer' } }, over || {});
+    }
+    async function land(w, rows, id, postLookup) {
+      plan(w, { notifications: { _: { data: rows, error: null } },
+                posts: { _: { data: postLookup || { kind: 'offer' }, error: null } },
+                _: { data: [], error: null } });
+      signIn(w, ME);
+      await w.navigateTo('page-notifications', true);
+      await w.kxLoadNotifications();
+      await new Promise(function (r) { setTimeout(r, 60); });
+      w.kxOpenNotification(id);
+      await new Promise(function (r) { setTimeout(r, 120); });
+      restore(w);
+      return (w.document.querySelector('.app-page.active') || {}).id;
+    }
+    it('opens ประกาศขาย for a question answered on one', async function (w) {
+      expect(await land(w, [notif()], 'n1')).toBe('page-offer-detail');
+    });
+    it('opens ต้องการซื้อ for the same notification on an RFQ', async function (w) {
+      expect(await land(w, [notif({ link_post_id: RFQ, posts: { kind: 'rfq' } })], 'n1'))
+        .toBe('page-rfq-detail');
+    });
+    it('looks the post up when the row does not carry its kind', async function (w) {
+      // rows written before posts(kind) was fetched, or a post since deleted
+      var old = notif(); delete old.posts;
+      expect(await land(w, [old], 'n1', { kind: 'offer' })).toBe('page-offer-detail');
+    });
+    it('still sends a verification result to the profile', async function (w) {
+      expect(await land(w, [notif({ kind: 'verify_approved', link_post_id: null, posts: null })], 'n1'))
+        .toBe('page-company-profile');
+    });
+  });
+
   describe('no view counts', function () {
     it('shows none anywhere in the page', function (w) {
       expect(/\d+\s*วิว/.test(w.document.body.innerText)).toBe(false);
