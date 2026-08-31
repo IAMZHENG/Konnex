@@ -1887,11 +1887,22 @@
         'page-dashboard','page-auth','page-admin-verify'];
       signIn(w);
       plan(w, { _: { data: [], error: null } });
+      /* A navigateTo that never settles used to freeze the whole run at this
+         point, with the report stopping mid-page and nothing saying why. A page
+         that will not open is a finding; race each one so it is reported as one. */
+      var stuck = [];
       for (var i = 0; i < pages.length; i++) {
-        await w.navigateTo(pages[i], true);
+        var page = pages[i];
+        var settled = await Promise.race([
+          Promise.resolve(w.navigateTo(page, true)).then(function () { return true; },
+                                                         function () { return true; }),
+          new Promise(function (r) { setTimeout(function () { r(false); }, 3000); })
+        ]);
+        if (!settled) stuck.push(page);
         await new Promise(function (r) { setTimeout(r, 20); });
       }
       restore(w);
+      expect(stuck).toEqual([], 'these pages never finished opening');
 
       var attrs = ['onclick','onchange','oninput','onkeydown','onsubmit','onfocus','onblur'];
       var dead = [];
@@ -2054,6 +2065,62 @@
       restore(w);
       expect(w.kxProfileIsNew).toBe(true);
       expect(sb._writes.length).toBe(1, 'reaching the insert is what "new" means');
+    });
+  });
+
+  // ============================== สมัครสมาชิกไม่ถามเลขบัตรประชาชน/เลขเสียภาษี ===
+  /* The optional 13-digit field was checked against no registry, so it verified
+     nothing — it only stood between a new account and a look around. Identity is
+     established in การยืนยันตัวตน instead, with documents and an approval.
+     The column stays for the numbers already stored; nothing writes it. */
+  describe('signup asks for no identity number', function () {
+    it('renders no such field on either entity', function (w) {
+      w.authTab('register');
+      ['company', 'person'].forEach(function (kind) {
+        w.authEntity(kind);
+        expect(!!w.document.getElementById('auTaxInput')).toBe(false, kind + ': no input');
+      });
+      var text = w.document.getElementById('page-auth').textContent;
+      expect(/เลขบัตรประชาชน|เลขทะเบียนนิติบุคคล|เลขผู้เสียภาษี|13 หลัก/.test(text))
+        .toBe(false, 'and no copy left over asking for one');
+    });
+
+    it('stashes nothing to write into tax_id', async function (w) {
+      w.authTab('register'); w.authEntity('company');
+      w.document.getElementById('auNameInput').value    = 'บจก. ทดสอบ';
+      w.document.getElementById('auContactInput').value = 'สมชาย';
+      w.document.getElementById('auPhoneInput').value   = '0812345678';
+      w.document.getElementById('auRegEmail').value     = 'x@y.co.th';
+      w.document.getElementById('auRegPassword').value  = 'abcd1234';
+      w.document.getElementById('auRegTerms').checked   = true;
+      w.localStorage.removeItem('kx.pendingProfile');
+      var real = w.sb.auth.signUp;
+      w.sb.auth.signUp = async function () {
+        return { data: { user: { id: ME }, session: null }, error: null };
+      };
+      await w.authSubmitRegister();
+      w.sb.auth.signUp = real;
+      var stash = JSON.parse(w.localStorage.getItem('kx.pendingProfile') || 'null');
+      expect(!!stash).toBe(true, 'the rest of the form still carries over');
+      expect('tax_id' in stash).toBe(false);
+      expect(stash.phone).toBe('0812345678', 'the fields that remain still work');
+      w.localStorage.removeItem('kx.pendingProfile');
+    });
+
+    /* The real hazard of pulling the field out: the profile save builds its
+       update from PROFILE_COLS, so leaving taxId mapped there with nothing left
+       to fill it would have written '' over the numbers older accounts already
+       have, every time they touched แก้ไขโปรไฟล์. */
+    it('never sends tax_id when a profile is saved', async function (w) {
+      var sb = plan(w, { profiles: { update: { data: null, error: null } } });
+      w.kxSession = { user: { id: ME } };
+      await w.kxSaveProfileToDb();
+      restore(w);
+      var wrote = sb._writes.filter(function (x) { return x.table === 'profiles'; });
+      expect(wrote.length > 0).toBe(true, 'the save reached the table');
+      wrote.forEach(function (x) {
+        expect('tax_id' in x.row).toBe(false, 'an empty string here wipes a stored number');
+      });
     });
   });
 

@@ -3059,6 +3059,39 @@ glyph needing 37 and overlapped their labels by 4px; and the avatar upload capti
 tight enough to clip its tone marks. Latin text fits at those values, which is why they
 looked fine when they were written.
 
+## สมัครสมาชิกไม่ถามเลขบัตรประชาชนอีกแล้ว
+
+The signup form asked for a 13-digit เลขบัตรประชาชน / เลขทะเบียนนิติบุคคล. It was
+optional, and nothing checked it against any registry, so it verified nothing — it only
+put an identity number in front of someone who had not yet seen the app. Identity is
+established in การยืนยันตัวตน instead, where documents are uploaded and a person
+approves them.
+
+Pulling the field out had a trap behind it. The profile save builds its update from
+`PROFILE_COLS`, a map of form field to column; `taxId` was in that map, fed by a
+`DEFAULTS.taxId` of `''`. With signup no longer seeding it, every save from
+แก้ไขโปรไฟล์ would have written an empty string over whatever number an older account
+already had. So the mapping goes too, along with the entry in `DEFAULTS`, the `tax_id`
+in the reduced fallback payload, the `taxId` branch in `kxSeedProfile`, and the
+`tax_id` the first-login insert carried out of `kx.pendingProfile`. Nothing in the
+client writes that column now.
+
+`profiles.tax_id` itself stays. Numbers already stored keep their value; the app simply
+stops asking for and stops touching them.
+
+Three tests hold it: no such input on either entity and no copy left asking for one, a
+submitted registration whose stash carries no `tax_id`, and a profile save whose update
+does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
+
+## เทสต์รันเฉพาะบางกลุ่มได้
+
+`tests/run.html?only=<ข้อความ>` runs only the groups whose name contains that text. A
+full pass walks all 18 pages in the dead-handler audit and each one waits out its own
+network calls, so it runs for minutes — a wait that tells you nothing while you are
+iterating on one group. That audit also races each `navigateTo` against a 3-second
+timer now: a page that never finishes opening is reported as a finding, where before it
+froze the run with the report stopping mid-page and nothing saying why.
+
 ## Known wrinkles
 
 - `assets/img/konnex-mark-1.png` is served as the favicon at 512×512 (~307 KB). The

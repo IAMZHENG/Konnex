@@ -11828,10 +11828,16 @@ html, body{
           <p class="au-sub">สมัครฟรี เริ่มโพสต์งานหรือเสนอราคาได้ทันที</p>
           <div class="au-entity">
             <div class="au-entcard" id="auEntPerson" onclick="authEntity('person')" role="radio" aria-checked="false" tabindex="0"><div class="au-radio"></div><div><div class="au-rt">บุคคลธรรมดา</div><div class="au-rs">รับงานในชื่อตัวเอง</div></div></div>
-            <div class="au-entcard active" id="auEntCompany" onclick="authEntity('company')" role="radio" aria-checked="true" tabindex="0"><div class="au-radio on"></div><div><div class="au-rt">นิติบุคคล</div><div class="au-rs">รับงานในนามบริษัท มีเลขผู้เสียภาษี</div></div></div>
+            <div class="au-entcard active" id="auEntCompany" onclick="authEntity('company')" role="radio" aria-checked="true" tabindex="0"><div class="au-radio on"></div><div><div class="au-rt">นิติบุคคล</div><div class="au-rs">รับงานในนามบริษัทหรือห้างหุ้นส่วน</div></div></div>
           </div>
           <div class="au-field"><label id="auNameLabel">ชื่อบริษัท / ธุรกิจ <span class="au-req">*</span></label><input type="text" id="auNameInput" placeholder="เช่น บจก. ไทยพรีซิชั่น"></div>
-          <div class="au-field"><label id="auTaxLabel">เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี (ไม่บังคับ)</label><input type="text" id="auTaxInput" inputmode="numeric" maxlength="13" placeholder="เลข 13 หลัก (เว้นว่างไว้ก่อนได้)"></div>
+          <!-- เลขบัตรประชาชน / เลขทะเบียนนิติบุคคล stood here. It was optional and
+               nothing checked it against any registry, so it verified nothing at
+               signup — it only put an identity number in the way of looking
+               around. การยืนยันตัวตน is where identity is established, with
+               documents and an approval. The profiles.tax_id column stays so the
+               numbers already stored keep their value, but nothing in the app
+               asks for one any more. -->
           <div class="au-row2"><div class="au-field"><label id="auContactLabel">ชื่อผู้ติดต่อ <span class="au-req">*</span></label><input type="text" id="auContactInput" placeholder="ชื่อ-นามสกุล"></div><div class="au-field"><label>เบอร์โทรศัพท์ <span class="au-req">*</span></label><input type="tel" id="auPhoneInput" placeholder="08x-xxx-xxxx"></div></div>
           <div class="au-field"><label>อีเมล <span class="au-req">*</span></label><input id="auRegEmail" type="email" placeholder="you@company.co.th"></div>
           <div class="au-field"><label>รหัสผ่าน <span class="au-req">*</span></label><input id="auRegPassword" type="password" placeholder="อย่างน้อย 8 ตัวอักษร"></div>
@@ -16397,8 +16403,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     person: {
       name:    'ชื่อ-นามสกุล',
       namePh:  'เช่น สมชาย ใจดี',
-      tax:     'เลขบัตรประชาชน',
-      taxPh:   'เลข 13 หลัก (เว้นว่างไว้ก่อนได้)',
       contact: 'ชื่อผู้ติดต่อ (ถ้าต่างจากด้านบน)',
       avatar:  'รูปโปรไฟล์',
       media:   'รูปปกและรูปโปรไฟล์'
@@ -16406,8 +16410,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     company: {
       name:    'ชื่อบริษัท / ธุรกิจ',
       namePh:  'เช่น บจก. ไทยพรีซิชั่น',
-      tax:     'เลขทะเบียนนิติบุคคล / เลขผู้เสียภาษี',
-      taxPh:   'เลข 13 หลัก (เว้นว่างไว้ก่อนได้)',
       contact: 'ชื่อผู้ติดต่อ',
       avatar:  'โลโก้บริษัท',
       media:   'รูปปกและโลโก้บริษัท'
@@ -16434,11 +16436,8 @@ body.kx-auth .kx-burger{ display:none !important; }
       if(dot) dot.classList.toggle('on', on);
     });
     setText('auNameLabel', c.name, true);
-    // no longer required — see authSubmitRegister
-    setText('auTaxLabel', c.tax + ' (ไม่บังคับ)', false);
     setText('auContactLabel', c.contact, type === 'company');
     var ni = document.getElementById('auNameInput'); if(ni) ni.placeholder = c.namePh;
-    var ti = document.getElementById('auTaxInput');  if(ti) ti.placeholder = c.taxPh;
 
     // edit profile wording
     var at = document.getElementById('epAvatarTitle'); if(at) at.textContent = c.avatar;
@@ -16515,7 +16514,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     // the pages that have not been wired to the database yet do not show someone
     // else's sample data the moment you land
     var name    = (document.getElementById('auNameInput')    || {}).value || '';
-    var tax     = (document.getElementById('auTaxInput')     || {}).value || '';
     var contact = (document.getElementById('auContactInput') || {}).value || '';
     var phone   = (document.getElementById('auPhoneInput')   || {}).value || '';
     var mail    = document.getElementById('auRegEmail');
@@ -16535,20 +16533,6 @@ body.kx-auth .kx-burger{ display:none !important; }
       var ni = document.getElementById('auNameInput');
       ni.classList.add('bad'); ni.focus();
       kxToast(isPerson ? 'กรุณากรอกชื่อ-นามสกุล' : 'กรุณากรอกชื่อบริษัท / ธุรกิจ');
-      return;
-    }
-    /* Optional. It was required at signup, which puts an identity document in
-       the way of looking around — and the number alone verifies nothing, since
-       nothing checks it against a registry. การยืนยันตัวตน is where identity is
-       actually established, with documents and an approval. Left blank it stays
-       blank; typed, it still has to be 13 digits, because a half-entered one is
-       worse than none. */
-    var taxEl = document.getElementById('auTaxInput');
-    if(taxEl) taxEl.classList.remove('bad');
-    var taxDigits = tax.replace(/\D/g, '');
-    if(taxDigits && taxDigits.length !== 13){
-      if(taxEl){ taxEl.classList.add('bad'); taxEl.focus(); }
-      kxToast((isPerson ? 'เลขบัตรประชาชน' : 'เลขทะเบียนนิติบุคคล') + 'ต้องมี 13 หลัก (หรือเว้นว่างไว้ก่อนก็ได้)');
       return;
     }
     // a company is a separate entity from the person you speak to, so it needs
@@ -16580,7 +16564,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         email: mail.value.trim(), company_name: name.trim(),
         // an individual who left it blank is their own contact
         contact_name: contact.trim() || (isPerson ? name.trim() : ''),
-        phone: phone.trim(), tax_id: taxDigits || null,
+        phone: phone.trim(),
         business_type: isPerson ? 'person' : 'company'
       }));
     }catch(e){}
@@ -16598,7 +16582,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       return;
     }
 
-    if(typeof kxSeedProfile === 'function') kxSeedProfile({ name: name, taxId: tax });
+    if(typeof kxSeedProfile === 'function') kxSeedProfile({ name: name });
 
     if(res.data.session){
       // email confirmation is off on this project — signed in immediately
@@ -17331,7 +17315,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   var DEFAULTS = {
     name: '', tagline: '', about: '',
     bizType: '', founded: '', employees: '',
-    capital: '', taxId: '',
+    capital: '',
     occupation: '', experience: '',
     phone: '', email: '', website: '', hours: '', address: '', province: '',
     skills: [], certs: [], areas: [],
@@ -17360,7 +17344,7 @@ body.kx-auth .kx-burger{ display:none !important; }
      instantly, but the row is what other people see and what wins on load. */
   var PROFILE_COLS = {
     name:'company_name', tagline:'tagline', about:'about', bizType:'industry',
-    founded:'founded_year', employees:'employees', capital:'capital', taxId:'tax_id',
+    founded:'founded_year', employees:'employees', capital:'capital',
     occupation:'occupation', experience:'experience', phone:'phone', email:'email',
     website:'website', hours:'hours', address:'address', province:'province',
     avatar:'avatar_url', cover:'cover_url'
@@ -17440,7 +17424,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(upd.error && /column .* does not exist|schema cache/i.test(upd.error.message || '')){
       profileExtrasMissing = true;
       var basic = { company_name: row.company_name, about: row.about, phone: row.phone,
-                    tax_id: row.tax_id, employees: row.employees, founded_year: row.founded_year };
+                    employees: row.employees, founded_year: row.founded_year };
       upd = await sb.from('profiles').update(basic).eq('id', window.kxSession.user.id);
       if(!upd.error) kxToast('บันทึกแล้ว — บางช่องยังไม่ได้ติดตั้ง (ยังไม่ได้รัน profile_fields.sql)');
     }
@@ -17467,8 +17451,6 @@ body.kx-auth .kx-burger{ display:none !important; }
     data.phone = val('pfPhone'); data.email = val('pfEmail');
     data.website = val('pfWebsite'); data.hours = val('pfHours'); data.address = val('pfAddress');
     data.province = val('pfProvince');
-    // taxId is captured at signup and used by the Verified flow — it has no field here
-    // and must not be blanked by a collect() pass
     var cover = $('epCoverImg'), av = $('epAvatarImg');
     if(cover && !cover.hidden) data.cover = cover.src;
     if(av && !av.hidden) data.avatar = av.src;
@@ -17856,10 +17838,11 @@ body.kx-auth .kx-burger{ display:none !important; }
   window.kxAddCert = function(){ collect(); data.certs.push({ name:'', desc:'' }); renderCerts(); refresh(); };
   window.kxProfileData = function(){ return data; };
   window.kxApplyProfile = applyToProfile;
+  // exposed so a test can watch which columns the update actually carries
+  window.kxSaveProfileToDb = saveProfileToDb;
   window.kxSeedProfile = function(seed){
     if(!seed) return;
     if(seed.name)  data.name  = seed.name;
-    if(seed.taxId) data.taxId = seed.taxId;
     persist(); fill(); applyToProfile();
   };
 
@@ -17868,7 +17851,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     data = load();
 
     ['epName','pfTagline','pfAbout','pfBizType','pfFounded','pfEmployees','pfCapital',
-     'pfTaxId','pfPhone','pfEmail','pfWebsite','pfHours','pfAddress','pfProvince'].forEach(function(id){
+     'pfPhone','pfEmail','pfWebsite','pfHours','pfAddress','pfProvince'].forEach(function(id){
       var el = $(id);
       if(el) el.addEventListener('input', refresh);
       if(el && el.tagName === 'SELECT') el.addEventListener('change', refresh);
@@ -19051,7 +19034,6 @@ body.kx-auth .kx-burger{ display:none !important; }
       company_name: (pending && pending.company_name) || null,
       contact_name: pending ? pending.contact_name : null,
       phone:        pending ? pending.phone        : null,
-      tax_id:       pending ? pending.tax_id        : null,
       avatar_url:   photo,
       email:        user.email || null,
       business_type: (pending && pending.business_type) || 'company'

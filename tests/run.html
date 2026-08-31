@@ -104,7 +104,21 @@
       var s = document.createElement('script');
       s.src = 'suite.js';
       s.onload = async function () {
-        totals.innerHTML = '<span class="pill run">กำลังรัน…</span>';
+        /* ?only=<ข้อความ> รันเฉพาะกลุ่มที่ชื่อมีข้อความนั้น — the full run walks
+           every page in the app, and each one waits out its own network calls,
+           so a whole pass is minutes long. When you are iterating on one group
+           that wait tells you nothing. */
+        var only = (location.search.match(/[?&]only=([^&]*)/) || [])[1];
+        if (only) {
+          only = decodeURIComponent(only).toLowerCase();
+          var keep = KX.suites.filter(function (g) {
+            return g.name.toLowerCase().indexOf(only) > -1;
+          });
+          KX.suites.length = 0;
+          keep.forEach(function (g) { KX.suites.push(g); });
+        }
+        totals.innerHTML = '<span class="pill run">กำลังรัน…' +
+          (only ? ' (เฉพาะ “' + only + '”)' : '') + '</span>';
         var r = await KX.run(w, paint);
         totals.innerHTML =
           '<span class="pill ok">ผ่าน ' + r.passed + '</span>' +
