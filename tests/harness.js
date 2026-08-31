@@ -21,9 +21,13 @@
     fn();
     current = null;
   }
-  function it(name, fn) {
+  /* `timeoutMs` is for the rare test that legitimately takes a while — the
+     handler audit opens all 18 pages, and on a machine whose DNS is slow to
+     fail, every page waits out its own network calls. Everything else keeps
+     the default, so a genuine hang is still caught quickly. */
+  function it(name, fn, timeoutMs) {
     if (!current) throw new Error('it() outside describe()');
-    current.tests.push({ name: name, fn: fn });
+    current.tests.push({ name: name, fn: fn, timeoutMs: timeoutMs });
   }
   function beforeEach(fn) {
     if (!current) throw new Error('beforeEach() outside describe()');
@@ -136,6 +140,33 @@
   };
 
   // ------------------------------------------------------------------- run ---
+  /* A test that never settles used to take the whole run with it: the report
+     stopped mid-group and nothing said which test it was in, which is the least
+     useful failure a suite can produce. A watchdog turns it into an ordinary
+     named failure and lets the rest of the run finish. The timed-out test's own
+     promise is left to its fate — it cannot be cancelled, and by then the run
+     has moved on. */
+  /* Generous on purpose. A browser throttles timers in a tab that is not on
+     screen, so a test that waits 300ms for a render can take a minute there —
+     a tighter budget reports that as a hang, which is a lie. This is a net for
+     a promise that never settles at all, not a performance budget. */
+  var TEST_TIMEOUT_MS = 120000;
+  function withTimeout(p, name, ms) {
+    var limit = ms || TEST_TIMEOUT_MS, timer;
+    return Promise.race([
+      Promise.resolve(p).then(function (v) { clearTimeout(timer); return v; },
+                              function (e) { clearTimeout(timer); throw e; }),
+      new Promise(function (_, reject) {
+        timer = setTimeout(function () {
+          var e = new Error('ค้างเกิน ' + Math.round(limit / 1000) + ' วินาที — ' +
+                            'this test never settled: ' + name);
+          e.isAssertion = true;
+          reject(e);
+        }, limit);
+      })
+    ]);
+  }
+
   async function run(win, report) {
     var passed = 0, failed = 0, results = [];
     for (var s = 0; s < suites.length; s++) {
@@ -145,7 +176,7 @@
         var test = suite.tests[t], rec = { name: test.name, ok: true, err: null };
         try {
           if (suite.before) await suite.before(win);
-          await test.fn(win);
+          await withTimeout(test.fn(win), suite.name + ' › ' + test.name, test.timeoutMs);
           passed++;
         } catch (e) {
           rec.ok = false;

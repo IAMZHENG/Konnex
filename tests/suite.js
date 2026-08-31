@@ -1899,7 +1899,11 @@
           new Promise(function (r) { setTimeout(function () { r(false); }, 3000); })
         ]);
         if (!settled) stuck.push(page);
-        await new Promise(function (r) { setTimeout(r, 20); });
+        /* Let the renderer's own promises drain. This used to be a 20ms
+           setTimeout, which is the one thing in this loop a browser throttles
+           when the tab is not on screen — 18 of them turned a two-second test
+           into a nine-minute one. Microtasks are not throttled. */
+        for (var f = 0; f < 5; f++) await Promise.resolve();
       }
       restore(w);
       expect(stuck).toEqual([], 'these pages never finished opening');
@@ -2065,6 +2069,96 @@
       restore(w);
       expect(w.kxProfileIsNew).toBe(true);
       expect(sb._writes.length).toBe(1, 'reaching the insert is what "new" means');
+    });
+  });
+
+  // ==================================================== กดลูกตาดูรหัสผ่านได้ ===
+  describe('the reveal button on password fields', function () {
+    var IDS = ['auLoginPassword', 'auRegPassword', 'auNewPw1', 'auNewPw2',
+               'setAuthEmailPw', 'setPwCur', 'setPwNew', 'setPwNew2'];
+
+    it('reaches every password box in the app', function (w) {
+      var loose = Array.prototype.filter.call(
+        w.document.querySelectorAll('input[type="password"], input[data-kx-eye]'),
+        function (el) { return !el.getAttribute('data-kx-eye'); });
+      expect(loose.map(function (el) { return el.id; })).toEqual([],
+        'a password box with no way to read it back');
+      IDS.forEach(function (id) {
+        var el = w.document.getElementById(id);
+        expect(!!el).toBe(true, id + ' exists');
+        expect(el.parentNode.className).toBe('kx-pw-wrap', id + ' is wrapped');
+        expect(!!el.parentNode.querySelector('.kx-pw-eye')).toBe(true, id + ' has a button');
+      });
+    });
+
+    it('starts hidden and turns the characters on and off', function (w) {
+      var el = w.document.getElementById('auRegPassword');
+      var btn = el.parentNode.querySelector('.kx-pw-eye');
+      expect(el.type).toBe('password', 'nothing is revealed until it is asked for');
+      btn.click();
+      expect(el.type).toBe('text');
+      expect(btn.getAttribute('aria-pressed')).toBe('true');
+      btn.click();
+      expect(el.type).toBe('password');
+      expect(btn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('keeps the caret where it was', function (w) {
+      var el = w.document.getElementById('auRegPassword');
+      var btn = el.parentNode.querySelector('.kx-pw-eye');
+      el.value = 'MySecret123';
+      el.focus(); el.setSelectionRange(4, 4);
+      btn.click();
+      expect(el.selectionStart).toBe(4,
+        'flipping type sends the caret to the end unless it is put back');
+      expect(el.value).toBe('MySecret123');
+      btn.click(); el.value = '';
+    });
+
+    /* The button sits inside a form. A <button> with no type submits it, which
+       on the signup form means the eye registers the account. */
+    it('is a button that submits nothing', function (w) {
+      Array.prototype.forEach.call(w.document.querySelectorAll('.kx-pw-eye'), function (b) {
+        expect(b.type).toBe('button');
+      });
+    });
+
+    /* Leaving the page with a password on screen is the one real cost of this
+       control, and nobody clicks it back on the way out. */
+    it('re-hides everything when the page is left', async function (w) {
+      var el = w.document.getElementById('auRegPassword');
+      el.parentNode.querySelector('.kx-pw-eye').click();
+      expect(el.type).toBe('text', 'revealed, then we navigate away');
+      await w.navigateTo('page-feed', true);
+      expect(el.type).toBe('password');
+      expect(w.document.querySelectorAll('input[data-kx-eye][type="text"]').length).toBe(0,
+        'and nothing else was left readable either');
+    });
+
+    /* ตั้งค่า styles its own inputs through `#page-settings .set-field input`,
+       which outranks the wrapper's rule — the eye landed on top of the typed
+       characters there. The room is reserved inline for that reason. */
+    it('reserves room for itself even where the page restyles the input', function (w) {
+      IDS.forEach(function (id) {
+        var el = w.document.getElementById(id);
+        var pad = parseFloat(w.getComputedStyle(el).paddingRight);
+        expect(pad >= 44).toBe(true, id + ' has only ' + pad + 'px for the button');
+      });
+    });
+
+    it('does not wrap a field twice when a page is reopened', async function (w) {
+      await w.navigateTo('page-auth', true);
+      w.kxWirePasswordEyes();
+      w.kxWirePasswordEyes();
+      var el = w.document.getElementById('auRegPassword');
+      expect(el.parentNode.querySelectorAll('.kx-pw-eye').length).toBe(1);
+      expect(el.parentNode.parentNode.className).notToContain('kx-pw-wrap');
+    });
+
+    it('no longer ships eight asterisks as the current password', function (w) {
+      var el = w.document.getElementById('setPwCur');
+      expect(el.getAttribute('value')).toBe(null,
+        'it shipped value="********", which fails the sign-in check it feeds');
     });
   });
 

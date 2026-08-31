@@ -3083,14 +3083,56 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
-## เทสต์รันเฉพาะบางกลุ่มได้
+## กดลูกตาดูรหัสผ่านได้ทุกช่อง
 
-`tests/run.html?only=<ข้อความ>` runs only the groups whose name contains that text. A
-full pass walks all 18 pages in the dead-handler audit and each one waits out its own
-network calls, so it runs for minutes — a wait that tells you nothing while you are
-iterating on one group. That audit also races each `navigateTo` against a 3-second
-timer now: a page that never finishes opening is reported as a finding, where before it
-froze the run with the report stopping mid-page and nothing saying why.
+All eight password boxes in the app were write-only. Two of them already had a
+"ยืนยันรหัสผ่าน" box beside them, which is the usual answer to that and a weak one:
+typing the same string blind twice catches a slip only if you make a *different* slip
+the second time, and it catches nothing at all in the common case — a wrong keyboard
+layout or caps lock — where both boxes agree perfectly and both are wrong. Showing the
+characters catches all of it, so the reveal goes on every field, confirm boxes included.
+No confirm box was added to signup.
+
+The button is added by script rather than written into the markup eight times, and the
+details that took the work are the ones that are invisible when they are right:
+`type="button"`, because a bare `<button>` inside the signup form submits it; the caret
+put back where it was, because flipping `type` sends it to the end and someone clicking
+the eye mid-word is checking what they typed, not asking to jump; `tabIndex = -1`, so
+tabbing runs down the form; and everything re-hidden when the page is left, because a
+revealed password left standing on screen is the real cost of this control and nobody
+clicks it back on the way out.
+
+One thing had to be inline rather than in the stylesheet. ตั้งค่า styles its own inputs
+with `#page-settings .set-field input`, which outranks `.kx-pw-wrap > input` on
+specificity, so its 12px of right padding stood and the eye sat directly on top of the
+typed characters. The wrapper sets the padding on the element instead, taking the larger
+of the two so a field that already reserves more keeps it.
+
+Two things fixed while in there. `setPwCur` shipped `value="********"` — eight literal
+asterisks presented as your current password, which then failed the sign-in check that
+field feeds, so ตั้งค่า → เปลี่ยนรหัสผ่าน refused everyone until they cleared it by hand.
+And the ยอมรับข้อกำหนด row on signup rendered as three ragged columns at 375px: `.au-check`
+is a flex row, so each link was a flex item of its own being squeezed and wrapped
+independently. The words are one sentence, so they now live in one flex item.
+
+## เทสต์: รันเฉพาะบางกลุ่มได้ และไม่ค้างเงียบอีกแล้ว
+
+`tests/run.html?only=<ข้อความ>` runs only the groups whose name contains that text.
+
+Three things changed after a run wedged with the report stopping mid-group and nothing
+saying which test it was in — the least useful failure a suite can produce. The runner
+now races each test against a watchdog, so a promise that never settles becomes a named
+failure and the rest of the run finishes. The dead-handler audit races each `navigateTo`
+against a 3-second timer, so a page that never opens is reported rather than waited on.
+
+And the wedge itself turned out not to be a hang at all. That audit opens all 18 pages
+with a small wait between them, and the wait was a `setTimeout` — the one thing a browser
+throttles in a tab that is not on screen. Run the suite in a background tab and 18 waits
+of 20ms each become 18 waits of about a minute, turning a two-second test into a
+nine-minute one. The waits are microtask flushes now, which are not throttled. The
+watchdog's own budget is deliberately generous for the same reason: it is a net for a
+promise that never settles, not a performance budget, and a tighter one reports a
+throttled tab as a hang.
 
 ## Known wrinkles
 
