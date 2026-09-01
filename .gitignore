@@ -20,3 +20,7 @@ index.*.bak
 # just these two lines if they turn out to belong in the app after all.
 assets/img/272735234_5015452981851609_4099771454338103587_n.jpg
 assets/img/S__10821695.jpg
+
+# PDF/ is a local folder of exported copies — the tracked ones live in docs/,
+# and two folders of the same documents drift apart the moment one is rebuilt
+PDF/
