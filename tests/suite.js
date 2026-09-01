@@ -923,17 +923,30 @@
   });
 
   describe('QubeQuote says เสนอราคา, not ประมูล', function () {
-    it('has no ประมูล left anywhere on the page', function (w) {
-      var html = w.document.documentElement.innerHTML;
-      expect(html).notToContain('ประมูล',
+    /* Everywhere except the two legal documents, which have to be able to say
+       "this is not an auction" out loud. Banning the word there would only make
+       the sentence vaguer, and it is a denial, not an offer. */
+    function appHtml(w) {
+      var clone = w.document.documentElement.cloneNode(true);
+      ['page-terms', 'page-privacy'].forEach(function (id) {
+        var el = clone.querySelector('#' + id);
+        if (el) el.remove();
+      });
+      return clone.innerHTML;
+    }
+    it('has no ประมูล left anywhere the app speaks for itself', function (w) {
+      expect(appHtml(w)).notToContain('ประมูล',
         'QubeQuote gathers quotes; it does not run an auction and picks no winner');
+      var terms = w.document.getElementById('page-terms').textContent;
+      expect(terms).toContain('ไม่ใช่การประมูล',
+        'and the terms say so plainly rather than staying silent about it');
     });
     /* There used to be two pricing modes and this asserted the page named both.
        There is one behaviour now — a price goes to the post owner and to nobody
        else, enforced by the select policy on `quotes` — so naming a mode is
        naming a choice the poster does not have. */
     it('names no pricing mode, because there is only one behaviour', function (w) {
-      var html = w.document.documentElement.innerHTML;
+      var html = appHtml(w);
       expect(html).notToContain('เสนอราคาแบบเปิด');
       expect(html).notToContain('เสนอราคาแบบปิด');
     });
@@ -2216,6 +2229,82 @@
         if (Math.abs(n[0] - n[1]) > 0.01) bad.push(a);
       });
       expect(bad).toEqual([], 'these arcs are elliptical, not circular');
+    });
+  });
+
+  // ================================ ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว ===
+  describe('the terms and the privacy policy', function () {
+    it('both exist and are reachable from the signup checkbox', function (w) {
+      expect(!!w.document.getElementById('page-terms')).toBe(true);
+      expect(!!w.document.getElementById('page-privacy')).toBe(true);
+      var links = w.document.querySelectorAll('.au-check-t a');
+      expect(links.length).toBe(2, 'ยอมรับ … และ … — two links');
+      var targets = Array.prototype.map.call(links, function (a) {
+        return (a.getAttribute('onclick') || '').match(/page-[a-z]+/)[0];
+      });
+      expect(targets).toEqual(['page-terms', 'page-privacy']);
+    });
+
+    /* The links live on the signup form, so they have to open for someone who
+       has no account yet. Sending them to the signup form to read what they are
+       agreeing to would be a door that only opens from the inside. */
+    it('opens for a visitor with no session, while the rest still does not', async function (w) {
+      var had = w.kxSession;
+      w.kxSession = null;
+      try {
+        await w.navigateTo('page-terms', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-terms');
+        await w.navigateTo('page-privacy', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-privacy');
+        await w.navigateTo('page-feed', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth',
+          'every other page still requires signing in');
+      } finally { w.kxSession = had; }
+    });
+
+    /* The draft these were written from still described sealed bidding, an
+       auction, and a buyer choosing a winner on the platform. All three were
+       built and then removed on purpose, so promising them here would be a
+       promise the software does not keep. */
+    it('promises nothing the app does not do', function (w) {
+      var text = w.document.getElementById('page-terms').textContent;
+      [['เสนอราคาแบบปิด', 'sealed bidding was removed'],
+       ['ประมูลแบบปิด', 'sealed bidding was removed'],
+       ['ประมูลแบบเปิด', 'this is not an auction'],
+       ['เคาะราคา', 'this is not an auction'],
+       ['ผู้ชนะการประมูล', 'no winner is ever recorded']
+      ].forEach(function (p) {
+        expect(text.indexOf(p[0])).toBe(-1, p[0] + ' — ' + p[1]);
+      });
+      expect(text).toContain('ไม่ใช่การประมูล');
+      expect(text).toContain('ไม่เลือกผู้ชนะ');
+    });
+
+    it('discloses what the app actually exposes', function (w) {
+      var terms = w.document.getElementById('page-terms').textContent;
+      var priv = w.document.getElementById('page-privacy').textContent;
+      // who sees a price, and who only sees the average
+      expect(terms).toContain('ราคาเฉลี่ย');
+      expect(terms).toContain('เห็นได้เฉพาะเจ้าของประกาศ');
+      // the two-offer case the average gives away — documented, not hidden
+      expect(terms).toContain('สองราย');
+      // post images and attachments sit in public storage
+      expect(priv).toContain('ผู้ที่ทราบลิงก์ของไฟล์สามารถเปิดดูได้แม้ไม่ได้เข้าสู่ระบบ');
+      // identity documents do not
+      expect(priv).toContain('ไม่เปิดสาธารณะ');
+      // signup stopped asking for an identity number, so the policy must not claim it
+      expect(priv).toContain('เราไม่ได้ขอเลขบัตรประชาชน');
+      // data leaves the country
+      expect(priv).toContain('สิงคโปร์');
+    });
+
+    it('carries a version and an effective date on both', function (w) {
+      ['page-terms', 'page-privacy'].forEach(function (id) {
+        var v = w.document.querySelector('#' + id + ' .doc-ver');
+        expect(!!v).toBe(true, id + ' should show its version');
+        expect(v.textContent).toContain('ฉบับที่');
+        expect(v.textContent).toContain('มีผลบังคับใช้');
+      });
     });
   });
 

@@ -11547,6 +11547,8 @@ html, body{
               <div class="link-list">
                 <div class="link-item" onclick="navigateTo('page-edit-profile')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21v-6h6v6"></path></svg>แก้ไขโปรไฟล์<span class="chev">›</span></div>
                 <div class="link-item" onclick="openVerify()"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>เอกสารยืนยัน<span class="chev">›</span></div>
+                <div class="link-item" onclick="navigateTo('page-terms')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>ข้อกำหนดการใช้งาน<span class="chev">›</span></div>
+                <div class="link-item" onclick="navigateTo('page-privacy')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>นโยบายความเป็นส่วนตัว<span class="chev">›</span></div>
               </div>
             </div>
             <div class="set-card">
@@ -11840,7 +11842,7 @@ html, body{
           <div class="au-row2"><div class="au-field"><label id="auContactLabel">ชื่อผู้ติดต่อ <span class="au-req">*</span></label><input type="text" id="auContactInput" placeholder="ชื่อ-นามสกุล"></div><div class="au-field"><label>เบอร์โทรศัพท์ <span class="au-req">*</span></label><input type="tel" id="auPhoneInput" placeholder="08x-xxx-xxxx"></div></div>
           <div class="au-field"><label>อีเมล <span class="au-req">*</span></label><input id="auRegEmail" type="email" placeholder="you@company.co.th"></div>
           <div class="au-field"><label>รหัสผ่าน <span class="au-req">*</span></label><input id="auRegPassword" type="password" placeholder="อย่างน้อย 8 ตัวอักษร"></div>
-          <label class="au-check"><input id="auRegTerms" type="checkbox"> <span class="au-check-t">ยอมรับ <a class="au-link">ข้อกำหนดการใช้งาน</a> และ <a class="au-link">นโยบายความเป็นส่วนตัว</a></span></label>
+          <label class="au-check"><input id="auRegTerms" type="checkbox"> <span class="au-check-t">ยอมรับ <a class="au-link" onclick="event.preventDefault();navigateTo('page-terms')">ข้อกำหนดการใช้งาน</a> และ <a class="au-link" onclick="event.preventDefault();navigateTo('page-privacy')">นโยบายความเป็นส่วนตัว</a></span></label>
           <div id="auRegErr" class="au-err" hidden style="color:#c0392b;font-size:14px;margin:-6px 0 10px;"></div>
           <button id="auRegBtn" class="au-btn" onclick="authSubmitRegister()">สมัครสมาชิก</button>
           <div class="au-switch">มีบัญชีอยู่แล้ว? <a onclick="authTab('login')">เข้าสู่ระบบ</a></div>
@@ -11866,7 +11868,7 @@ html, body{
           <button class="au-btn" id="auNewPwBtn" onclick="authSetNewPassword()">บันทึกรหัสผ่านใหม่</button>
         </div>
       </div>
-      <div class="au-foot">© 2026 QubeQuote · ปลอดภัยด้วยการเข้ารหัส SSL</div>
+      <div class="au-foot">© 2026 QubeQuote · ปลอดภัยด้วยการเข้ารหัส SSL<br><a class="au-link" onclick="navigateTo('page-terms')">ข้อกำหนดการใช้งาน</a> · <a class="au-link" onclick="navigateTo('page-privacy')">นโยบายความเป็นส่วนตัว</a></div>
     </div>
   </div>
 </div>
@@ -12552,6 +12554,251 @@ html, body{
   }
   function premChoose(plan){ kxToast('เลือกแพ็กเกจ ' + plan + ' แล้ว — หน้าชำระเงินยังไม่เปิดใช้งาน'); }
 </script>
+
+<!-- ===== ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว =====
+     Two pages rather than a modal: they are long, they need to be linkable, and
+     the links to them sit on the signup form, so they have to open for someone
+     who has no account yet. The session guard has an exception for exactly
+     these two ids.
+
+     The wording follows what the app actually does, which is not the same as
+     the draft it was based on. That draft still described sealed bidding, an
+     auction, and a buyer "choosing" a winner on the platform — all three were
+     built and then removed on purpose, and promising them in the terms would
+     have been a promise the software does not keep. -->
+<div id="page-terms" class="app-page">
+  <div class="doc-wrap">
+    <article class="doc">
+      <header class="doc-head">
+        <div class="doc-brand">
+          <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
+          <div>
+            <div class="doc-name">QubeQuote</div>
+            <div class="doc-tag">แพลตฟอร์มขอและเปรียบเทียบใบเสนอราคา</div>
+          </div>
+        </div>
+        <div class="doc-ver">ฉบับที่ 1.0<br><span>มีผลบังคับใช้ 1 กันยายน 2569</span></div>
+      </header>
+
+      <h1>ข้อกำหนดการใช้งาน</h1>
+      <p class="doc-lead">โปรดอ่านข้อกำหนดนี้โดยละเอียดก่อนใช้บริการ การสมัครสมาชิกหรือใช้งาน
+        QubeQuote ถือว่าท่านยอมรับข้อกำหนดฉบับนี้</p>
+
+      <h2>1. ขอบเขตของบริการ</h2>
+      <p>QubeQuote เป็นพื้นที่ตัวกลาง (marketplace) ที่เชื่อมผู้ซื้อ ผู้ขาย ผู้รับเหมา และผู้ให้บริการ
+        เพื่อประกาศความต้องการซื้อ (RFQ) ประกาศขายสินค้าและบริการ (Offer) ส่งใบเสนอราคา
+        และเปรียบเทียบข้อเสนอในที่เดียว</p>
+
+      <div class="doc-note">
+        <b>ข้อจำกัดสำคัญ:</b> บริการของเราครอบคลุมเฉพาะ<b>ขั้นตอนการขอและเปรียบเทียบใบเสนอราคา</b>เท่านั้น
+        เราไม่เป็นคู่สัญญาในการซื้อขาย ไม่รับชำระเงิน ไม่ถือเงินแทน ไม่จัดส่งสินค้า
+        และไม่รับประกันคุณภาพสินค้าหรือบริการ เมื่อผู้ซื้อกับผู้เสนอราคาตกลงกันแล้ว
+        ทั้งสองฝ่ายต้องเจรจา ทำสัญญา ชำระเงิน และส่งมอบงานกันเองโดยตรง
+      </div>
+
+      <p>เราไม่รับประกันว่าจะมีผู้เสนอราคาเข้ามา ไม่รับประกันจำนวนหรือคุณภาพของข้อเสนอ
+        ไม่คัดกรองผู้ใช้แทนท่าน และไม่รับรองผู้ใช้รายใดก่อนการซื้อขายเกิดขึ้นจริง</p>
+
+      <h2>2. การสมัครและบัญชีผู้ใช้</h2>
+      <p>2.1 ผู้ใช้ต้องมีอายุไม่ต่ำกว่า 20 ปี หรือมีอำนาจผูกพันนิติบุคคลที่ตนลงทะเบียนแทน</p>
+      <p>2.2 บัญชีหนึ่งบัญชีใช้งานได้ทั้งบทบาทผู้ซื้อและผู้ขาย ผู้ใช้ต้องให้ข้อมูลที่ถูกต้อง ครบถ้วน
+        และปรับปรุงให้เป็นปัจจุบัน</p>
+      <p>2.3 การสมัครสมาชิกขอเพียงชื่อ ชื่อผู้ติดต่อ เบอร์โทรศัพท์ อีเมล และรหัสผ่าน
+        <b>เราไม่ขอเลขบัตรประชาชนหรือเลขประจำตัวผู้เสียภาษีในขั้นตอนสมัคร</b></p>
+      <p>2.4 ผู้ใช้มีหน้าที่รักษารหัสผ่านเป็นความลับ และรับผิดชอบต่อการกระทำทั้งหมดที่เกิดขึ้นภายใต้บัญชีของตน
+        หากพบการเข้าถึงโดยไม่ได้รับอนุญาต ต้องแจ้งเราทันที</p>
+      <p>2.5 ตรา <span class="doc-pill">ยืนยันแล้ว</span> เป็นขั้นตอนแยกต่างหากจากการสมัคร
+        ผู้ใช้ส่งเอกสารเข้ามาและผู้ดูแลระบบเป็นผู้พิจารณาอนุมัติ ตรานี้หมายถึงเราได้ตรวจเอกสารที่ส่งมาแล้วเท่านั้น
+        <b>ไม่ใช่การรับรองความสามารถ ฐานะทางการเงิน หรือคุณภาพงาน</b> ของผู้ใช้รายนั้น
+        และเราอาจเพิกถอนตราได้หากพบว่าเอกสารไม่ถูกต้อง</p>
+
+      <h2>3. การประกาศและเนื้อหาของผู้ใช้</h2>
+      <p>3.1 ผู้ใช้เป็นผู้รับผิดชอบเนื้อหาที่ตนโพสต์ทั้งหมด รวมถึงข้อความ รูปภาพ แบบงาน (drawing)
+        และไฟล์แนบ</p>
+      <p>3.2 ผู้ใช้ยังคงเป็นเจ้าของเนื้อหาของตน และให้สิทธิ QubeQuote ใช้ ทำสำเนา และแสดงเนื้อหานั้น
+        เท่าที่จำเป็นต่อการให้บริการ</p>
+      <p>3.3 ห้ามโพสต์เนื้อหาที่ผิดกฎหมาย ละเมิดทรัพย์สินทางปัญญา เป็นความเท็จ หลอกลวง
+        หรือมีข้อมูลส่วนบุคคลของผู้อื่นโดยไม่ได้รับอนุญาต</p>
+      <p>3.4 เราอาจลบหรือระงับประกาศที่ขัดต่อข้อกำหนดนี้ได้ โดยจะแจ้งเหตุผลเท่าที่ทำได้</p>
+
+      <h2>4. ใบเสนอราคาและการเปิดเผยราคา</h2>
+      <p>4.1 ใบเสนอราคาที่ส่งผ่านระบบถือเป็นข้อเสนอทางธุรกิจของผู้เสนอ ผู้เสนอต้องรับผิดชอบ
+        ความถูกต้องของราคา เงื่อนไข และระยะเวลาส่งมอบ</p>
+      <p>4.2 <b>QubeQuote ไม่ใช่การประมูล</b> ราคาไม่ได้ถูกเก็บไว้เปิดพร้อมกันตามเวลา
+        ไม่มีการแข่งกันลดราคา และไม่มีการนับถอยหลังปิดรับ
+        มีเพียงการส่งใบเสนอราคาเข้ามาให้เจ้าของประกาศเปรียบเทียบ
+        ข้อเสนอเรียงตามลำดับเวลาที่ส่งเข้ามา</p>
+
+      <div class="doc-note">
+        <b>ใครเห็นอะไร:</b> ผู้ใช้ที่เข้าสู่ระบบแล้วจะเห็น<b>ว่ามีใครเสนอราคาเข้ามาบ้าง จำนวนข้อเสนอ
+        และราคาเฉลี่ย</b> ของประกาศนั้น &nbsp;·&nbsp; <b>ราคาของแต่ละรายและไฟล์ใบเสนอราคาที่แนบมา
+        เห็นได้เฉพาะเจ้าของประกาศ</b> และผู้เสนอรายนั้นเห็นราคาของตัวเองเท่านั้น
+        <br><br>
+        โปรดทราบว่าเมื่อประกาศหนึ่งมีข้อเสนอเพียงสองราย ผู้เสนอที่รู้ราคาของตัวเองสามารถคำนวณ
+        ราคาของอีกรายจากค่าเฉลี่ยได้ นี่เป็นผลที่ตามมาจากการแสดงค่าเฉลี่ยอย่างตรงไปตรงมา
+        และเราแจ้งไว้ตรงนี้เพื่อให้ท่านตัดสินใจได้ก่อนส่งราคา
+      </div>
+
+      <p>4.3 <b>QubeQuote ไม่เลือกผู้ชนะและไม่บันทึกผลการตัดสินใจ</b> ระบบไม่มีปุ่มเลือกผู้ชนะ
+        ไม่มีสถานะแพ้/ชนะ และไม่เก็บว่าท่านตกลงกับใคร การตัดสินใจเกิดขึ้นในกระบวนการจัดซื้อของท่านเอง
+        ซึ่งอยู่นอกแพลตฟอร์ม</p>
+      <p>4.4 เจ้าของประกาศอาจปิดรับข้อเสนอก่อนกำหนดได้ และประกาศจะแสดงสถานะตามวันที่หมดเขต
+        ที่เจ้าของกำหนดไว้</p>
+
+      <h2>5. ผลงานที่ผ่านมาและรีวิว</h2>
+      <p>5.1 ผลงานที่ผ่านมาในโปรไฟล์เป็นข้อมูลที่ผู้ใช้กรอกเอง <b>QubeQuote ไม่ได้ตรวจสอบ</b>
+        และแสดงข้อความกำกับไว้บนการ์ดทุกใบ ผู้อ่านควรใช้วิจารณญาณ</p>
+      <p>5.2 รีวิวเขียนได้เฉพาะระหว่างคู่ที่มีความเกี่ยวข้องกันจริงในระบบ คือฝ่ายหนึ่งเป็นเจ้าของประกาศ
+        และอีกฝ่ายเสนอราคาในประกาศนั้น และเขียนถึงกันได้รายละหนึ่งครั้ง</p>
+      <p>5.3 ห้ามเขียนรีวิวเท็จ ห้ามจ้างหรือแลกเปลี่ยนเพื่อให้ได้รีวิว และห้ามข่มขู่เพื่อให้แก้หรือลบรีวิว</p>
+
+      <h2>6. การกระทำที่ห้าม</h2>
+      <p>ห้ามสร้างบัญชีปลอมหรือใช้ตัวตนผู้อื่น ห้ามฮั้วราคาหรือสมคบกันเพื่อบิดเบือนการแข่งขัน
+        ห้ามใช้ระบบเพื่อเก็บข้อมูลผู้ใช้รายอื่น (scraping) ห้ามพยายามเข้าถึงข้อมูลที่ไม่ได้รับอนุญาต
+        ห้ามรบกวนหรือทำให้ระบบเสียหาย และห้ามนำข้อมูลราคาของผู้อื่นไปเปิดเผยต่อบุคคลที่สาม</p>
+
+      <h2>7. ค่าบริการ</h2>
+      <p>การใช้งานพื้นฐานไม่มีค่าใช้จ่าย หากมีบริการเสริมแบบชำระเงินในอนาคต
+        เราจะแจ้งเงื่อนไขและราคาให้ทราบล่วงหน้า และผู้ใช้ต้องยอมรับก่อนเริ่มใช้บริการนั้น</p>
+
+      <h2>8. ข้อจำกัดความรับผิด</h2>
+      <p>8.1 เราให้บริการตามสภาพที่เป็นอยู่ ("as is") และไม่รับประกันว่าระบบจะทำงานต่อเนื่อง
+        โดยไม่มีข้อผิดพลาด</p>
+      <p>8.2 เราไม่รับผิดต่อความเสียหายที่เกิดจากข้อตกลง การชำระเงิน คุณภาพงาน
+        หรือข้อพิพาทระหว่างผู้ใช้ ซึ่งเกิดขึ้นภายนอกแพลตฟอร์ม</p>
+      <p>8.3 ในกรณีที่เราต้องรับผิดตามกฎหมาย ความรับผิดรวมจะไม่เกินจำนวนค่าบริการที่ผู้ใช้ชำระให้เรา
+        ในรอบ 12 เดือนก่อนเกิดเหตุ</p>
+
+      <h2>9. การระงับและยกเลิกบัญชี</h2>
+      <p>ผู้ใช้สามารถลบบัญชีได้เองเมื่อใดก็ได้จากหน้าตั้งค่า และเราจะระงับหรือลบบัญชีที่ฝ่าฝืนข้อกำหนดนี้
+        หรือมีพฤติกรรมที่กระทบต่อความปลอดภัยและความเป็นธรรมของแพลตฟอร์ม
+        โดยจะแจ้งเหตุผลเท่าที่กฎหมายอนุญาต</p>
+
+      <h2>10. การแก้ไขข้อกำหนด</h2>
+      <p>เราอาจปรับปรุงข้อกำหนดนี้เป็นครั้งคราว หากเป็นการเปลี่ยนแปลงที่มีนัยสำคัญ
+        เราจะแจ้งผู้ใช้ล่วงหน้าไม่น้อยกว่า 15 วันผ่านแอปหรืออีเมล
+        การใช้งานต่อหลังวันมีผลถือว่ายอมรับฉบับใหม่</p>
+
+      <h2>11. กฎหมายที่ใช้บังคับ</h2>
+      <p>ข้อกำหนดนี้อยู่ภายใต้กฎหมายไทย ข้อพิพาทให้อยู่ในเขตอำนาจศาลไทย
+        โดยคู่กรณีตกลงเจรจาด้วยความสุจริตก่อนดำเนินคดี</p>
+
+      <div class="doc-foot">
+        <a class="au-link" onclick="navigateTo('page-privacy')">อ่านนโยบายความเป็นส่วนตัว →</a>
+      </div>
+      <p class="doc-fine">หมายเหตุ: ข้อความในวงเล็บเหลี่ยมเป็นช่องที่ต้องกรอกข้อมูลจริงก่อนเผยแพร่
+        และควรให้ที่ปรึกษากฎหมายตรวจสอบก่อนใช้บังคับ</p>
+    </article>
+  </div>
+</div>
+
+<div id="page-privacy" class="app-page">
+  <div class="doc-wrap">
+    <article class="doc">
+      <header class="doc-head">
+        <div class="doc-brand">
+          <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
+          <div>
+            <div class="doc-name">QubeQuote</div>
+            <div class="doc-tag">แพลตฟอร์มขอและเปรียบเทียบใบเสนอราคา</div>
+          </div>
+        </div>
+        <div class="doc-ver">ฉบับที่ 1.0<br><span>มีผลบังคับใช้ 1 กันยายน 2569</span></div>
+      </header>
+
+      <h1>นโยบายความเป็นส่วนตัว</h1>
+      <p class="doc-lead">นโยบายนี้อธิบายว่าเราเก็บ ใช้ เปิดเผย และคุ้มครองข้อมูลส่วนบุคคลของท่าน
+        อย่างไร ตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)</p>
+
+      <h2>1. ข้อมูลที่เราเก็บ</h2>
+      <table class="doc-table">
+        <thead><tr><th>ประเภทข้อมูล</th><th>ตัวอย่าง</th></tr></thead>
+        <tbody>
+          <tr><td>ข้อมูลบัญชี</td><td>ชื่อ อีเมล เบอร์โทรศัพท์ ชื่อผู้ติดต่อ รหัสผ่าน (เก็บแบบเข้ารหัสทางเดียวโดยผู้ให้บริการยืนยันตัวตน)</td></tr>
+          <tr><td>ข้อมูลโปรไฟล์</td><td>ชื่อบริษัท ประเภทธุรกิจ ที่อยู่ จังหวัด เว็บไซต์ เวลาทำการ รูปโปรไฟล์และรูปปก</td></tr>
+          <tr><td>เอกสารยืนยันตัวตน</td><td>เฉพาะเมื่อท่านสมัครขอตรา “ยืนยันแล้ว” เช่น หนังสือรับรองบริษัทหรือบัตรประชาชน</td></tr>
+          <tr><td>ข้อมูลการใช้งาน</td><td>ประกาศ ใบเสนอราคา ไฟล์แนบ คำถาม–คำตอบ ข้อความ รีวิว ประกาศที่บันทึกไว้ ประวัติการเข้าชม</td></tr>
+          <tr><td>ข้อมูลทางเทคนิค</td><td>บันทึกการเข้าสู่ระบบและข้อมูลที่ระบบสร้างขึ้นเพื่อความปลอดภัย</td></tr>
+        </tbody>
+      </table>
+      <p>เราไม่ได้ขอเลขบัตรประชาชนหรือเลขประจำตัวผู้เสียภาษีในขั้นตอนสมัครสมาชิก
+        ข้อมูลระบุตัวตนจะถูกขอเฉพาะเมื่อท่านเลือกสมัครขอตรา “ยืนยันแล้ว” เท่านั้น</p>
+
+      <h2>2. วัตถุประสงค์และฐานทางกฎหมาย</h2>
+      <p>2.1 <b>เพื่อปฏิบัติตามสัญญา</b> — สร้างและดูแลบัญชี แสดงประกาศ ส่งและรับใบเสนอราคา
+        เปิดช่องทางติดต่อระหว่างคู่กรณี</p>
+      <p>2.2 <b>เพื่อประโยชน์อันชอบด้วยกฎหมาย</b> — ป้องกันการทุจริตและการใช้งานผิดวัตถุประสงค์
+        ปรับปรุงคุณภาพบริการ</p>
+      <p>2.3 <b>เพื่อปฏิบัติตามกฎหมาย</b> — จัดเก็บหลักฐานตามที่กฎหมายกำหนด
+        และตอบข้อเรียกร้องของหน่วยงานรัฐที่มีอำนาจ</p>
+      <p>2.4 <b>ความยินยอม</b> — การส่งข่าวสารการตลาด ซึ่งท่านถอนความยินยอมได้ทุกเมื่อจากหน้าตั้งค่า</p>
+
+      <h2>3. การเปิดเผยข้อมูล</h2>
+      <p>3.1 <b>ต่อผู้ใช้รายอื่น:</b> ข้อมูลโปรไฟล์สาธารณะ (ชื่อ จังหวัด สถานะการยืนยัน ผลงานที่ผู้ใช้กรอกเอง)
+        เนื้อหาประกาศที่ท่านโพสต์ และเมื่อท่านส่งใบเสนอราคา ผู้ใช้รายอื่นจะเห็น<b>ว่าท่านเป็นผู้เสนอราคา</b>
+        รายหนึ่ง พร้อม<b>ราคาเฉลี่ย</b>ของประกาศนั้น</p>
+      <p>3.2 <b>ต่อคู่กรณีในธุรกรรม:</b> ราคาที่ท่านเสนอและไฟล์ใบเสนอราคาที่แนบมา
+        เปิดเผยต่อเจ้าของประกาศเท่านั้น</p>
+
+      <div class="doc-note doc-warn">
+        <b>รูปภาพและไฟล์แนบในประกาศเปิดสาธารณะ:</b> รูปประกาศและไฟล์แนบถูกเก็บในที่จัดเก็บแบบสาธารณะ
+        ผู้ที่ทราบลิงก์ของไฟล์สามารถเปิดดูได้แม้ไม่ได้เข้าสู่ระบบ
+        <b>จึงไม่ควรอัปโหลดเอกสารที่มีข้อมูลส่วนบุคคลหรือความลับทางการค้าลงในประกาศ</b>
+        <br><br>
+        เอกสารยืนยันตัวตนเก็บแยกไว้ในที่จัดเก็บแบบปิด ไม่เปิดสาธารณะ
+        และเข้าถึงได้เฉพาะเจ้าของเอกสารกับผู้ดูแลระบบผ่านลิงก์ชั่วคราวที่หมดอายุในตัวเอง
+      </div>
+
+      <p>3.3 <b>ต่อผู้ให้บริการที่เราใช้:</b> ผู้ให้บริการโครงสร้างพื้นฐานที่เก็บฐานข้อมูล ไฟล์
+        และระบบยืนยันตัวตน ภายใต้สัญญาคุ้มครองข้อมูล</p>
+      <p>3.4 <b>การโอนข้อมูลไปต่างประเทศ:</b> ระบบฐานข้อมูลและไฟล์ของเราตั้งอยู่ในภูมิภาคสิงคโปร์
+        การใช้บริการจึงมีการโอนข้อมูลออกนอกราชอาณาจักร โดยผู้ให้บริการมีมาตรการคุ้มครอง
+        ตามมาตรฐานสากล</p>
+      <p>3.5 เราไม่ขายข้อมูลส่วนบุคคลของท่านให้บุคคลที่สาม</p>
+
+      <h2>4. ความปลอดภัยของข้อมูล</h2>
+      <p>การเชื่อมต่อระบบเข้ารหัสด้วย HTTPS/TLS รหัสผ่านถูกเข้ารหัสทางเดียวโดยผู้ให้บริการยืนยันตัวตน
+        <b>เราไม่เห็นรหัสผ่านของท่าน</b> และสิทธิ์การเข้าถึงข้อมูลถูกบังคับที่ชั้นฐานข้อมูลเป็นราย
+        แถวข้อมูล ไม่ใช่ที่หน้าจอ ผู้ใช้จึงอ่านได้เฉพาะข้อมูลที่ตนมีสิทธิ์อ่านจริง</p>
+
+      <h2>5. ระยะเวลาเก็บรักษาและการลบบัญชี</h2>
+      <p>เราเก็บข้อมูลบัญชีตลอดระยะเวลาที่ท่านใช้บริการ ท่านลบบัญชีได้ด้วยตนเองจากหน้าตั้งค่า
+        เมื่อลบแล้ว ประกาศ ใบเสนอราคา ข้อความ และประวัติที่ผูกกับบัญชีจะถูกลบตามไปด้วยทันที
+        เว้นแต่ข้อมูลที่ต้องเก็บต่อตามกฎหมาย ซึ่งจะเก็บตามระยะเวลาที่กฎหมายกำหนด</p>
+
+      <h2>6. สิทธิของท่านตาม PDPA</h2>
+      <p>ท่านมีสิทธิขอเข้าถึงและขอสำเนาข้อมูล ขอแก้ไขให้ถูกต้อง ขอลบหรือทำลาย ขอระงับการใช้
+        ขอให้โอนย้ายข้อมูล คัดค้านการประมวลผล และถอนความยินยอม
+        รวมถึงสิทธิร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล
+        ท่านใช้สิทธิได้โดยติดต่อเราตามช่องทางท้ายเอกสาร เราจะดำเนินการภายใน 30 วัน</p>
+
+      <h2>7. คุกกี้และข้อมูลที่เก็บในเบราว์เซอร์</h2>
+      <p>เราเก็บโทเคนการเข้าสู่ระบบและการตั้งค่าบางอย่างไว้ในเบราว์เซอร์ของท่าน
+        เพื่อให้ท่านไม่ต้องเข้าสู่ระบบใหม่ทุกครั้งและเพื่อจำการตั้งค่าที่ท่านเลือกไว้
+        <b>เราไม่ใช้คุกกี้เพื่อโฆษณาและไม่ติดตามท่านข้ามเว็บไซต์</b>
+        ท่านลบข้อมูลเหล่านี้ได้จากการตั้งค่าเบราว์เซอร์ แต่จะทำให้ต้องเข้าสู่ระบบใหม่</p>
+
+      <h2>8. การแจ้งเหตุละเมิดข้อมูล</h2>
+      <p>หากเกิดเหตุละเมิดข้อมูลส่วนบุคคลที่มีความเสี่ยงต่อสิทธิและเสรีภาพของท่าน
+        เราจะแจ้งสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคลภายใน 72 ชั่วโมง
+        และแจ้งท่านโดยไม่ชักช้าเมื่อกฎหมายกำหนด</p>
+
+      <h2>9. ข้อมูลติดต่อ</h2>
+      <div class="doc-contact">
+        <div><b>ผู้ควบคุมข้อมูลส่วนบุคคล:</b> [ชื่อนิติบุคคลผู้ให้บริการ QubeQuote]</div>
+        <div><b>ที่อยู่:</b> [ที่อยู่จดทะเบียน]</div>
+        <div><b>อีเมล:</b> privacy@qubequote.com</div>
+        <div><b>เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล (DPO):</b> [ชื่อ / อีเมล]</div>
+      </div>
+
+      <div class="doc-foot">
+        <a class="au-link" onclick="navigateTo('page-terms')">อ่านข้อกำหนดการใช้งาน →</a>
+      </div>
+      <p class="doc-fine">หมายเหตุ: ข้อความในวงเล็บเหลี่ยมเป็นช่องที่ต้องกรอกข้อมูลจริงก่อนเผยแพร่
+        และควรให้ที่ปรึกษากฎหมายตรวจสอบก่อนใช้บังคับ</p>
+    </article>
+  </div>
+</div>
 
 <div class="av-menu-ov" id="avMenu" onclick="if(event.target.id==='avMenu')closeAvMenu()">
   <div class="av-menu">
@@ -16333,6 +16580,69 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     background: linear-gradient(120deg, #0b3fd0 0%, #0056fd 55%, #2f7bff 100%);
     }
 
+/* ===== ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว ===== */
+#page-terms, #page-privacy { background: var(--bg, #f6f8fc); }
+.doc-wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 72px; }
+.doc {
+    background: #fff; border: 1px solid var(--line, #e6e7f0); border-radius: 14px;
+    padding: 34px 38px 40px; color: var(--ink, #1c1a18);
+    font-size: 15px; line-height: 1.75;
+    }
+.doc-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+    padding-bottom: 16px; border-bottom: 3px solid #0056fd; margin-bottom: 26px;
+    }
+.doc-brand { display: flex; align-items: center; gap: 11px; }
+.doc-brand img { width: 34px; height: 38px; object-fit: contain; display: block; }
+.doc-name { font-size: 20px; font-weight: 700; letter-spacing: .2px; }
+.doc-tag { font-size: 13px; color: var(--ink-soft, #565b6e); }
+.doc-ver { font-size: 12.5px; color: var(--ink-soft, #565b6e); text-align: right; line-height: 1.6; }
+.doc h1 { font-size: 27px; font-weight: 700; margin: 0 0 10px; line-height: 1.4; }
+.doc-lead { color: var(--ink-soft, #565b6e); margin: 0 0 26px; }
+.doc h2 {
+    font-size: 16px; font-weight: 700; color: #0846c7;
+    margin: 30px 0 10px; line-height: 1.5;
+    }
+.doc p { margin: 0 0 12px; }
+.doc-note {
+    background: #eef3ff; border-left: 4px solid #0056fd; border-radius: 0 8px 8px 0;
+    padding: 15px 18px; margin: 16px 0 18px; font-size: 14.5px; line-height: 1.8;
+    }
+.doc-note.doc-warn { background: #fff6e8; border-left-color: #d97706; }
+.doc-pill {
+    display: inline-block; background: #eaf1ff; color: #0846c7; border-radius: 999px;
+    padding: 1px 10px; font-size: 13px; font-weight: 600;
+    }
+.doc-table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 14px; }
+.doc-table th, .doc-table td {
+    border: 1px solid var(--line, #e6e7f0); padding: 9px 12px;
+    text-align: left; vertical-align: top; line-height: 1.7;
+    }
+.doc-table th { background: #f6f8fc; font-weight: 700; }
+.doc-contact {
+    background: #0846c7; color: #fff; border-radius: 10px;
+    padding: 16px 20px; line-height: 2; font-size: 14.5px;
+    }
+.doc-contact b { color: #cddcff; }
+.doc-foot { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line, #e6e7f0); }
+.doc-foot .au-link { cursor: pointer; font-weight: 600; }
+.doc-fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-soft, #565b6e); line-height: 1.7; }
+@media (max-width: 640px) {
+    .doc-wrap { padding: 14px 10px 56px; }
+    .doc { padding: 22px 18px 28px; font-size: 14.5px; }
+    .doc h1 { font-size: 23px; }
+    .doc-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .doc-ver { text-align: left; }
+    /* a table of two columns has nowhere to shrink to on a phone, so the rows
+       become blocks with the heading carried in front of the value */
+    .doc-table, .doc-table tbody, .doc-table tr, .doc-table td { display: block; width: 100%; }
+    .doc-table thead { display: none; }
+    .doc-table tr { border: 1px solid var(--line, #e6e7f0); border-radius: 8px;
+                    margin-bottom: 10px; overflow: hidden; }
+    .doc-table td { border: 0; }
+    .doc-table td:first-child { background: #f6f8fc; font-weight: 700; }
+    }
+
 /* ===== เวิร์ดมาร์ก QubeQuote =====
    Two tones in one word, the way the brand sheet sets it: Qube in the dark
    ink, Quote in the brand blue. The <b> carries no extra weight — both halves
@@ -19219,9 +19529,14 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
   // have resolved, so it is let through unguarded; it already defaults to page-auth
   // unless the URL hash names a page, and boot() below corrects course the moment the
   // real answer is in, before the person has had time to click anything.
+  var KX_OPEN_PAGES = { 'page-auth': 1, 'page-terms': 1, 'page-privacy': 1 };
   var _kxNav = window.navigateTo;
   window.navigateTo = function(id, skipHistory){
-    if(kxAuthChecked && id !== 'page-auth' && !window.kxSession) return _kxNav('page-auth', skipHistory);
+    /* ข้อกำหนดการใช้งาน and นโยบายความเป็นส่วนตัว open without a session, because
+       the links to them are on the signup form: sending someone who has not
+       signed up yet back to the signup form to read what they are agreeing to
+       is a door that only opens from the inside. */
+    if(kxAuthChecked && !KX_OPEN_PAGES[id] && !window.kxSession) return _kxNav('page-auth', skipHistory);
     return _kxNav(id, skipHistory);
   };
 

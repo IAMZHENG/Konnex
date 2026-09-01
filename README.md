@@ -3089,6 +3089,53 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## ข้อกำหนดการใช้งาน และ นโยบายความเป็นส่วนตัว
+
+Two new pages, `page-terms` and `page-privacy`, written from a supplied draft.
+The links on the signup checkbox were `<a class="au-link">` with no handler —
+they had never gone anywhere.
+
+**Both open without a session.** The session guard now consults an allow-list
+rather than testing for `page-auth` alone: the links to these documents sit *on*
+the signup form, so bouncing an unregistered visitor back to the signup form to
+read what they are agreeing to would be a door that only opens from the inside.
+
+**The draft did not match the software, and the software won.** Three things it
+described were built here and then deliberately removed, and shipping them in
+the terms would have been promising what the app does not do:
+
+- *ประมูลแบบเปิด / ประมูลแบบปิด* — sealed bidding was taken out at the user's
+  request; there is one quoting mode.
+- *ผู้ซื้อเลือกผู้ให้บริการรายใดก็ได้* — QubeQuote records no selection at all
+  (`no_winner.sql`); there is no button, no won/lost status, and no outcome
+  stored. The decision happens in the buyer's own purchasing process.
+- *ใบเสนอราคาเปิดเผยเฉพาะระหว่างผู้เสนอและผู้ขอ* — everyone signed in now sees
+  **who** quoted and the **average**; only the listing owner sees each price and
+  the attached files.
+
+Three disclosures were added that the draft did not carry, each because the code
+does it:
+
+- Post images and attachments live in **public** storage buckets, so anyone with
+  the URL can open them signed out. The policy says so and says not to upload
+  confidential documents to a listing. Verification documents are in the private
+  bucket, reached through a short-lived signed URL.
+- On a listing with exactly two offers, a bidder who knows their own price can
+  recover the other from the average. That was a deliberate trade documented in
+  `public_avg_price.sql`, so it is stated where a bidder will read it before
+  sending a price rather than worked out afterwards.
+- Data sits in Supabase's Singapore region — a cross-border transfer PDPA
+  requires disclosing.
+
+The contact block still carries the draft's `[bracketed]` placeholders for the
+operating company, its address and the DPO. **These are not written yet and the
+documents should not be relied on until they are, and until a lawyer has read
+them** — the draft's own footnote says the same and it is kept.
+
+A test walks the terms for the vocabulary of the features that were removed and
+fails if any of it comes back, which also catches the documents drifting away
+from the build later.
+
 ## Konnex → QubeQuote
 
 The name was already in use elsewhere, so the app is QubeQuote from 2026-09-01,
