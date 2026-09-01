@@ -11550,6 +11550,12 @@ html, body{
                 <div class="link-item" onclick="navigateTo('page-terms')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>ข้อกำหนดการใช้งาน<span class="chev">›</span></div>
                 <div class="link-item" onclick="navigateTo('page-privacy')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>นโยบายความเป็นส่วนตัว<span class="chev">›</span></div>
               </div>
+              <!-- read back from policy_acceptances, not from anything local: the
+                   point of the record is that it is not the browser's word for it -->
+              <div class="set-field" style="margin-top:14px">
+                <label>การยอมรับข้อกำหนดของบัญชีนี้</label>
+                <div id="setPolicyAccepted" class="set-policy-row">กำลังโหลด…</div>
+              </div>
             </div>
             <div class="set-card">
               <h3>เปลี่ยนรหัสผ่าน</h3>
@@ -12799,6 +12805,185 @@ html, body{
     </article>
   </div>
 </div>
+
+<!-- ===== ต้องอ่านและกดยอมรับก่อนสมัครทุกครั้ง =====
+     The body is cloned out of #page-terms and #page-privacy when the modal
+     opens rather than written again here. A second copy of the wording would
+     be a second thing to keep in step, and the day it fell behind, the text
+     someone agreed to would not be the text the app shows. -->
+<div class="kxc-ov" id="kxConsent" role="dialog" aria-modal="true" aria-labelledby="kxcTitle" hidden>
+  <div class="kxc-box">
+    <div class="kxc-head">
+      <div>
+        <div class="kxc-title" id="kxcTitle">ข้อกำหนดการใช้งาน และ นโยบายความเป็นส่วนตัว</div>
+        <div class="kxc-sub" id="kxcSub">โปรดอ่านก่อนสมัครสมาชิก</div>
+      </div>
+    </div>
+    <div class="kxc-body" id="kxcBody" tabindex="0"></div>
+    <div class="kxc-foot">
+      <div class="kxc-hint" id="kxcHint">เลื่อนอ่านจนจบเพื่อกดยอมรับ</div>
+      <div class="kxc-btns">
+        <button type="button" class="kxc-btn" onclick="kxConsentClose()">ยกเลิก</button>
+        <button type="button" class="kxc-btn primary" id="kxcAccept" disabled
+                onclick="kxConsentAccept()">ยอมรับและสมัครสมาชิก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== ยอมรับข้อกำหนดก่อนสมัคร และเก็บบันทึกไว้ =====
+
+   The tick-box on the signup form used to be the whole of this: it changed a
+   boolean for as long as the page was open, and nothing recorded that anyone
+   had agreed to anything. Two things are wrong with that and both are fixed
+   here — the documents are now put in front of the person every time before an
+   account is created, and the fact that they accepted is written down.
+
+   Versions live in one place. The two document pages read their own version
+   label out of this object at boot, so the version shown on the page and the
+   version written into the record cannot drift apart — which is the only
+   property that makes the record worth keeping. */
+window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยายน 2569' };
+
+(function(){
+  var ov, body, accept, hint, onAccept = null, lastFocus = null;
+
+  function el(id){ return document.getElementById(id); }
+
+  /* Cloned from the live pages, so the modal cannot show older wording than the
+     page does. The header of each document is dropped — the modal has its own
+     title — and so is the cross-link, which would navigate the page underneath
+     the modal. */
+  function fill(){
+    body.innerHTML = '';
+    ['page-terms', 'page-privacy'].forEach(function(id, i){
+      var src = document.querySelector('#' + id + ' .doc');
+      if(!src) return;
+      var copy = src.cloneNode(true);
+      copy.classList.add('kxc-doc');
+      var head = copy.querySelector('.doc-head'); if(head) head.remove();
+      var foot = copy.querySelector('.doc-foot'); if(foot) foot.remove();
+      if(i) { var rule = document.createElement('div'); rule.className = 'kxc-rule'; body.appendChild(rule); }
+      body.appendChild(copy);
+    });
+  }
+
+  /* Enabled by reaching the end, not by a timer and not immediately. A box you
+     can accept without moving is a box nobody reads; a box that waits out a
+     countdown is the same box with a delay in front of it. The 24px slack is
+     for the last line sitting a fraction under the fold, and a document short
+     enough to need no scrolling enables straight away. */
+  function checkScrolled(){
+    var atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 24;
+    accept.disabled = !atEnd;
+    hint.textContent = atEnd ? 'อ่านครบแล้ว' : 'เลื่อนอ่านจนจบเพื่อกดยอมรับ';
+    hint.classList.toggle('done', atEnd);
+  }
+
+  window.kxConsentOpen = function(after){
+    ov = el('kxConsent'); body = el('kxcBody');
+    accept = el('kxcAccept'); hint = el('kxcHint');
+    if(!ov) { if(after) after(); return; }          // nothing to show: do not block signup
+    onAccept = after || null;
+    lastFocus = document.activeElement;
+    fill();
+    ov.hidden = false;
+    document.body.classList.add('kxc-open');
+    body.scrollTop = 0;
+    checkScrolled();
+    body.focus({ preventScroll: true });
+  };
+
+  window.kxConsentClose = function(){
+    if(!ov) return;
+    ov.hidden = true;
+    document.body.classList.remove('kxc-open');
+    onAccept = null;
+    if(lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+  };
+
+  window.kxConsentAccept = function(){
+    if(accept && accept.disabled) return;
+    var box = document.getElementById('auRegTerms');
+    if(box) box.checked = true;
+    /* Stamped at the moment of the press. The row is written later — signUp may
+       hand back no session, and the profile it hangs off may not exist yet —
+       so the versions and the time ride along in kx.pendingProfile and are
+       spent by kxEnsureProfile. */
+    window.kxPolicyAccepted = {
+      terms: window.KX_DOC.terms,
+      privacy: window.KX_DOC.privacy,
+      at: new Date().toISOString()
+    };
+    var go = onAccept;
+    kxConsentClose();
+    if(go) go();
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var b = el('kxcBody'), o = el('kxConsent');
+    if(b) b.addEventListener('scroll', checkScrolled);
+    if(o) o.addEventListener('click', function(e){ if(e.target === o) kxConsentClose(); });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape' && o && !o.hidden) kxConsentClose();
+    });
+    // one version number, shown wherever the documents show one
+    var v = window.KX_DOC;
+    document.querySelectorAll('#page-terms .doc-ver').forEach(function(n){
+      n.innerHTML = 'ฉบับที่ ' + v.terms + '<br><span>มีผลบังคับใช้ ' + v.effective + '</span>';
+    });
+    document.querySelectorAll('#page-privacy .doc-ver').forEach(function(n){
+      n.innerHTML = 'ฉบับที่ ' + v.privacy + '<br><span>มีผลบังคับใช้ ' + v.effective + '</span>';
+    });
+  });
+
+  /* Writing the record. Called after the profiles row exists, with whatever the
+     signup stashed. `upsert … ignoreDuplicates` leans on the unique index so a
+     second sign-in, or a retry, adds nothing: accepting twice is not two facts. */
+  window.kxRecordPolicyAcceptance = async function(profileId, stamp){
+    if(!profileId || !stamp) return null;
+    var rows = [
+      { profile_id: profileId, document: 'terms',   version: stamp.terms,   accepted_at: stamp.at },
+      { profile_id: profileId, document: 'privacy', version: stamp.privacy, accepted_at: stamp.at }
+    ].filter(function(r){ return !!r.version; });
+    if(!rows.length) return null;
+    var res = await sb.from('policy_acceptances')
+      .upsert(rows, { onConflict: 'profile_id,document,version', ignoreDuplicates: true });
+    if(res.error){
+      // the table is the record, not a gate: a signup must not fail over it
+      console.error('kxRecordPolicyAcceptance failed', res.error);
+      if(window.kxTableMissing && window.kxTableMissing(res.error))
+        console.warn('ยังไม่ได้รัน database/policy_acceptances.sql');
+    }
+    return res;
+  };
+
+  /* What ตั้งค่า shows: the versions this account is on record as having
+     accepted, straight from the table rather than from anything local. */
+  window.kxLoadPolicyAcceptances = async function(){
+    var box = document.getElementById('setPolicyAccepted');
+    if(!box || !window.kxSession) return;
+    var res = await sb.from('policy_acceptances')
+      .select('document, version, accepted_at')
+      .eq('profile_id', window.kxSession.user.id)
+      .order('accepted_at', { ascending: false });
+    if(res.error || !res.data || !res.data.length){
+      box.textContent = 'ยังไม่มีบันทึกการยอมรับสำหรับบัญชีนี้';
+      return;
+    }
+    var name = { terms: 'ข้อกำหนดการใช้งาน', privacy: 'นโยบายความเป็นส่วนตัว' };
+    box.innerHTML = res.data.map(function(r){
+      var d = new Date(r.accepted_at);
+      var when = isNaN(d) ? '' : d.toLocaleDateString('th-TH',
+        { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' +
+        d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+      return '<div class="set-policy-row"><b>' + (name[r.document] || r.document) +
+             '</b> ฉบับที่ ' + r.version + ' · ' + when + '</div>';
+    }).join('');
+  };
+})();
+</script>
 
 <div class="av-menu-ov" id="avMenu" onclick="if(event.target.id==='avMenu')closeAvMenu()">
   <div class="av-menu">
@@ -16580,6 +16765,50 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     background: linear-gradient(120deg, #0b3fd0 0%, #0056fd 55%, #2f7bff 100%);
     }
 
+/* ===== โมดัลยอมรับข้อกำหนดก่อนสมัคร ===== */
+.kxc-ov {
+    position: fixed; inset: 0; z-index: 4000;
+    background: rgba(12, 20, 40, .58);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+    }
+.kxc-ov[hidden] { display: none; }
+body.kxc-open { overflow: hidden; }
+.kxc-box {
+    background: #fff; border-radius: 16px; width: 780px; max-width: 100%;
+    max-height: min(88vh, 900px); display: flex; flex-direction: column;
+    box-shadow: 0 26px 70px rgba(15, 25, 50, .35); overflow: hidden;
+    }
+.kxc-head { padding: 20px 24px 15px; border-bottom: 1px solid var(--line, #e6e7f0); }
+.kxc-title { font-size: 18px; font-weight: 700; line-height: 1.5; color: var(--ink, #1c1a18); }
+.kxc-sub { font-size: 13.5px; color: var(--ink-soft, #565b6e); margin-top: 3px; }
+.kxc-body { overflow-y: auto; padding: 4px 24px 8px; flex: 1 1 auto; outline: none; }
+/* the cloned documents drop the card chrome — the modal is already a card */
+.kxc-body .kxc-doc { background: none; border: 0; border-radius: 0; padding: 18px 0; }
+.kxc-rule { height: 1px; background: var(--line, #e6e7f0); margin: 6px 0; }
+.kxc-foot {
+    padding: 14px 24px 18px; border-top: 1px solid var(--line, #e6e7f0);
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+.kxc-hint { font-size: 13px; color: var(--ink-soft, #565b6e); }
+.kxc-hint.done { color: #15803d; font-weight: 600; }
+.kxc-btns { margin-left: auto; display: flex; gap: 10px; }
+.kxc-btn {
+    border: 1.5px solid var(--line, #e6e7f0); background: #fff; color: var(--ink, #1c1a18);
+    border-radius: 10px; padding: 11px 18px; font-size: 15px; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+    }
+.kxc-btn.primary { background: #0056fd; border-color: #0056fd; color: #fff; }
+.kxc-btn.primary:disabled { background: #b9c6dd; border-color: #b9c6dd; cursor: not-allowed; }
+.set-policy-row { font-size: 14px; line-height: 1.9; color: var(--ink, #1c1a18); }
+@media (max-width: 640px) {
+    .kxc-ov { padding: 0; }
+    .kxc-box { max-height: 100vh; height: 100%; border-radius: 0; width: 100%; }
+    .kxc-body { padding: 4px 16px 8px; }
+    .kxc-head, .kxc-foot { padding-left: 16px; padding-right: 16px; }
+    .kxc-btns { margin-left: 0; width: 100%; }
+    .kxc-btn { flex: 1 1 0; }
+    }
+
 /* ===== ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว ===== */
 #page-terms, #page-privacy { background: var(--bg, #f6f8fc); }
 .doc-wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 72px; }
@@ -16945,6 +17174,17 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     if((pw.value || '').length < 8){
       pw.classList.add('bad'); pw.focus(); kxToast('รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร'); return;
     }
+    /* The documents go up every time, after the form is otherwise valid and
+       before the account is created — not once per browser and not skipped
+       because the box happens to be ticked. Ticking a box is not reading;
+       putting the text in the way is the only version of this that means
+       anything. The modal calls back into here once it has been accepted, and
+       kxPolicyAccepted is cleared first so a previous run cannot stand in for
+       this one. */
+    if(!window.kxPolicyAccepted){
+      kxConsentOpen(function(){ window.authSubmitRegister(); });
+      return;
+    }
     if(terms && !terms.checked){
       kxToast('กรุณายอมรับข้อกำหนดการใช้งานก่อนสมัครสมาชิก'); terms.focus(); return;
     }
@@ -16958,7 +17198,9 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
         // an individual who left it blank is their own contact
         contact_name: contact.trim() || (isPerson ? name.trim() : ''),
         phone: phone.trim(),
-        business_type: isPerson ? 'person' : 'company'
+        business_type: isPerson ? 'person' : 'company',
+        // which versions were on screen when they pressed ยอมรับ, and when
+        policy: window.kxPolicyAccepted
       }));
     }catch(e){}
 
@@ -19438,6 +19680,13 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     window.kxProfileIsNew = true;
     if(ins.error){ console.error('profile insert failed', ins.error); window.kxCurrentUser = row; return row; }
     window.kxCurrentUser = ins.data;
+    /* Now that the profiles row exists there is something for the consent to
+       hang off. It is written after the insert and never before it: the foreign
+       key would refuse it, and a consent record for an account that failed to
+       be created is a record of nothing. */
+    if(window.kxRecordPolicyAcceptance && pending && pending.policy)
+      await kxRecordPolicyAcceptance(user.id, pending.policy);
+    window.kxPolicyAccepted = null;
     // the same three the existing-row branch runs, so a first sign-in lands in
     // the same state as every one after it
     if(window.kxApplyAvatars) window.kxApplyAvatars();
@@ -22368,6 +22617,7 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     }
     if(id === 'page-settings' && window.kxLoadSettings) window.kxLoadSettings();
     if(id === 'page-settings' && window.kxLoadPrefs) window.kxLoadPrefs();
+    if(id === 'page-settings' && window.kxLoadPolicyAcceptances) window.kxLoadPolicyAcceptances();
     // ประเภทบัญชี lives here, so the chips have to show the account's real type
     if(id === 'page-settings' && window.kxSyncEntity && window.kxEntity) window.kxSyncEntity(window.kxEntity());
     /* kxLoadProfile was written and never called, so แก้ไขโปรไฟล์ only ever

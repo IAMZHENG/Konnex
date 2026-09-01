@@ -2234,6 +2234,20 @@
 
   // ================================ ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว ===
   describe('the terms and the privacy policy', function () {
+    // a signup form filled in far enough to be otherwise valid
+    function fillSignup(w) {
+      w.authTab('register'); w.authEntity('company');
+      var v = { auNameInput: 'บจก. ทดสอบ', auContactInput: 'สมชาย',
+                auPhoneInput: '0812345678', auRegEmail: 'x@y.co.th',
+                auRegPassword: 'abcd1234' };
+      Object.keys(v).forEach(function (id) { w.document.getElementById(id).value = v[id]; });
+      return { reset: function () {
+        Object.keys(v).forEach(function (id) { w.document.getElementById(id).value = ''; });
+        w.document.getElementById('auRegTerms').checked = false;
+        w.kxPolicyAccepted = null;
+      } };
+    }
+
     it('both exist and are reachable from the signup checkbox', function (w) {
       expect(!!w.document.getElementById('page-terms')).toBe(true);
       expect(!!w.document.getElementById('page-privacy')).toBe(true);
@@ -2296,6 +2310,97 @@
       expect(priv).toContain('เราไม่ได้ขอเลขบัตรประชาชน');
       // data leaves the country
       expect(priv).toContain('สิงคโปร์');
+    });
+
+    /* Every signup, not once per browser: the documents go up after the form is
+       valid and before the account is made. A ticked box is not reading. */
+    it('will not create an account until the documents have been accepted', async function (w) {
+      var form = fillSignup(w);
+      w.kxPolicyAccepted = null;
+      w.document.getElementById('auRegTerms').checked = true;   // even pre-ticked
+      var calls = 0, real = w.sb.auth.signUp;
+      w.sb.auth.signUp = async function () { calls++; return { data: {}, error: null }; };
+      try {
+        await w.authSubmitRegister();
+        expect(calls).toBe(0, 'the account must not exist before anyone has read anything');
+        expect(w.document.getElementById('kxConsent').hidden).toBe(false, 'the modal is up');
+      } finally { w.sb.auth.signUp = real; form.reset(); w.kxConsentClose(); }
+    });
+
+    it('shows the real documents, not a second copy of the wording', function (w) {
+      w.kxConsentOpen();
+      try {
+        var docs = w.document.querySelectorAll('#kxcBody .kxc-doc');
+        expect(docs.length).toBe(2, 'ข้อกำหนด and นโยบาย, both of them');
+        var modal = w.document.getElementById('kxcBody').textContent;
+        // a sentence out of each page has to be present, because it is the page
+        [w.document.querySelector('#page-terms .doc-note').textContent.trim().slice(0, 40),
+         w.document.querySelector('#page-privacy .doc-warn').textContent.trim().slice(0, 40)]
+          .forEach(function (frag) { expect(modal).toContain(frag); });
+      } finally { w.kxConsentClose(); }
+    });
+
+    it('holds the accept button until the reader reaches the end', function (w) {
+      w.kxConsentOpen();
+      try {
+        var body = w.document.getElementById('kxcBody');
+        var btn = w.document.getElementById('kxcAccept');
+        expect(btn.disabled).toBe(true, 'nothing has been scrolled yet');
+        body.scrollTop = body.scrollHeight;
+        body.dispatchEvent(new w.Event('scroll'));
+        expect(btn.disabled).toBe(false);
+      } finally { w.kxConsentClose(); }
+    });
+
+    /* The record is what makes the tick-box worth anything: which versions, and
+       when. It rides in the signup stash because signUp can hand back no
+       session, and is spent once the profiles row it hangs off exists. */
+    it('stamps the accepted versions into the signup stash', async function (w) {
+      var form = fillSignup(w);
+      w.kxPolicyAccepted = null;
+      w.localStorage.removeItem('kx.pendingProfile');
+      var real = w.sb.auth.signUp;
+      w.sb.auth.signUp = async function () { return { data: { user: { id: ME } }, error: null }; };
+      try {
+        await w.authSubmitRegister();                 // opens the modal
+        var body = w.document.getElementById('kxcBody');
+        body.scrollTop = body.scrollHeight;
+        body.dispatchEvent(new w.Event('scroll'));
+        w.document.getElementById('kxcAccept').click();
+        await new Promise(function (r) { setTimeout(r, 0); });
+        var stash = JSON.parse(w.localStorage.getItem('kx.pendingProfile') || 'null');
+        expect(!!(stash && stash.policy)).toBe(true, 'nothing recorded what they agreed to');
+        expect(stash.policy.terms).toBe(w.KX_DOC.terms);
+        expect(stash.policy.privacy).toBe(w.KX_DOC.privacy);
+        expect(isNaN(Date.parse(stash.policy.at))).toBe(false, 'and when');
+      } finally {
+        w.sb.auth.signUp = real; form.reset();
+        w.localStorage.removeItem('kx.pendingProfile');
+      }
+    });
+
+    it('writes one row per document, and writes nothing twice', async function (w) {
+      var sb = plan(w, { policy_acceptances: { _: { data: null, error: null } } });
+      await w.kxRecordPolicyAcceptance(ME, { terms: '1.0', privacy: '1.0', at: '2026-09-01T00:00:00Z' });
+      restore(w);
+      var wrote = sb._writes.filter(function (x) { return x.table === 'policy_acceptances'; });
+      expect(wrote.length).toBe(1, 'one round trip, not one per document');
+      var rows = wrote[0].row;
+      expect(rows.length).toBe(2);
+      expect(rows.map(function (r) { return r.document; })).toEqual(['terms', 'privacy']);
+      expect(rows[0].profile_id).toBe(ME);
+      expect(wrote[0].op).toBe('upsert', 'a retry must not add a second row');
+    });
+
+    /* The version on the page and the version in the record come from the same
+       object. If they could drift, the record would name a document nobody was
+       ever shown. */
+    it('shows the same version it records', function (w) {
+      expect(w.KX_DOC.terms).toBeTruthy();
+      expect(w.document.querySelector('#page-terms .doc-ver').textContent)
+        .toContain(w.KX_DOC.terms);
+      expect(w.document.querySelector('#page-privacy .doc-ver').textContent)
+        .toContain(w.KX_DOC.privacy);
     });
 
     it('carries a version and an effective date on both', function (w) {
@@ -2428,13 +2533,22 @@
       w.sb.auth.signUp = async function () {
         return { data: { user: { id: ME }, session: null }, error: null };
       };
+      // signup goes through the consent modal now, so drive it the way a
+      // person does rather than asserting on a form that never got submitted
+      w.kxPolicyAccepted = null;
       await w.authSubmitRegister();
+      var body = w.document.getElementById('kxcBody');
+      body.scrollTop = body.scrollHeight;
+      body.dispatchEvent(new w.Event('scroll'));
+      w.document.getElementById('kxcAccept').click();
+      await new Promise(function (r) { setTimeout(r, 0); });
       w.sb.auth.signUp = real;
       var stash = JSON.parse(w.localStorage.getItem('kx.pendingProfile') || 'null');
       expect(!!stash).toBe(true, 'the rest of the form still carries over');
       expect('tax_id' in stash).toBe(false);
       expect(stash.phone).toBe('0812345678', 'the fields that remain still work');
       w.localStorage.removeItem('kx.pendingProfile');
+      w.kxPolicyAccepted = null;
     });
 
     /* The real hazard of pulling the field out: the profile save builds its

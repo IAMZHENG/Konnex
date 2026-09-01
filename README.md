@@ -3089,6 +3089,48 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## ต้องอ่านและกดยอมรับก่อนสมัคร และเก็บบันทึกไว้
+
+The tick-box on the signup form was the whole of the old consent: it changed a
+boolean for as long as the page was open, and then it was thrown away. Nothing
+anywhere recorded that anyone had agreed to anything, so the one question the box
+exists to answer — *which version did this account accept, and when?* — had no
+answer at all.
+
+Now the documents go up **every time**, after the form is otherwise valid and
+before the account is created — not once per browser, and not skipped because the
+box happens to be ticked already. The accept button stays disabled until the
+reader reaches the end of the text. A box you can accept without moving is a box
+nobody reads; a box that waits out a countdown is the same box with a delay in
+front of it.
+
+**The modal clones `#page-terms` and `#page-privacy` rather than holding a second
+copy of the wording.** A second copy is a second thing to keep in step, and on
+the day it fell behind, the text someone agreed to would not be the text the app
+shows. For the same reason the version number lives in one object, `KX_DOC`, and
+the pages read their own label out of it — a record naming a version nobody was
+ever shown is worse than no record.
+
+`database/policy_acceptances.sql` is the record: one row per (account, document,
+version), with a unique index so a retry or a second sign-in adds nothing —
+accepting twice is not two facts. It is **append-only on purpose**: there is a
+select policy and an insert policy and *no update or delete policy*, so with RLS
+on, Postgres refuses both to everyone holding the anon key, the account holder
+included. A consent record its own subject can quietly rewrite is not evidence of
+anything. Rows still go when the profile goes, through the cascade — keeping
+consent for an account that has exercised its right to be deleted would be the
+opposite of what the record is for.
+
+The write happens after the `profiles` insert and never before it: the foreign
+key would refuse it, and consent recorded for an account that failed to be
+created is a record of nothing. It rides there in `kx.pendingProfile`, because
+`signUp()` can hand back no session at all. If the migration has not been run the
+signup still succeeds and the console says which file is missing — the table is
+the record, not a gate.
+
+ตั้งค่า → บัญชี shows what the table holds for this account, read back from the
+table rather than from anything local, which is the point.
+
 ## ข้อกำหนดการใช้งาน และ นโยบายความเป็นส่วนตัว
 
 Two new pages, `page-terms` and `page-privacy`, written from a supplied draft.
