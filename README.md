@@ -3089,6 +3089,43 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## ออกไฟล์ PDF ของเอกสารทั้งสองฉบับ
+
+```
+node tools/build-docs-pdf.js
+```
+
+Writes three files into `docs/` — the two documents together, and each on its
+own. The documents are **extracted from `index.html`**, never retyped: a PDF
+saying something the app does not is the whole failure this exercise exists to
+avoid, and a second copy of the wording is how it happens.
+
+Printing is done by whatever Chrome or Edge is already on the machine, so the
+text in the PDF is **real selectable text** in the app's own Thai font — 6 CMaps
+covering 44 Thai characters including vowels and tone marks, verified. The draft
+this was modelled on had every glyph converted to outlines, which is why nothing
+in it could be searched, copied, or read aloud by a screen reader.
+
+Four things in this were each a bug first:
+
+- The script serves the page itself and used to wait for Chrome with
+  `execFileSync`. That blocks the event loop, so the request for the page
+  arrived at a server that could not answer it and both sides waited for each
+  other. Chrome is spawned and awaited asynchronously now.
+- `--run-all-compositor-stages-before-draw` reads like the flag that makes fonts
+  arrive before the draw. It hangs `--headless=new` indefinitely; the virtual
+  clock alone is enough.
+- Without `--user-data-dir`, Chrome hands the job to whatever instance the user
+  already has open and never returns. It gets a throwaway profile.
+- Chrome writes to an ASCII path and Node renames afterwards — a Thai path
+  handed through `CreateProcess` is at the mercy of the console codepage.
+
+The output check judges the object dictionaries, which are plain, and never the
+drawing operators, which live inside compressed streams: an early version looked
+for `Tj` and failed one file while passing two others on identical data, because
+finding those two bytes in compressed binary is luck. It asks for an embedded
+font program, a ToUnicode map, and the Thai family by name.
+
 ## ต้องอ่านและกดยอมรับก่อนสมัคร และเก็บบันทึกไว้
 
 The tick-box on the signup form was the whole of the old consent: it changed a
