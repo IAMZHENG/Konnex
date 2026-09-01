@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="QubeQuote">
+  <title>QubeQuote</title>
+  <!-- The tab and app icon: the mark in white on the brand ground, sized to
+       78% of the tile so it still reads at 16px. Same geometry as
+       qubequote-mark.svg, scaled and centred. -->
+  <rect width="512" height="512" fill="#0056fd"/>
+  <g transform="translate(79.32,56) scale(1.53846)">
+    <path d="M106.77 215.89 L21.66 166.75 L21.66 72.25 L103.5 25 L185.34 72.25 L185.34 139.35"
+          fill="none" stroke="#fff" stroke-width="46" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M164 176.5 L227.5 211.78 L227.5 257.28 L164 222 Z"
+          fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>

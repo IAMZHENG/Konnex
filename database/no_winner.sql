@@ -1,7 +1,7 @@
--- Konnex does not pick winners.
+-- QubeQuote does not pick winners.
 --
 -- This reverses rfq_outcome.sql and the win/lose model it was built on. The
--- decision behind it: Konnex collects comparable quotes so a buyer can take
+-- decision behind it: QubeQuote collects comparable quotes so a buyer can take
 -- them into their own purchasing process. It is not an auction, so there is no
 -- winner to declare, no loser to label, and nothing for the platform to record
 -- about a decision it never sees.

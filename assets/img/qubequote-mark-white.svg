@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 260" width="230" height="260" role="img" aria-label="QubeQuote">
+  <title>QubeQuote</title>
+  <!--
+    A regular pointy-top hexagon, open at the lower right, with a detached bar
+    for the Q's tail. Traced from the brand sheet rather than eyeballed: the
+    hexagon is centred on (103.5, 119.5) with a circumradius of 94.5 and a
+    46-wide stroke, the ring stops 71% of the way down the right side, and the
+    tail runs parallel to the upper-right edge. Rebuilt as geometry rather than
+    cropped from the sheet's raster, so it stays sharp at 16px and at 512.
+  -->
+  <g fill="none" stroke="#ffffff" stroke-width="46" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M106.77 215.89 L21.66 166.75 L21.66 72.25 L103.5 25 L185.34 72.25 L185.34 139.35"/>
+  </g>
+  <path d="M164 176.5 L227.5 211.78 L227.5 257.28 L164 222 Z"
+        fill="#ffffff" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+</svg>

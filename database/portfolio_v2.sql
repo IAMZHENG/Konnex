@@ -61,13 +61,13 @@ declare
   who text;
 begin
   if tg_op = 'INSERT' then
-    select coalesce(company_name, 'ผู้ใช้ Konnex') into who
+    select coalesce(company_name, 'ผู้ใช้ QubeQuote') into who
       from profiles where id = new.requester_id;
     insert into notifications (profile_id, kind, body, actor_id)
     values (new.addressee_id, 'connect_request', who || ' ขอเชื่อมต่อกับคุณ', new.requester_id);
 
   elsif tg_op = 'UPDATE' and new.status = 'accepted' and old.status <> 'accepted' then
-    select coalesce(company_name, 'ผู้ใช้ Konnex') into who
+    select coalesce(company_name, 'ผู้ใช้ QubeQuote') into who
       from profiles where id = new.addressee_id;
     insert into notifications (profile_id, kind, body, actor_id)
     values (new.requester_id, 'connect_accepted', who || ' ตอบรับการเชื่อมต่อแล้ว', new.addressee_id);

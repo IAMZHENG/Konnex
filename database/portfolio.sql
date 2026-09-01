@@ -1,12 +1,12 @@
 -- ผลงานที่ผ่านมา — the track record, written by the seller.
 --
 -- ผลงานสะสม used to be generated: it listed the RFQs this account had been
--- marked as winning. Konnex no longer picks winners, so that list can never
+-- marked as winning. QubeQuote no longer picks winners, so that list can never
 -- fill again, and the section it fed went dark.
 --
 -- Generating it was the wrong idea anyway. What a buyer wants to know is what
 -- this supplier has actually done — for whom, of what, when — and most of that
--- happened before Konnex existed or outside it entirely. The platform cannot
+-- happened before QubeQuote existed or outside it entirely. The platform cannot
 -- know any of it. The seller can, so the seller writes it.
 --
 -- The honest consequence, and it should stay visible in the UI: this is a

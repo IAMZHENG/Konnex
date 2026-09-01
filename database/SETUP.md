@@ -8,7 +8,7 @@
 ## ส่วนที่ 1 — Database: Supabase (ฟรี)
 
 1. ไปที่ **[supabase.com](https://supabase.com)** → กด **Start your project** → สมัครด้วยอีเมลหรือ GitHub
-2. กด **New project** ตั้งชื่อ (เช่น `konnex`) เลือก region ที่ใกล้ที่สุด (Singapore) ตั้งรหัสผ่าน database ไว้ (เก็บไว้ที่ปลอดภัย ไม่ต้องส่งให้ผม)
+2. กด **New project** ตั้งชื่อ (เช่น `qubequote`) เลือก region ที่ใกล้ที่สุด (Singapore) ตั้งรหัสผ่าน database ไว้ (เก็บไว้ที่ปลอดภัย ไม่ต้องส่งให้ผม)
 3. รอสร้างโปรเจกต์เสร็จ (~2 นาที) แล้วไปที่เมนู **SQL Editor** ทางซ้าย
 4. เปิดไฟล์ `database/schema.sql` ในโปรเจกต์นี้ → copy ทั้งไฟล์ → วางใน SQL Editor → กด **Run**
    ตารางทั้งหมด (profiles, posts, quotes, messages, ...) จะถูกสร้างพร้อม Row Level Security ทันที
@@ -36,7 +36,7 @@
 
 1. ไปที่ **[pages.cloudflare.com](https://pages.cloudflare.com)** → สมัครบัญชี Cloudflare (ฟรี)
 2. กด **Create a project** → เลือกแท็บ **Upload assets** (ไม่ใช่ Connect to Git)
-3. ลากทั้งโฟลเดอร์ `Project Konnex` (มี `index.html` และ `assets/`) วางลงไป
+3. ลากทั้งโฟลเดอร์ `Project QubeQuote` (มี `index.html` และ `assets/`) วางลงไป
 4. กด Deploy — จะได้ลิงก์ทันที เช่น `konnex.pages.dev`
 
 ถ้าอยากได้ auto-deploy ทุกครั้งที่แก้โค้ด (ผ่าน GitHub) บอกผมได้ ผมจะ `git init` และเตรียม repo ให้ แล้วคุณแค่เชื่อม GitHub เข้ากับ Cloudflare Pages ในหน้าตั้งค่า

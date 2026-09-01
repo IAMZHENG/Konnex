@@ -2,36 +2,35 @@
 <html lang="th"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
-<title>Konnex — แพลตฟอร์มซื้อขายงานและบริการ</title>
+<title>QubeQuote — แพลตฟอร์มซื้อขายงานและบริการ</title>
 
 
 
 <!-- Web app / PWA meta -->
-<meta name="theme-color" content="#0a5bff">
+<meta name="theme-color" content="#0056fd">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Konnex">
+<meta name="apple-mobile-web-app-title" content="QubeQuote">
 <meta name="format-detection" content="telephone=no">
 
-<!-- The tab icon, drawn at the sizes a tab actually uses.
-     One 192px file used to serve every size, and the browser squeezed it down
-     to 16px: the king is a tall narrow shape drawn at 78% of the height and 41%
-     of the width, so what survived that reduction was a blue square with a
-     smudge in it. These are rendered at their real size instead of downscaled,
-     and the king is pushed to 94% of the height — about half again as large as
-     before. It still cannot fill the tile the way a letterform does; a chess
-     king is twice as tall as it is wide, and cropping to the crown to gain the
-     width was tried and read as an abstract blob rather than as the mark. -->
-<link rel="icon" type="image/png" sizes="48x48" href="assets/img/konnex-favicon-48.png">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/img/konnex-favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="assets/img/konnex-favicon-16.png">
-<link rel="apple-touch-icon" href="assets/img/konnex-mark-3.png">
+<!-- The tab icon, drawn at the sizes a tab actually uses rather than downscaled
+     from one large file. The old mark was a chess king — twice as tall as it is
+     wide, so at 16px it reduced to a blue square with a smudge in it, and the
+     fix was to push it to 94% of the height. The Q is close to square, which is
+     the shape a tab icon wants, so it sits at 78% and still reads.
+     The SVG comes first: a browser that takes it draws the mark at whatever
+     size the tab is, and the PNGs stay for the ones that do not. -->
+<link rel="icon" type="image/svg+xml" href="assets/img/qubequote-icon.svg">
+<link rel="icon" type="image/png" sizes="48x48" href="assets/img/qubequote-favicon-48.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/img/qubequote-favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/img/qubequote-favicon-16.png">
+<link rel="apple-touch-icon" href="assets/img/qubequote-apple-touch-180.png">
 
 <!-- Web app manifest (embedded, so the whole app still ships as one file) -->
 <link rel="manifest" id="manifestLink" href="">
 
-<!-- ===== Konnex backend: Supabase =====
+<!-- ===== QubeQuote backend: Supabase =====
      Loaded blocking (no defer/async) so window.supabase exists before any inline
      script below runs. The URL and anon key are meant to be public — Row Level
      Security in database/schema.sql is what actually protects the data; anyone
@@ -441,7 +440,7 @@
 <style>
 .app-page{ display:none; }
 .app-page.active{ display:block; }
-/* Konnex line-icon system */
+/* QubeQuote line-icon system */
 .li-svg{ stroke:currentColor; stroke-width:1.7; fill:none; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:middle; width:20px; height:20px; }
 .ic .li-svg{ width:20px; height:20px; }
 .icon-btn .li-svg{ width:22px; height:22px; }
@@ -7911,7 +7910,7 @@ html, body{
   <!-- NAVBAR -->
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -8333,7 +8332,7 @@ html, body{
   <!-- NAVBAR -->
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -8441,7 +8440,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -8716,7 +8715,7 @@ html, body{
   <!-- NAVBAR -->
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -9132,7 +9131,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -9312,7 +9311,7 @@ html, body{
       return {
         id: c.id,
         postTitle: last && last.posts && last.posts.title,
-        other: others[0] || { company_name:'ผู้ใช้ Konnex' },
+        other: others[0] || { company_name:'ผู้ใช้ QubeQuote' },
         last: last,
         unread: msgs.some(function(m){
           return m.sender_id !== me && (!seen || new Date(m.created_at) > new Date(seen));
@@ -9346,7 +9345,7 @@ html, body{
       return;
     }
     listEl.innerHTML = CONVS.map(function(c){
-      var name = c.other.company_name || 'ผู้ใช้ Konnex';
+      var name = c.other.company_name || 'ผู้ใช้ QubeQuote';
       return '<div class="conv-item' + (c.id === current ? ' active' : '') + '" onclick="kxOpenConversation(\'' + c.id + '\')">' +
         '<div class="conv-avatar" style="overflow:hidden">' + avatarHTML(c.other, name) + '</div>' +
         '<div class="conv-info">' +
@@ -9418,7 +9417,7 @@ html, body{
     current = id;
     var conv = CONVS.filter(function(c){ return c.id === id; })[0];
     var other = (conv && conv.other) || {};
-    var name = other.company_name || 'ผู้ใช้ Konnex';
+    var name = other.company_name || 'ผู้ใช้ QubeQuote';
 
     var hav = head.querySelector('.conv-avatar');
     if(hav){ hav.style.overflow = 'hidden'; hav.innerHTML = avatarHTML(other, name); }
@@ -9619,7 +9618,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -9815,7 +9814,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -9934,7 +9933,7 @@ html, body{
 <div id="page-search" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -9958,7 +9957,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -10227,7 +10226,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -10318,7 +10317,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -10920,7 +10919,7 @@ html, body{
 
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11289,7 +11288,7 @@ html, body{
   </style>
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11461,7 +11460,7 @@ html, body{
 <div id="page-settings" class="app-page">
   <div class="navbar">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, งาน, สินค้า, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11576,7 +11575,7 @@ html, body{
               <p class="card-desc">บันทึกความต้องการของคุณไว้แล้ว — ระบบส่งอีเมลและ SMS ยังไม่เปิดใช้งาน จะเริ่มส่งตามที่ตั้งไว้เมื่อเปิด</p>
               <div class="toggle-row"><div><div class="tr-title">สรุปกิจกรรมรายสัปดาห์ทางอีเมล</div><div class="tr-sub">รายงานงานใหม่และข้อเสนอที่น่าสนใจ</div></div><div class="switch on" data-pref="email_weekly" onclick="kxTogglePref(this)"></div></div>
               <div class="toggle-row"><div><div class="tr-title">แจ้งเตือนทาง SMS</div><div class="tr-sub">สำหรับเหตุการณ์สำคัญ เช่น ได้รับเลือกงาน</div></div><div class="switch" data-pref="sms_important" onclick="kxTogglePref(this)"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">ข่าวสารและโปรโมชัน</div><div class="tr-sub">อัปเดตฟีเจอร์ใหม่และข้อเสนอพิเศษจาก Konnex</div></div><div class="switch" data-pref="email_promo" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row"><div><div class="tr-title">ข่าวสารและโปรโมชัน</div><div class="tr-sub">อัปเดตฟีเจอร์ใหม่และข้อเสนอพิเศษจาก QubeQuote</div></div><div class="switch" data-pref="email_promo" onclick="kxTogglePref(this)"></div></div>
             </div>
           </div>
 
@@ -11654,7 +11653,7 @@ html, body{
 <div id="page-saved" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11687,7 +11686,7 @@ html, body{
 <div id="page-admin-verify" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11715,7 +11714,7 @@ html, body{
 <div id="page-history" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-feed');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -11777,11 +11776,11 @@ html, body{
   <div class="au-wrap">
     <div class="au-brand">
       <div class="au-brand-top">
-        <div class="au-logo"><span class="au-mark tile"><img src="assets/img/konnex-mark-3-white.png" alt="Konnex"></span>KONNEX</div>
+        <div class="au-logo"><span class="au-mark tile"><img src="assets/img/qubequote-mark-white.svg" alt="QubeQuote"></span>QubeQuote</div>
         <div class="au-tag">แพลตฟอร์มที่เชื่อมโยงผู้ซื้อ ผู้ขาย และผู้ให้บริการ ให้ค้นหาโอกาสทางธุรกิจ รับข้อเสนอ และสร้างความร่วมมือได้ในที่เดียว</div>
       </div>
       <div class="au-points">
-        <!-- Three things Konnex actually does. The set this replaces promised
+        <!-- Three things QubeQuote actually does. The set this replaces promised
              two it does not: a ยืนยันตัวตน check (profiles.is_verified is read
              in six places and written in none — nothing can set it), and
              "ปิดดีลในระบบ · ติดตามสถานะงาน", which was the winner-picking flow
@@ -11790,7 +11789,7 @@ html, body{
         <div class="au-point"><span class="au-pic">👤</span><div><div class="au-pt">เชื่อมต่อกับคู่ค้า</div><div class="au-ps">เก็บรายชื่อผู้ที่เคยติดต่อ และดูว่าใครเชื่อมต่อกับใครบ้าง</div></div></div>
         <div class="au-point"><span class="au-pic">💬</span><div><div class="au-pt">คุยกับเจ้าของประกาศโดยตรง</div><div class="au-ps">ถามรายละเอียดและขอใบเสนอราคาได้ในแอป</div></div></div>
       </div>
-      <!-- "ผู้ประกอบการกว่า 12,000 รายใช้งาน Konnex อยู่ในขณะนี้" stood here.
+      <!-- "ผู้ประกอบการกว่า 12,000 รายใช้งาน QubeQuote อยู่ในขณะนี้" stood here.
            It was a hardcoded number that no code ever updated; the profiles
            table holds four rows. A count worth showing can go back here once
            there is one worth showing. -->
@@ -11799,8 +11798,8 @@ html, body{
     <div class="au-panel">
       <div class="au-card">
         <div class="au-cardhead">
-          <span class="au-cardmark tile"><img src="assets/img/konnex-mark-3.png" alt="Konnex"></span>
-          <div class="au-cardwelcome">ยินดีต้อนรับสู่ Konnex</div>
+          <span class="au-cardmark tile"><img src="assets/img/qubequote-mark.svg" alt="QubeQuote"></span>
+          <div class="au-cardwelcome">ยินดีต้อนรับสู่ QubeQuote</div>
         </div>
         <div class="au-tabs">
           <button class="au-tab active" id="auTabLogin" onclick="authTab('login')">เข้าสู่ระบบ</button>
@@ -11867,7 +11866,7 @@ html, body{
           <button class="au-btn" id="auNewPwBtn" onclick="authSetNewPassword()">บันทึกรหัสผ่านใหม่</button>
         </div>
       </div>
-      <div class="au-foot">© 2024 Konnex · ปลอดภัยด้วยการเข้ารหัส SSL</div>
+      <div class="au-foot">© 2026 QubeQuote · ปลอดภัยด้วยการเข้ารหัส SSL</div>
     </div>
   </div>
 </div>
@@ -11900,7 +11899,7 @@ html, body{
 <div id="page-dashboard" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-dashboard');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-dashboard');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search" onclick="navigateTo('page-feed')">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -12029,7 +12028,7 @@ html, body{
   <div class="pf-modal" id="verifyBox" style="max-width:460px;">
     <button class="pf-x" onclick="closeVerify()">✕</button>
     <h3>ยืนยันตัวตน / บริษัท</h3>
-    <div class="pf-sub">อัปโหลดเอกสารเพื่อรับตรา Verified — ทีมงาน Konnex จะตรวจสอบภายใน 1–2 วันทำการ</div>
+    <div class="pf-sub">อัปโหลดเอกสารเพื่อรับตรา Verified — ทีมงาน QubeQuote จะตรวจสอบภายใน 1–2 วันทำการ</div>
     <div class="vf-type">
       <button class="vf-type-btn active" id="vfTypePerson" onclick="vfSetType('person')">👤 บุคคลธรรมดา</button>
       <button class="vf-type-btn" id="vfTypeCompany" onclick="vfSetType('company')">🏢 นิติบุคคล</button>
@@ -12171,7 +12170,7 @@ html, body{
       '<div style="text-align:center;padding:16px 6px 6px">' +
         '<div style="width:58px;height:58px;border-radius:50%;background:#fff4dd;color:#92610a;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px">⏳</div>' +
         '<div style="font-size:18px;font-weight:700;margin-bottom:8px">ส่งเอกสารเรียบร้อย — รออนุมัติ</div>' +
-        '<div style="font-size:15px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">ส่งเอกสาร ' + stored.length + ' รายการแล้ว ทีมงาน Konnex จะตรวจสอบและแจ้งผลให้ทราบ</div>' +
+        '<div style="font-size:15px;color:var(--ink-soft);line-height:1.7;margin-bottom:20px">ส่งเอกสาร ' + stored.length + ' รายการแล้ว ทีมงาน QubeQuote จะตรวจสอบและแจ้งผลให้ทราบ</div>' +
         '<button class="pf-btn primary" style="width:100%;justify-content:center;display:flex" onclick="closeVerify();setVerifyPending()">รับทราบ</button>' +
       '</div>';
   }
@@ -12474,7 +12473,7 @@ html, body{
 <div id="page-premium" class="app-page">
   <div class="navbar sh-nav">
     <div class="nav-left">
-      <a class="logo" href="#" onclick="navigateTo('page-dashboard');return false;"><img class="brand-logo" src="assets/img/konnex-mark-3.png" alt="Konnex"><span class="brand-word">KONNEX</span></a>
+      <a class="logo" href="#" onclick="navigateTo('page-dashboard');return false;"><img class="brand-logo" src="assets/img/qubequote-mark.svg" alt="QubeQuote"><span class="brand-word"><b>Qube</b>Quote</span></a>
       <div class="search" onclick="navigateTo('page-feed')">🔍 ค้นหา RFQ, สินค้า, บริการ, บริษัท...</div>
     </div>
     <div class="nav-right">
@@ -12487,7 +12486,7 @@ html, body{
   <div class="prem-wrap">
     <div class="prem-hero">
       <div class="prem-crown">👑</div>
-      <h1>อัปเกรดเป็น Konnex Premium</h1>
+      <h1>อัปเกรดเป็น QubeQuote Premium</h1>
       <p>เสนอราคาได้ไม่จำกัด ขึ้นก่อนใคร และปิดดีลได้มากขึ้น</p>
       <div class="prem-toggle"><button class="prem-cyc active" onclick="premCycle(this,'mo')">รายเดือน</button><button class="prem-cyc" onclick="premCycle(this,'yr')">รายปี <span>ประหยัด 20%</span></button></div>
     </div>
@@ -12857,15 +12856,15 @@ document.addEventListener('keydown', function(e){
 // Manifest is generated in-browser so the whole app still ships as a single .html file.
 (function(){
   try{
-    var icon = "assets/img/konnex-icon-512-3.png";
+    var icon = "assets/img/qubequote-icon-512.png";
     var manifest = {
-      name: "Konnex — แพลตฟอร์มซื้อขายงานและบริการ",
-      short_name: "Konnex",
+      name: "QubeQuote — แพลตฟอร์มซื้อขายงานและบริการ",
+      short_name: "QubeQuote",
       start_url: window.location.pathname + window.location.search,
       scope: window.location.pathname,
       display: "standalone",
       background_color: "#f6f8fc",
-      theme_color: "#0a5bff",
+      theme_color: "#0056fd",
       icons: [
         /* the file is 512 square; declaring 192 made the manifest lie about it.
            "any", not "any maskable": a maskable icon is cropped to a circle of
@@ -12912,12 +12911,15 @@ if('serviceWorker' in navigator){
   }).catch(function(){ /* nothing to undo */ });
   if(window.caches && caches.keys){
     caches.keys().then(function(names){
+      // `konnex-`, not `qubequote-`, and it has to stay that way: the caches
+      // this clears were named by a build that shipped under the old name.
+      // Renaming it along with the rest would leave those clients stuck.
       names.forEach(function(n){ if(/^konnex-/.test(n)) caches.delete(n); });
     }).catch(function(){});
   }
 }
 
-/* ===== Konnex line-icon system: swap emoji chrome for clean SVG icons (all pages) ===== */
+/* ===== QubeQuote line-icon system: swap emoji chrome for clean SVG icons (all pages) ===== */
 (function(){
   var P = {
     home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
@@ -13342,7 +13344,7 @@ function savedCardHTML(r){
   var p = r.posts || {};
   var isRfq = p.kind !== 'offer';
   var imgs = (p.post_images || []).slice().sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
-  var img = imgs.length ? imgs[0].url : 'assets/img/konnex-mark-3.png';
+  var img = imgs.length ? imgs[0].url : 'assets/img/qubequote-mark.svg';
   var count = isRfq ? (p.quote_count || 0) : (p.request_count || 0);
   var countLbl = isRfq ? ' ข้อเสนอ' : ' ผู้ขอใบเสนอราคา';
   return '<div class="sh-scard" data-type="' + (isRfq ? 'buy' : 'sell') + '" data-post-id="' + p.id + '"' +
@@ -15879,7 +15881,7 @@ body.kx-auth .kx-burger{ display:none !important; }
      across the top-bar icons. Only !important actually wins here. */
   .navbar .search, .sh-nav .search{ display:none !important; }
 
-  /* wordmark was collapsing to 0-32px while "KONNEX" needs 67px */
+  /* wordmark was collapsing to 0-32px while the name needs its full width */
   .navbar .logo, .sh-nav .logo{ flex:none; }
   .brand-word{ flex:none; white-space:nowrap; }
 
@@ -16290,6 +16292,14 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
 /* the offers-and-average summary, centred in its card */
 #page-rfq-detail .compare-sub { justify-content: center; }
+
+/* ===== เวิร์ดมาร์ก QubeQuote =====
+   Two tones in one word, the way the brand sheet sets it: Qube in the dark
+   ink, Quote in the brand blue. The <b> carries no extra weight — both halves
+   are the same 700 — it is only there to hold the colour, since the whole
+   wordmark has to stay one run of text that wraps and truncates as one. */
+.brand-word{ color:#0056fd; }
+.brand-word b{ font-weight:inherit; color:#0b1b33; }
 
 /* ===== ปุ่มลูกตาดูรหัสผ่าน =====
    A password box you cannot read is a box you retype from memory, and the two
@@ -20251,7 +20261,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   function cardThumbHTML(images, cls){
     var list = (images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var urls = list.map(function(im){ return im.url; });
-    if(!urls.length) urls = ['assets/img/konnex-mark-3.png'];
+    if(!urls.length) urls = ['assets/img/qubequote-mark.svg'];
     var one = urls.length === 1;
     return '<div class="' + cls + ' kx-cthumb" data-i="0"' +
         ' data-all="' + esc(JSON.stringify(urls)) + '" onclick="event.stopPropagation()">' +
@@ -20298,7 +20308,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   function postCardHTML(post){
     var isRfq = post.kind === 'rfq';
     var owner = post.profiles || {};
-    var ownerName = owner.company_name || 'ผู้ใช้ Konnex';
+    var ownerName = owner.company_name || 'ผู้ใช้ QubeQuote';
     var loc = post.province || '';
     var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var docs = post.post_attachments || [];
@@ -20452,7 +20462,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(window.kxToast) kxToast(el.getAttribute('data-hint') || '');
   };
 
-  /* A quote card carries no verdict. Konnex collects quotes so the buyer can
+  /* A quote card carries no verdict. QubeQuote collects quotes so the buyer can
      compare them and decide in their own purchasing process — it does not run
      an auction, so there is no winner to mark and nothing here that ranks one
      supplier above another. What the card shows is the offer itself: who, how
@@ -20547,7 +20557,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var el = document.getElementById(elId);
     if(!el) return;
     var owner = post.profiles || {};
-    var name  = owner.company_name || 'ผู้ใช้ Konnex';
+    var name  = owner.company_name || 'ผู้ใช้ QubeQuote';
     el.querySelector('.post-owner-av').innerHTML = avatarInner(owner, name);
     el.querySelector('.post-owner-name').textContent = name;
     el.title = 'ดูโปรไฟล์ ' + name;
@@ -20612,7 +20622,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var canBid    = !isOwner && !isClosed && !isExpired;
     // 'decided' and 'canPick' are gone with the winner. An RFQ is open or it is
     // closed; what the buyer does with the quotes afterwards happens in their own
-    // purchasing process, and Konnex has no business claiming to know.
+    // purchasing process, and QubeQuote has no business claiming to know.
     var decided   = false;
     var canPick   = false;
 
@@ -20689,7 +20699,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       else offerListEl.innerHTML = waitNote + (quotes.length
         // in the order they were sent, not ranked by price — the list is a
         // record of who offered what, and ordering it by price makes the page
-        // look like a leaderboard for a decision Konnex does not make
+        // look like a leaderboard for a decision QubeQuote does not make
         ? quotes.slice().sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); })
             .map(function(q){ return quoteCardHTML(q, isOwner, decided, canPick, avgPrice, pickHint); }).join('')
         : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่มีข้อเสนอ</div><div class="kx-empty-sub">เมื่อมีผู้เสนอราคาเข้ามา รายการจะแสดงที่นี่</div></div>');
@@ -20730,7 +20740,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var root = document.getElementById('page-offer-detail');
     if(!root) return;
     var owner = post.profiles || {};
-    var ownerName = owner.company_name || 'ผู้ใช้ Konnex';
+    var ownerName = owner.company_name || 'ผู้ใช้ QubeQuote';
     var images = (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var quotes = post.quotes || [];
 
@@ -20743,7 +20753,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       slot.innerHTML = images.length
         ? galleryHTML(images)
         : '<div class="kx-gal" data-n="1"><span class="kx-gcell" style="cursor:default">' +
-          '<img class="kx-gimg" src="assets/img/konnex-mark-3.png" style="object-fit:contain;">' +
+          '<img class="kx-gimg" src="assets/img/qubequote-mark.svg" style="object-fit:contain;">' +
           '</span></div>';
       if(wrap) wrap.style.display = 'none';
     }
@@ -20821,7 +20831,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var msgs = followUps.map(function(f){
       var byOwner = !!(ownerProfile && f.asker_id && ownerProfile.id === f.asker_id);
       var who = byOwner ? ownerName
-        : ((f.profiles && f.profiles.company_name) || 'ผู้ใช้ Konnex');
+        : ((f.profiles && f.profiles.company_name) || 'ผู้ใช้ QubeQuote');
       var pic = byOwner ? ownerProfile : (f.profiles || null);
       return '<div style="display:flex;gap:10px;align-items:flex-start;margin:10px 0 0 42px;">' +
         '<div style="width:32px;height:32px;border-radius:50%;background:var(--blue-600);color:#fff;' +
@@ -20852,7 +20862,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     var answered = !!(q.answer && q.answer.trim());
     var mine = !!(window.kxSession && q.asker_id === window.kxSession.user.id);
     var asker = q.profiles || null;
-    var askerName = (asker && asker.company_name) || 'ผู้ใช้ Konnex';
+    var askerName = (asker && asker.company_name) || 'ผู้ใช้ QubeQuote';
     var openAsker = q.asker_id ? 'kxViewProfile(\'' + q.asker_id + '\');return false;' : 'return false;';
     var head = '<a href="#" onclick="' + openAsker + '" style="color:var(--blue-700);text-decoration:none;">' +
       esc(askerName) + '</a>' + (mine ? ' <span style="font-size:12px;font-weight:600;color:var(--ink-faint);background:var(--bg);border:1px solid var(--line);padding:1px 8px;border-radius:999px;">คุณ</span>' : '');
@@ -20944,7 +20954,7 @@ body.kx-auth .kx-burger{ display:none !important; }
               : 'ส่วนราคา') +
         'และใบเสนอราคาที่แนบมา เห็นได้เฉพาะเจ้าของประกาศ</div>' +
       rows.map(function(b){
-        var who = b.company_name || 'ผู้ใช้ Konnex';
+        var who = b.company_name || 'ผู้ใช้ QubeQuote';
         var open = b.bidder_id ? 'kxViewProfile(&quot;' + esc(b.bidder_id) + '&quot;)' : '';
         var q = mine[b.bidder_id];
         return '<div class="offer-card kx-q' + (q ? ' kx-q-mine' : '') + '">' +
@@ -21167,7 +21177,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         .then(function(r){
           if(r.error){ strip.style.display = 'none'; return; }
           var sent = r.data ? r.data.length : 0;
-          // งานสำเร็จ counted quotes marked 'won'. Konnex no longer declares a
+          // งานสำเร็จ counted quotes marked 'won'. QubeQuote no longer declares a
           // winner, so there is nothing behind that number and it is left off
           // rather than shown as a permanent zero.
           strip.innerHTML =
@@ -21266,7 +21276,7 @@ body.kx-auth .kx-burger{ display:none !important; }
       console.error('kxViewProfile failed', res.error); kxToast('ไม่พบโปรไฟล์นี้'); return;
     }
     var pr = res.data;
-    var name = pr.company_name || 'ผู้ใช้ Konnex';
+    var name = pr.company_name || 'ผู้ใช้ QubeQuote';
 
     navigateTo('page-company-profile');
     fillInfoList(pr);
@@ -21315,7 +21325,7 @@ body.kx-auth .kx-burger{ display:none !important; }
         : esc(name.charAt(0).toUpperCase());
     }
     var cover = p.querySelector('.cover');
-    if(cover) cover.src = pr.cover_url || 'assets/img/konnex-mark-3.png';
+    if(cover) cover.src = pr.cover_url || 'assets/img/qubequote-mark.svg';
 
     var about = p.querySelector('.about-text');
     if(about) about.textContent = pr.about || 'ยังไม่มีข้อมูลแนะนำ';
@@ -21488,7 +21498,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   function myRfqCardHTML(post){
     var images = post.post_images || [];
-    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
+    var thumb = images.length ? images[0].url : 'assets/img/qubequote-mark.svg';
     var docs = post.post_attachments || [];
     var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
@@ -21522,7 +21532,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   function myOfferRowHTML(post){
     var images = post.post_images || [];
-    var thumb = images.length ? images[0].url : 'assets/img/konnex-mark-3.png';
+    var thumb = images.length ? images[0].url : 'assets/img/qubequote-mark.svg';
     // the public counter, so this agrees with the feed card and the detail page
     var reqs = post.request_count != null ? post.request_count : (post.quote_requests || []).length;
     var statusVal = post.status === 'open' ? 'active' : post.status;
@@ -21568,7 +21578,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     // the person on the card is the one who asked
     var isReply = q.origin === 'offer';
     var who = owner.company_name || (isReply ? 'ผู้ขอราคา' : 'เจ้าของประกาศ');
-    /* A quote you sent has no verdict — Konnex is not judging it, and nobody
+    /* A quote you sent has no verdict — QubeQuote is not judging it, and nobody
        ever declares a winner. What the seller can usefully know is whether the
        listing is still taking quotes, so the pill says that instead. 'รอผล'
        claimed a result was coming; none is. */
@@ -21851,7 +21861,7 @@ body.kx-auth .kx-burger{ display:none !important; }
   }
 
   /* งานของฉัน used to carry a third tab, พิจารณา — "bidding over, waiting for the
-     owner to choose a winner". Konnex no longer picks winners, so there is
+     owner to choose a winner". QubeQuote no longer picks winners, so there is
      nothing left to wait on: a post's whole life is just whether it is still
      taking quotes or not, and that is decided the moment its deadline passes
      (or the owner closes it early). Two buckets, not three.
@@ -22206,7 +22216,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     function row(r, kind){
       var otherId = otherOf(r);
       var pp = people[otherId] || {};
-      var name = pp.company_name || 'ผู้ใช้ Konnex';
+      var name = pp.company_name || 'ผู้ใช้ QubeQuote';
       var sub = [pp.business_type === 'person' ? 'บุคคลธรรมดา' : 'นิติบุคคล', pp.province]
                   .filter(Boolean).join(' · ');
       var av = pp.avatar_url
@@ -22339,10 +22349,10 @@ body.kx-auth .kx-burger{ display:none !important; }
   };
 
   /* ---------- ผลงานที่ผ่านมา ----------
-     ผลงานสะสม used to be generated from the RFQs this account had won. Konnex
+     ผลงานสะสม used to be generated from the RFQs this account had won. QubeQuote
      picks no winners, so that list can never fill again — and generating it was
      the wrong idea regardless, because most of a supplier's work happened before
-     Konnex or outside it. The seller writes this one.
+     QubeQuote or outside it. The seller writes this one.
 
      Which makes it a claim rather than a record, and the card says so out loud.
      A buyer weighing it should know it is not the same kind of evidence as a
@@ -22391,7 +22401,7 @@ body.kx-auth .kx-burger{ display:none !important; }
                 (r.detail ? '<div class="pw-detail">' + esc(r.detail) + '</div>' : '') +
               '</div></div>';
           }).join('') + '</div>' +
-          '<div class="pw-note">ข้อมูลนี้ผู้ให้บริการกรอกเอง Konnex ไม่ได้ตรวจสอบ</div>'
+          '<div class="pw-note">ข้อมูลนี้ผู้ให้บริการกรอกเอง QubeQuote ไม่ได้ตรวจสอบ</div>'
         : '<div style="padding:18px 4px;text-align:center;font-size:15px;color:var(--ink-faint);line-height:1.7;">' +
           (isOwner ? 'ยังไม่มีผลงาน — กด “＋ เพิ่มผลงาน” เพื่อเล่าว่าเคยขายอะไรให้ใครมาบ้าง'
                    : 'ยังไม่ได้เพิ่มผลงาน') + '</div>');
@@ -22500,7 +22510,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     card.innerHTML = head + (res.data.length
       ? '<div class="svc-grid" id="pfServices">' + res.data.map(function(s){
           return '<div class="svc" data-id="' + s.id + '">' +
-            '<img src="' + esc(s.image_url || 'assets/img/konnex-mark-3.png') + '">' +
+            '<img src="' + esc(s.image_url || 'assets/img/qubequote-mark.svg') + '">' +
             (isOwner ? '<button type="button" class="svc-del" title="ลบบริการนี้" aria-label="ลบบริการนี้" ' +
                        'onclick="kxDeleteService(\'' + s.id + '\')">🗑</button>' : '') +
             '<div class="svc-body"><div class="svc-title">' + esc(s.title) + '</div>' +
@@ -22558,7 +22568,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
     card.innerHTML = head + score + (res.data.length
       ? res.data.map(function(r){
-          var who = (r.profiles && r.profiles.company_name) || 'ผู้ใช้ Konnex';
+          var who = (r.profiles && r.profiles.company_name) || 'ผู้ใช้ QubeQuote';
           return '<div style="border-top:1px solid var(--line);padding:14px 0;">' +
             '<div style="display:flex;align-items:center;gap:10px;">' +
               '<div style="width:34px;height:34px;border-radius:50%;background:var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;overflow:hidden;flex-shrink:0;">' +
@@ -22588,7 +22598,7 @@ body.kx-auth .kx-burger{ display:none !important; }
      button on the site would be permanently dead, and the ratings on every
      profile would freeze at whatever they are today.
 
-     What Konnex can still see honestly is that the two of you dealt with each
+     What QubeQuote can still see honestly is that the two of you dealt with each
      other on a specific listing: they sent you a quote on your RFQ, or you sent
      them one on theirs. That is a real interaction with something to say about
      it — how they quoted, how they answered questions, whether they turned up —
@@ -22659,7 +22669,7 @@ body.kx-auth .kx-burger{ display:none !important; }
     if(!window.kxSession) return false;
     var url = null;
     /* This used to swallow the failure and save the service anyway, so a photo
-       from a phone — HEIC, several megabytes — quietly became the Konnex mark
+       from a phone — HEIC, several megabytes — quietly became the QubeQuote mark
        and the owner had no way to tell it had not worked. If a picture was
        chosen and it cannot be stored, nothing is saved and the reason is
        shown. */
@@ -22883,7 +22893,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
   function cardHTML(r){
     var p = r.profiles || {};
-    var who = p.company_name || p.contact_name || 'ผู้ใช้ Konnex';
+    var who = p.company_name || p.contact_name || 'ผู้ใช้ QubeQuote';
     var av = p.avatar_url
       ? '<img src="' + esc(p.avatar_url) + '" alt="" style="width:100%;height:100%;object-fit:cover">'
       : esc(String(who).charAt(0).toUpperCase());

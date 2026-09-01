@@ -87,10 +87,10 @@
       expect(html).toContain('data-i="0"', 'starts at the first');
       expect(html).toContain('b.jpg', 'the second is loaded, not fetched on demand');
     });
-    it('falls back to the Konnex mark rather than leaving a hole', function (w) {
+    it('falls back to the QubeQuote mark rather than leaving a hole', function (w) {
       // a list card is a fixed-height row; an empty thumb column would collapse it
       var html = w.kxCardThumbHTML([], 'cls');
-      expect(html).toContain('konnex-mark', 'no images still needs something in the frame');
+      expect(html).toContain('qubequote-mark', 'no images still needs something in the frame');
       expect(html).toContain('data-i="0"');
     });
   });
@@ -434,7 +434,7 @@
       var names = Array.prototype.map.call(box.querySelectorAll('.conn-name'),
         function (n) { return n.textContent; });
       expect(names).toContain('บจก. เอ');
-      expect(names).notToContain('ผู้ใช้ Konnex', 'every id in the fake has a profile');
+      expect(names).notToContain('ผู้ใช้ QubeQuote', 'every id in the fake has a profile');
     });
     it('says so plainly when the list is empty', async function (w) {
       var box = await open(w, null, []);
@@ -623,7 +623,7 @@
       } } });
     }
     /* With no winner and no recorded outcome, "we did business" is not something
-       Konnex can see. What it can see is that the two of you dealt with each
+       QubeQuote can see. What it can see is that the two of you dealt with each
        other on one listing — they quoted on yours, or you quoted on theirs. */
     it('counts a supplier who quoted on your listing', async function (w) {
       signIn(w);
@@ -664,7 +664,7 @@
     });
   });
 
-  // ============================================ Konnex does not pick winners ===
+  // ============================================ QubeQuote does not pick winners ===
   describe('a quote carries no verdict', function () {
     it('has no เลือก button, because there is nothing to pick', function (w) {
       expect(typeof w.kxPickWinner).toBe('undefined');
@@ -824,7 +824,7 @@
       withRows(w, TWO); signIn(w);
       await w.kxLoadPortfolio(ME, true);
       restore(w);
-      expect(card(w).textContent).toContain('Konnex ไม่ได้ตรวจสอบ',
+      expect(card(w).textContent).toContain('QubeQuote ไม่ได้ตรวจสอบ',
         'a buyer weighing this against a review deserves to know which is evidence');
     });
     it('gives the owner the add and delete controls, and a visitor neither', async function (w) {
@@ -922,11 +922,11 @@
     });
   });
 
-  describe('Konnex says เสนอราคา, not ประมูล', function () {
+  describe('QubeQuote says เสนอราคา, not ประมูล', function () {
     it('has no ประมูล left anywhere on the page', function (w) {
       var html = w.document.documentElement.innerHTML;
       expect(html).notToContain('ประมูล',
-        'Konnex gathers quotes; it does not run an auction and picks no winner');
+        'QubeQuote gathers quotes; it does not run an auction and picks no winner');
     });
     /* There used to be two pricing modes and this asserted the page named both.
        There is one behaviour now — a price goes to the post owner and to nobody
@@ -1807,8 +1807,20 @@
         expect(sizes.indexOf(s) > -1).toBe(true, s + ' should be declared');
       });
     });
+    /* The scalable one is declared first, so a browser that takes SVG draws the
+       mark at whatever size the tab happens to be and never touches the PNGs. */
+    it('offers a scalable icon ahead of the fixed sizes', async function (w) {
+      var first = w.document.querySelector('link[rel~="icon"]');
+      expect(first.getAttribute('type')).toBe('image/svg+xml',
+        'the SVG has to come first or the PNGs win');
+      var r = await fetch('../' + first.getAttribute('href'));
+      expect(r.status).toBe(200);
+      expect((await r.text()).indexOf('<svg') > -1).toBe(true);
+    });
     it('points each one at a file drawn at that size', async function (w) {
-      var links = w.document.querySelectorAll('link[rel~="icon"]');
+      // only the sized links: an SVG has no one size to be drawn at
+      var links = w.document.querySelectorAll('link[rel~="icon"][sizes]');
+      expect(links.length).toBe(3, 'the three tab sizes are still declared');
       for (var i = 0; i < links.length; i++) {
         var want = parseInt(links[i].getAttribute('sizes'), 10);
         var href = links[i].getAttribute('href');
@@ -2072,6 +2084,55 @@
     });
   });
 
+  // ============================================ ชื่อและโลโก้ QubeQuote ===
+  /* The app shipped as Konnex. Two things keep that name deliberately and both
+     would be silently wrong to "fix": the Cloudflare Worker's name, which is
+     what puts the site at its current address, and the service-worker cache
+     cleanup, which clears caches an older build created under the old name. */
+  describe('the app is called QubeQuote', function () {
+    it('says so in the tab, the manifest and the wordmark', async function (w) {
+      expect(w.document.title.indexOf('QubeQuote')).toBe(0);
+      expect(w.document.querySelector('meta[name="apple-mobile-web-app-title"]')
+              .getAttribute('content')).toBe('QubeQuote');
+      var word = w.document.querySelector('.brand-word');
+      expect(word.textContent).toBe('QubeQuote');
+      expect(word.querySelector('b').textContent).toBe('Qube',
+        'the two tones split the word, not the letters');
+    });
+
+    it('shows the old name nowhere a person can read it', function (w) {
+      var hits = [];
+      var walk = w.document.createTreeWalker(w.document.body, 4 /* SHOW_TEXT */);
+      var n;
+      while ((n = walk.nextNode())) {
+        if (n.parentElement && n.parentElement.tagName === 'SCRIPT') continue;
+        if (/Konnex/i.test(n.nodeValue)) hits.push(n.nodeValue.trim().slice(0, 60));
+      }
+      w.document.querySelectorAll('*').forEach(function (el) {
+        Array.prototype.forEach.call(el.attributes, function (a) {
+          if (/Konnex/i.test(a.value) && !/konnex-shell|\^konnex/.test(a.value))
+            hits.push(el.tagName + '[' + a.name + ']=' + a.value.slice(0, 50));
+        });
+      });
+      expect(hits).toEqual([]);
+    });
+
+    it('keeps the old name where it is an identifier, not a label', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      expect(src.indexOf("/^konnex-/") > -1).toBe(true,
+        'this clears caches a build under the old name created — renaming it strands them');
+    });
+
+    it('draws the mark rather than scaling a photo of it', async function (w) {
+      var img = w.document.querySelector('.brand-logo');
+      expect(img.getAttribute('src')).toContain('.svg');
+      var r = await fetch('../' + img.getAttribute('src'));
+      var svg = await r.text();
+      expect(r.status).toBe(200);
+      expect(svg).toContain('#0056fd');
+    });
+  });
+
   // ==================================================== กดลูกตาดูรหัสผ่านได้ ===
   describe('the reveal button on password fields', function () {
     var IDS = ['auLoginPassword', 'auRegPassword', 'auNewPw1', 'auNewPw2',
@@ -2259,7 +2320,7 @@
       plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
       signIn(w);
       await w.kxOpenPost(post.id, 'rfq');
-      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ Konnex';
+      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ QubeQuote';
       for (var i = 0; i < 80; i++) {
         var el = w.document.querySelector('#page-rfq-detail .post-owner-name');
         if (el && el.textContent === want) break;
@@ -2324,7 +2385,7 @@
       plan(w, { posts: { _: { data: post, error: null } }, _: { data: [], error: null } });
       signIn(w);
       await w.kxOpenPost(post.id, 'offer');
-      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ Konnex';
+      var want = (post.profiles && post.profiles.company_name) || 'ผู้ใช้ QubeQuote';
       for (var i = 0; i < 80; i++) {
         var el = w.document.querySelector('#page-offer-detail .post-owner-name');
         if (el && el.textContent === want) break;

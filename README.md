@@ -1,7 +1,13 @@
-# Konnex
+# QubeQuote
 
 Mobile-first marketplace web app (Thai) — buyers post RFQs, sellers post offers.
 Vanilla HTML/CSS/JS, no build step. Open `index.html` in a browser.
+
+Shipped as **Konnex** until 2026-09-01, and the change log below is written in
+the name that was current when each entry was written. Two things still answer
+to the old one on purpose: the Cloudflare Worker (`konnex.xeeb0262.workers.dev`,
+see `wrangler.toml`) and the service-worker cache cleanup, which clears caches an
+older build created under that name.
 
 ## Structure
 
@@ -3082,6 +3088,53 @@ stops asking for and stops touching them.
 Three tests hold it: no such input on either entity and no copy left asking for one, a
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
+
+## Konnex → QubeQuote
+
+The name was already in use elsewhere, so the app is QubeQuote from 2026-09-01,
+with the mark from the new brand sheet.
+
+The mark is **drawn, not cropped**. The sheet is a 1536×1024 raster and the mark
+occupies 230×260 of it — enough for a 40px top bar, not enough for a 512px app
+icon, which would have been a 2.2× upscale of a shape whose whole character is
+crisp straight edges. So it was measured off the sheet and rebuilt as geometry: a
+regular pointy-top hexagon, 207 wide and 239 tall, stroked at 46 with round
+joins, cut 71% of the way down its right side, plus a detached bar running
+parallel to the upper-right edge for the Q's tail. The reconstruction was scored
+against the sheet pixel by pixel and tuned until it matched — 97%, with the
+remainder being a sub-pixel boundary offset around a ~1,400px perimeter. It now
+ships as SVG and is sharp at every size.
+
+The tab icon leads with that SVG, so a browser that accepts one draws the mark at
+whatever size the tab happens to be; the three PNGs stay for the ones that do
+not. The old mark needed to be pushed to 94% of the tile to survive 16px — a
+chess king is twice as tall as it is wide, so reduction left a blue square with a
+smudge in it. The Q is close to square, which is the shape a tab icon wants, and
+sits at 78% while still reading.
+
+**Three things keep the old name, and each would be a bug to "fix":**
+
+- `wrangler.toml`'s `name = "konnex"` is the Worker's identity and is what puts
+  the site at `konnex.xeeb0262.workers.dev`. Changing it deploys a *second*,
+  empty-history Worker at a new hostname and leaves the old one serving the old
+  build at the old address. Moving the site is a deploy decision, not a
+  find-and-replace.
+- The service-worker cleanup matches `/^konnex-/`, because the caches it clears
+  were named by a build that shipped under that name.
+- The change log below is written in whichever name was current when each entry
+  was written.
+
+One string could not be renamed from the client at all. `kx_notify_connection()`
+holds `'ผู้ใช้ QubeQuote'` — the stand-in shown for an account with no company
+name — inside a trigger function Postgres compiled when it was created, so every
+new connection notification kept saying the old name however the page was
+labelled. `database/rename_qubequote.sql` replaces the function and rewrites the
+notifications already sent. It is copied from `portfolio_v2.sql`'s version body
+for body: that file superseded `connections.sql`'s with one that also records
+`actor_id`, and re-creating the older shape would have silently dropped it.
+
+The retired PNGs are deleted rather than left in place, so the old mark stops
+being served; they remain in git history.
 
 ## กดลูกตาดูรหัสผ่านได้ทุกช่อง
 

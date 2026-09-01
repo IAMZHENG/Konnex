@@ -1,5 +1,5 @@
 -- ============================================================================
--- Konnex — database schema (Postgres, written for Supabase)
+-- QubeQuote — database schema (Postgres, written for Supabase)
 -- ============================================================================
 -- What this covers: the marketplace loop the prototype already has UI for —
 -- companies/profiles, RFQ posts (ต้องการซื้อ), Offer posts (ประกาศขาย), quotes/bids,
