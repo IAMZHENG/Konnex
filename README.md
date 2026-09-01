@@ -3094,16 +3094,31 @@ does not name the column. Restoring the one line in `PROFILE_COLS` fails the thi
 The name was already in use elsewhere, so the app is QubeQuote from 2026-09-01,
 with the mark from the new brand sheet.
 
-The mark is **drawn, not cropped**. The sheet is a 1536×1024 raster and the mark
-occupies 230×260 of it — enough for a 40px top bar, not enough for a 512px app
-icon, which would have been a 2.2× upscale of a shape whose whole character is
-crisp straight edges. So it was measured off the sheet and rebuilt as geometry: a
-regular pointy-top hexagon, 207 wide and 239 tall, stroked at 46 with round
-joins, cut 71% of the way down its right side, plus a detached bar running
-parallel to the upper-right edge for the Q's tail. The reconstruction was scored
-against the sheet pixel by pixel and tuned until it matched — 97%, with the
-remainder being a sub-pixel boundary offset around a ~1,400px perimeter. It now
-ships as SVG and is sharp at every size.
+The mark is **traced, not cropped and not redrawn by eye**. The sheet is a
+1536×1024 raster and the mark occupies 230×260 of it — enough for a 40px top bar,
+not enough for a 512px app icon, which would have been a 2.2× upscale of a shape
+whose whole character is crisp straight edges.
+
+The first attempt approximated it: a regular pointy-top hexagon, stroked with
+round joins, cut partway down its right side, plus a detached bar for the tail. It
+scored 97% against the sheet and was still visibly wrong, because the 3% was
+concentrated where the eye looks. The real mark ends its strokes with **flat
+angled cuts**; a stroked path can only end in a butt, round or square cap, so
+those ends came out as rounded blobs, and the corners were softer than the
+original throughout. Worse, half the stroke width hung off the left of the
+viewBox, so the browser cut it and the top bar showed a mark with a flat side.
+
+It is now an **outline followed off the artwork**: the mark is rasterised at 4×,
+its boundary walked as a crack-following contour (each cell/empty boundary is a
+unit edge oriented with the ink on one side, so chaining them traverses each
+contour exactly once), and the result simplified to within 0.4px. That comes to
+99.9% of the original pixel for pixel, in a 1.4KB path. It is a filled outline
+with no stroke, so there is nothing left to overflow the box — and a test now
+asserts that every coordinate in the path lands inside the viewBox.
+
+Two contours, not three, which is worth knowing before assuming a bug: the ring
+is cut open at the lower right, so its counter is not enclosed and the whole ring
+is one simply-connected C. The second contour is the tail.
 
 The tab icon leads with that SVG, so a browser that accepts one draws the mark at
 whatever size the tab happens to be; the three PNGs stay for the ones that do

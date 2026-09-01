@@ -2131,6 +2131,30 @@
       expect(r.status).toBe(200);
       expect(svg).toContain('#0056fd');
     });
+
+    /* The first attempt drew the mark as a stroked hexagon, and half the stroke
+       width hung off the left of the viewBox — the browser cut it, so the top
+       bar showed a mark with a flat side. A filled outline has no stroke to
+       overflow, and every point of it has to land inside the box. */
+    it('keeps every point of the mark inside its own viewBox', async function (w) {
+      var files = ['assets/img/qubequote-mark.svg', 'assets/img/qubequote-mark-white.svg'];
+      for (var f = 0; f < files.length; f++) {
+        var svg = await (await fetch('../' + files[f])).text();
+        var box = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+        expect(!!box).toBe(true, files[f] + ' should declare a viewBox from the origin');
+        var vw = +box[1], vh = +box[2];
+        expect(/stroke-width/.test(svg)).toBe(false,
+          'a stroke is the thing that overflowed; this is a filled outline');
+        var d = svg.match(/ d="([^"]+)"/)[1];
+        var nums = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
+        var outside = [];
+        for (var i = 0; i < nums.length; i += 2) {
+          if (nums[i] < 0 || nums[i] > vw) outside.push('x=' + nums[i]);
+          if (nums[i + 1] < 0 || nums[i + 1] > vh) outside.push('y=' + nums[i + 1]);
+        }
+        expect(outside).toEqual([], files[f] + ' has geometry the viewBox would clip');
+      }
+    });
   });
 
   // ==================================================== กดลูกตาดูรหัสผ่านได้ ===

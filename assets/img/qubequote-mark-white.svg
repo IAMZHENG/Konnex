@@ -1,16 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 260" width="230" height="260" role="img" aria-label="QubeQuote">
   <title>QubeQuote</title>
   <!--
-    A regular pointy-top hexagon, open at the lower right, with a detached bar
-    for the Q's tail. Traced from the brand sheet rather than eyeballed: the
-    hexagon is centred on (103.5, 119.5) with a circumradius of 94.5 and a
-    46-wide stroke, the ring stops 71% of the way down the right side, and the
-    tail runs parallel to the upper-right edge. Rebuilt as geometry rather than
-    cropped from the sheet's raster, so it stays sharp at 16px and at 512.
+    Traced from the brand sheet, not redrawn by eye. The outline is followed
+    off the artwork at 4x resolution and simplified to within 0.4px, which
+    lands at 99.9% of the original pixel for pixel. An earlier version
+    approximated it with a stroked hexagon: that gave round end caps where
+    the real mark has flat angled cuts, softer corners, and a stroke that
+    overflowed the viewBox on the left and was clipped.
+    White on transparent: the sign-in page's blue panel.
   -->
-  <g fill="none" stroke="#ffffff" stroke-width="46" stroke-linejoin="round" stroke-linecap="round">
-    <path d="M106.77 215.89 L21.66 166.75 L21.66 72.25 L103.5 25 L185.34 72.25 L185.34 139.35"/>
-  </g>
-  <path d="M164 176.5 L227.5 211.78 L227.5 257.28 L164 222 Z"
-        fill="#ffffff" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+  <path fill="#ffffff" fill-rule="nonzero" d="M101 0.75 L106.75 0.75 L110.75 2 L144.5 22 L148.25 24.75 L153 27 L155 28.75 L159.75 31 L165 34.75 L176.5 41 L181.75 44.75 L191.5 50 L196.75 53.75 L199.75 55 L205 60 L207 64.25 L207.75 67.75 L208 162.75 L207 167.75 L205 170 L203 171 L200 171 L193 166.25 L166 151 L163 148.5 L162 145.5 L162 86.5 L160 82.25 L154.75 78 L140.5 70 L136.75 67.25 L135 66.75 L130 63.25 L121.75 59 L113 53.25 L106.25 50 L102.5 50 L99 51.25 L91.75 56 L83.5 60.25 L74.75 66 L51.5 79.25 L48.25 82.5 L46.5 87.25 L46.5 151.5 L48 156.5 L50.25 159.25 L54 161.75 L57 163 L59 164.75 L70.5 171 L72.5 172.75 L73.75 173 L113.25 196.75 L121.5 201 L125.25 203.75 L138.75 211 L142 214 L142 217.75 L140 220.5 L112.75 236.75 L107.75 239 L100.25 239 L95.5 237 L89.75 233 L83.25 229.75 L76.75 225.25 L75.5 225 L71.75 222.25 L60.5 216 L58.5 214.25 L57.25 214 L48.5 208.25 L40.5 204 L33.25 199 L22.25 193 L13.75 187.25 L7.25 184 L3.25 180 L1 175.5 L0.25 172 L0 164.25 L0.25 67.5 L1 64.25 L3 60.25 L8.5 55 L11.5 53.75 L35.25 39 L43.25 34.75 L51.75 29 L66.5 20.75 L70 18 L81.25 11.75 L85 9 L86.25 8.75 L88.25 7 L97.75 1.75ZM163.5 172.25 L166.75 173 L175.25 178.75 L183.5 183 L188.75 186.75 L200.5 193 L206 196.75 L225.75 208 L228.25 210.25 L229.25 213.25 L229.25 257.5 L227.75 259.5 L224.25 260 L221.75 258.25 L220.25 258 L209.75 251.25 L202.75 247.75 L197.75 244.25 L187.75 239 L163 224 L161.75 221 L161.75 174Z"/>
 </svg>
