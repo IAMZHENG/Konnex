@@ -9874,6 +9874,15 @@ html, body{
             ลากไฟล์มาวาง หรือ <span class="cp-drop-cta">เลือกไฟล์</span><br>
             <span class="cp-drop-sub">รองรับ PDF, Word, Excel, PNG, JPG, DWG</span>
           </div>
+          <!-- The privacy policy says this too, but a warning in a policy is
+               read after the decision and usually never. This one sits where
+               the file is chosen, which is the only moment it can change what
+               someone does. -->
+          <div class="cp-file-warn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            <span>ไฟล์แนบในประกาศ <b>เปิดสาธารณะ</b> ผู้ที่ทราบลิงก์เปิดดูได้แม้ไม่ได้เข้าสู่ระบบ
+              อย่าแนบเอกสารที่มีข้อมูลส่วนบุคคลของผู้อื่นหรือความลับทางการค้า</span>
+          </div>
           <div class="cp-sec" id="cpImgSec" hidden>
             <div class="cp-sec-head">รูปภาพ <span class="cp-n" id="cpImgN">0</span></div>
             <div class="cp-imgs" id="cpImgs"></div>
@@ -11546,7 +11555,7 @@ html, body{
               <p class="card-desc">แก้ไขโปรไฟล์ที่ผู้ใช้รายอื่นจะเห็น</p>
               <div class="link-list">
                 <div class="link-item" onclick="navigateTo('page-edit-profile')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M3 21V7l9-4 9 4v14"></path><path d="M9 21v-6h6v6"></path></svg>แก้ไขโปรไฟล์<span class="chev">›</span></div>
-                <div class="link-item" onclick="openVerify()"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>เอกสารยืนยัน<span class="chev">›</span></div>
+                <div class="link-item" data-verify-entry hidden onclick="openVerify()"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>เอกสารยืนยัน<span class="chev">›</span></div>
                 <div class="link-item" onclick="navigateTo('page-terms')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 13h6"></path><path d="M9 17h4"></path></svg>ข้อกำหนดการใช้งาน<span class="chev">›</span></div>
                 <div class="link-item" onclick="navigateTo('page-privacy')"><svg class="li-svg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>นโยบายความเป็นส่วนตัว<span class="chev">›</span></div>
               </div>
@@ -11945,7 +11954,7 @@ html, body{
           <div class="dash-verify-title">ยืนยันตัวตนหรือบริษัทของคุณเพื่อรับตรา <b>Verified</b></div>
           <div class="dash-verify-sub">ผู้ซื้อไว้ใจบริษัทที่ยืนยันตัวตนมากกว่า — ข้อเสนอของคุณจะโดดเด่นขึ้น</div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openVerify()">ยืนยันตัวตน</button>
+        <button class="btn btn-primary btn-sm" data-verify-entry hidden onclick="openVerify()">ยืนยันตัวตน</button>
       </div>
 
       <div class="dash-stats">
@@ -12075,7 +12084,27 @@ html, body{
   var vfCount = 0;
   var vfFiles = [];      // {label, file} — the documents actually picked
   var vfType  = 'person';
+  /* ===== การยืนยันตัวตนปิดอยู่ในเฟสแรก =====
+     A Thai national ID card carries the holder's religion, so a photograph of
+     one is sensitive personal data under PDPA มาตรา 26 — a stricter regime for
+     collection, storage, and breach handling than everything else in the app
+     put together, in exchange for a badge nobody has asked for yet.
+
+     Switched off here, at the one door every entry point goes through, rather
+     than by hiding the buttons: a hidden button is still a working feature for
+     anyone who reaches it another way, and the promise we make in
+     ข้อกำหนดการใช้งาน has to be true of the code, not of the menu.
+
+     Nothing is deleted. The modal, the admin queue, verification_requests and
+     the private verify-docs bucket all stay exactly as they are, so turning
+     this back on is deleting this guard. */
+  window.KX_VERIFY_ENABLED = false;
+
   function openVerify(){
+    if(!window.KX_VERIFY_ENABLED){
+      kxToast('การยืนยันตัวตนยังไม่เปิดให้บริการในช่วงนี้');
+      return;
+    }
     vfFiles = [];
     var pr = window.kxCurrentUser;
     vfSetType(pr && pr.business_type === 'person' ? 'person' : 'company');
@@ -12613,10 +12642,9 @@ html, body{
         <b>เราไม่ขอเลขบัตรประชาชนหรือเลขประจำตัวผู้เสียภาษีในขั้นตอนสมัคร</b></p>
       <p>2.4 ผู้ใช้มีหน้าที่รักษารหัสผ่านเป็นความลับ และรับผิดชอบต่อการกระทำทั้งหมดที่เกิดขึ้นภายใต้บัญชีของตน
         หากพบการเข้าถึงโดยไม่ได้รับอนุญาต ต้องแจ้งเราทันที</p>
-      <p>2.5 ตรา <span class="doc-pill">ยืนยันแล้ว</span> เป็นขั้นตอนแยกต่างหากจากการสมัคร
-        ผู้ใช้ส่งเอกสารเข้ามาและผู้ดูแลระบบเป็นผู้พิจารณาอนุมัติ ตรานี้หมายถึงเราได้ตรวจเอกสารที่ส่งมาแล้วเท่านั้น
-        <b>ไม่ใช่การรับรองความสามารถ ฐานะทางการเงิน หรือคุณภาพงาน</b> ของผู้ใช้รายนั้น
-        และเราอาจเพิกถอนตราได้หากพบว่าเอกสารไม่ถูกต้อง</p>
+      <p>2.5 <b>ในช่วงเปิดให้บริการระยะแรก เราไม่รับเอกสารยืนยันตัวตนและไม่มีตรา “ยืนยันแล้ว”</b>
+        เราไม่ขอสำเนาบัตรประชาชนหรือหนังสือรับรองบริษัทจากผู้ใช้ หากเปิดให้บริการนี้ในภายหลัง
+        เราจะแจ้งล่วงหน้าและปรับปรุงเอกสารฉบับนี้ก่อน</p>
 
       <h2>3. การประกาศและเนื้อหาของผู้ใช้</h2>
       <p>3.1 ผู้ใช้เป็นผู้รับผิดชอบเนื้อหาที่ตนโพสต์ทั้งหมด รวมถึงข้อความ รูปภาพ แบบงาน (drawing)
@@ -12722,13 +12750,11 @@ html, body{
         <tbody>
           <tr><td>ข้อมูลบัญชี</td><td>ชื่อ อีเมล เบอร์โทรศัพท์ ชื่อผู้ติดต่อ รหัสผ่าน (เก็บแบบเข้ารหัสทางเดียวโดยผู้ให้บริการยืนยันตัวตน)</td></tr>
           <tr><td>ข้อมูลโปรไฟล์</td><td>ชื่อบริษัท ประเภทธุรกิจ ที่อยู่ จังหวัด เว็บไซต์ เวลาทำการ รูปโปรไฟล์และรูปปก</td></tr>
-          <tr><td>เอกสารยืนยันตัวตน</td><td>เฉพาะเมื่อท่านสมัครขอตรา “ยืนยันแล้ว” เช่น หนังสือรับรองบริษัทหรือบัตรประชาชน</td></tr>
           <tr><td>ข้อมูลการใช้งาน</td><td>ประกาศ ใบเสนอราคา ไฟล์แนบ คำถาม–คำตอบ ข้อความ รีวิว ประกาศที่บันทึกไว้ ประวัติการเข้าชม</td></tr>
           <tr><td>ข้อมูลทางเทคนิค</td><td>บันทึกการเข้าสู่ระบบและข้อมูลที่ระบบสร้างขึ้นเพื่อความปลอดภัย</td></tr>
         </tbody>
       </table>
-      <p>เราไม่ได้ขอเลขบัตรประชาชนหรือเลขประจำตัวผู้เสียภาษีในขั้นตอนสมัครสมาชิก
-        ข้อมูลระบุตัวตนจะถูกขอเฉพาะเมื่อท่านเลือกสมัครขอตรา “ยืนยันแล้ว” เท่านั้น</p>
+      <div class="doc-note"><b>เราเก็บเท่าที่จำเป็นต่อการทำงานของบริการ</b> ในช่วงเปิดให้บริการระยะแรก <b>เราไม่เก็บข้อมูลอ่อนไหวตามมาตรา 26 เลย</b> — ไม่ขอสำเนาบัตรประชาชน ไม่ขอหนังสือรับรองบริษัท ไม่ขอเลขประจำตัวผู้เสียภาษี และไม่มีบริการยืนยันตัวตน<br><br>สิ่งที่เก็บคือสิ่งที่ระบบต้องใช้จริงเพื่อให้ท่านโพสต์ประกาศ รับใบเสนอราคา เปรียบเทียบข้อเสนอ และติดต่อกับคู่ค้าได้ ถ้าเราเพิ่มการเก็บข้อมูลประเภทใหม่ เราจะแก้เอกสารฉบับนี้และแจ้งท่านก่อน</div>
 
       <h2>2. วัตถุประสงค์และฐานทางกฎหมาย</h2>
       <p>2.1 <b>เพื่อปฏิบัติตามสัญญา</b> — สร้างและดูแลบัญชี แสดงประกาศ ส่งและรับใบเสนอราคา
@@ -12751,8 +12777,7 @@ html, body{
         ผู้ที่ทราบลิงก์ของไฟล์สามารถเปิดดูได้แม้ไม่ได้เข้าสู่ระบบ
         <b>จึงไม่ควรอัปโหลดเอกสารที่มีข้อมูลส่วนบุคคลหรือความลับทางการค้าลงในประกาศ</b>
         <br><br>
-        เอกสารยืนยันตัวตนเก็บแยกไว้ในที่จัดเก็บแบบปิด ไม่เปิดสาธารณะ
-        และเข้าถึงได้เฉพาะเจ้าของเอกสารกับผู้ดูแลระบบผ่านลิงก์ชั่วคราวที่หมดอายุในตัวเอง
+        คำเตือนนี้แสดงอยู่ตรงจุดที่ท่านเลือกไฟล์ด้วย ไม่ใช่เฉพาะในเอกสารฉบับนี้
       </div>
 
       <p>3.3 <b>ต่อผู้ให้บริการที่เราใช้:</b> ผู้ให้บริการโครงสร้างพื้นฐานที่เก็บฐานข้อมูล ไฟล์
@@ -12763,7 +12788,7 @@ html, body{
       <p>3.5 เราไม่ขายข้อมูลส่วนบุคคลของท่านให้บุคคลที่สาม</p>
 
       <h2>4. ความปลอดภัยของข้อมูล</h2>
-      <p>การเชื่อมต่อระบบเข้ารหัสด้วย HTTPS/TLS รหัสผ่านถูกเข้ารหัสทางเดียวโดยผู้ให้บริการยืนยันตัวตน
+      <p>การเชื่อมต่อระบบเข้ารหัสด้วย HTTPS/TLS รหัสผ่านถูกเข้ารหัสทางเดียวโดยผู้ให้บริการระบบบัญชี
         <b>เราไม่เห็นรหัสผ่านของท่าน</b> และสิทธิ์การเข้าถึงข้อมูลถูกบังคับที่ชั้นฐานข้อมูลเป็นราย
         แถวข้อมูล ไม่ใช่ที่หน้าจอ ผู้ใช้จึงอ่านได้เฉพาะข้อมูลที่ตนมีสิทธิ์อ่านจริง</p>
 
@@ -12989,7 +13014,7 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
   <div class="av-menu">
     <div class="av-menu-item" onclick="closeAvMenu();navigateTo('page-edit-profile')"><span class="ami-ic"><svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 6.5l4 4"/></svg></span>แก้ไขโปรไฟล์</div>
     <div class="av-menu-item" onclick="closeAvMenu();navigateTo('page-settings')"><span class="ami-ic"><svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.06a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.91 1.37v.17a1.8 1.8 0 1 1-3.6 0v-.09a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.06a1.8 1.8 0 1 1-2.55-2.55l.06-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.91h-.17a1.8 1.8 0 1 1 0-3.6h.09a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.06-.06a1.8 1.8 0 1 1 2.55-2.55l.06.06a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .91-1.37v-.17a1.8 1.8 0 1 1 3.6 0v.09a1.5 1.5 0 0 0 .91 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.06a1.8 1.8 0 1 1 2.55 2.55l-.06.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.91h.17a1.8 1.8 0 1 1 0 3.6h-.09a1.5 1.5 0 0 0-1.37.91z"/></svg></span>ตั้งค่า</div>
-    <div class="av-menu-item" onclick="closeAvMenu();openVerify()"><span class="ami-ic"><svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4.5 6v6c0 5 3.4 8 7.5 9.5 4.1-1.5 7.5-4.5 7.5-9.5V6z"/><path d="M9 12.3l2 2 4-4.4"/></svg></span>ยืนยันตัวตน</div>
+    <div class="av-menu-item" data-verify-entry hidden onclick="closeAvMenu();openVerify()"><span class="ami-ic"><svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 4.5 6v6c0 5 3.4 8 7.5 9.5 4.1-1.5 7.5-4.5 7.5-9.5V6z"/><path d="M9 12.3l2 2 4-4.4"/></svg></span>ยืนยันตัวตน</div>
     <div class="av-menu-sep"></div>
     <div class="av-menu-item" onclick="closeAvMenu();kxSignOut()"><span class="ami-ic"><svg class="li-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4"/><path d="M6 12h9"/></svg></span>ออกจากระบบ</div>
   </div>
@@ -16764,6 +16789,20 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
 #page-company-profile .hero-banner {
     background: linear-gradient(120deg, #0b3fd0 0%, #0056fd 55%, #2f7bff 100%);
     }
+
+/* ===== คำเตือนตรงจุดที่เลือกไฟล์ ===== */
+.cp-file-warn {
+    display: flex; gap: 9px; align-items: flex-start;
+    background: #fff6e8; border: 1px solid #f2d9ae; border-radius: 10px;
+    padding: 10px 13px; margin-top: 9px;
+    font-size: 13.5px; line-height: 1.7; color: #7a4b06;
+    }
+.cp-file-warn svg {
+    flex: none; width: 17px; height: 17px; margin-top: 3px;
+    fill: none; stroke: #d97706; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+    }
+.cp-file-warn b { color: #7a4b06; }
 
 /* ===== โมดัลยอมรับข้อกำหนดก่อนสมัคร ===== */
 .kxc-ov {
@@ -23394,7 +23433,7 @@ body.kxc-open { overflow: hidden; }
         : '<div style="font-size:15px;color:var(--ink-soft);line-height:1.7;padding:4px 0 10px;">' +
           (isOwner ? 'ยังไม่ได้ยืนยันตัวตน — ยืนยันแล้วผู้ซื้อจะไว้ใจข้อเสนอของคุณมากขึ้น'
                    : 'ยังไม่ได้ยืนยันตัวตน') + '</div>' +
-          (isOwner ? '<button type="button" class="btn btn-primary btn-sm" onclick="openVerify()">ยืนยันตัวตน</button>' : ''));
+          (isOwner ? (window.KX_VERIFY_ENABLED ? '<button type="button" class="btn btn-primary btn-sm" onclick="openVerify()">ยืนยันตัวตน</button>' : '') : ''));
     if(window.pfApplyTab) window.pfApplyTab();
   };
 })();

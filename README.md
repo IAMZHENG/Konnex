@@ -3089,6 +3089,43 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## เฟสแรก: เก็บเท่าที่จำเป็น
+
+The goal set for launch was "open as fast as possible without taking on more
+data — and more PDPA — than the service actually needs". That is a decision
+about which features to switch off, not a rewording exercise: the policy has to
+describe what the app does, so making the policy say less means making the app
+collect less.
+
+Three things were on the table. Only one was cut, which was the user's call:
+
+- **การยืนยันตัวตน is off.** A Thai national ID card carries the holder's
+  religion, so a photograph of one is sensitive data under มาตรา 26 — a stricter
+  regime for collection, storage and breach handling than the whole of the rest
+  of the app put together, in exchange for a badge nobody has asked for yet.
+- View history and feed ranking stay. `portfolio.buyer_name` — a third party's
+  name, typed by a user — stays. Reviews stay. Each was offered and kept.
+
+It is switched off at `openVerify()`, the one door every entry point goes
+through, and not by hiding buttons: a hidden button is still a working feature
+for anyone who reaches it another way, and the sentence in ข้อกำหนดการใช้งาน has
+to be true of the code rather than of the menu. The buttons are hidden as well,
+but that is tidiness. **Nothing is deleted** — the modal, the admin queue,
+`verification_requests` and the private `verify-docs` bucket are all untouched,
+so turning it back on is deleting one guard.
+
+Attachments stay in the public bucket. Moving them behind signed URLs was the
+recommendation and the user had no preference; keeping them is the choice that
+matches "launch fastest", and the honest mitigation is not another paragraph in
+a policy. **The warning now sits at the file picker**, where the decision is
+actually made — a warning in a policy is read after the choice, and usually
+never.
+
+Two tests hold this together, because the switch and the sentence about the
+switch have to move as one: one asserts the code refuses, the other asserts both
+documents say so and that the privacy table no longer offers a row for data
+nothing collects.
+
 ## ออกไฟล์ PDF ของเอกสารทั้งสองฉบับ
 
 ```

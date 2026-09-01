@@ -2304,10 +2304,11 @@
       expect(terms).toContain('สองราย');
       // post images and attachments sit in public storage
       expect(priv).toContain('ผู้ที่ทราบลิงก์ของไฟล์สามารถเปิดดูได้แม้ไม่ได้เข้าสู่ระบบ');
-      // identity documents do not
-      expect(priv).toContain('ไม่เปิดสาธารณะ');
-      // signup stopped asking for an identity number, so the policy must not claim it
-      expect(priv).toContain('เราไม่ได้ขอเลขบัตรประชาชน');
+      /* There used to be a line here about identity documents being kept in the
+         private bucket instead. Phase one collects none, so the sentence went
+         with the feature — the claim that survives is the stronger one, that no
+         sensitive data is taken at all, and its own test is below. */
+      expect(priv).toContain('ไม่ขอสำเนาบัตรประชาชน');
       // data leaves the country
       expect(priv).toContain('สิงคโปร์');
     });
@@ -2401,6 +2402,47 @@
         .toContain(w.KX_DOC.terms);
       expect(w.document.querySelector('#page-privacy .doc-ver').textContent)
         .toContain(w.KX_DOC.privacy);
+    });
+
+    /* Phase one collects only what the quoting loop needs. The one thing cut
+       for it is identity verification: a Thai ID card carries the holder's
+       religion, so a photograph of one is sensitive data under มาตรา 26 — a
+       stricter regime for collection, storage and breach handling than the
+       whole of the rest of the app, in exchange for a badge nobody has asked
+       for yet. These tests exist because the switch and the sentence about the
+       switch have to move together. */
+    it('collects no identity documents, and the code is what enforces it', function (w) {
+      expect(w.KX_VERIFY_ENABLED).toBe(false);
+      var said = null, real = w.kxToast;
+      w.kxToast = function (m) { said = m; };
+      try { w.openVerify(); } finally { w.kxToast = real; }
+      expect(w.document.getElementById('verifyModal').classList.contains('open'))
+        .toBe(false, 'the door itself is shut, not merely the buttons to it');
+      expect(said).toContain('ยังไม่เปิดให้บริการ');
+      var open = Array.prototype.filter.call(
+        w.document.querySelectorAll('[data-verify-entry]'), function (e) { return e.offsetParent; });
+      expect(open.length).toBe(0, 'and no entry point is on screen either');
+    });
+
+    it('says so in both documents rather than staying quiet', function (w) {
+      var terms = w.document.getElementById('page-terms').textContent;
+      var priv = w.document.getElementById('page-privacy').textContent;
+      expect(terms).toContain('ไม่รับเอกสารยืนยันตัวตน');
+      expect(priv).toContain('ไม่เก็บข้อมูลอ่อนไหวตามมาตรา 26');
+      // and the policy must not still list what it no longer takes
+      var rows = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-privacy .doc-table tbody tr td:first-child'),
+        function (td) { return td.textContent.trim(); });
+      expect(rows).notToContain('เอกสารยืนยันตัวตน',
+        'the table was still offering a row for data nothing collects');
+    });
+
+    /* A warning in a policy is read after the decision, and usually never. */
+    it('warns about public attachments where the file is chosen', function (w) {
+      var warn = w.document.querySelector('#page-create-post .cp-file-warn');
+      expect(!!warn).toBe(true, 'no warning at the upload control');
+      expect(warn.textContent).toContain('เปิดสาธารณะ');
+      expect(warn.textContent).toContain('ความลับทางการค้า');
     });
 
     it('carries a version and an effective date on both', function (w) {
