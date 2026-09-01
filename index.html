@@ -13921,8 +13921,14 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-auth .au-cardmark.tile{ overflow:visible; background:transparent !important; }
 #page-auth .au-mark.tile{ border-radius:13px; }
 #page-auth .au-cardmark.tile{ border-radius:21px; }
+/* `cover` when this was written, because the file behind it was the app icon —
+   a square tile with the mark already on it — and cover made that tile fill its
+   rounded box exactly. The mark is a bare silhouette again, and it is 230×260
+   in a square box, so cover scaled it until the width fitted and cut 9px off
+   the top and bottom of the Q. cover is right for a photograph, where losing an
+   edge costs nothing. A logo has no edge that is safe to lose. */
 #page-auth .au-mark.tile img,
-#page-auth .au-cardmark.tile img{ width:100%; height:100%; object-fit:cover; display:block; }
+#page-auth .au-cardmark.tile img{ width:100%; height:100%; object-fit:contain; display:block; }
 
 /* The bar kept its desktop 32px inset on a phone: the burger started 32px in from a
    375px screen and the wordmark ran 30px *past* the left edge of the right-hand icons,
@@ -16292,6 +16298,40 @@ body.kx-auth .kx-burger{ display:none !important; }
     }
 /* the offers-and-average summary, centred in its card */
 #page-rfq-detail .compare-sub { justify-content: center; }
+
+/* ===== ขนาดและความคมของมาร์ก =====
+   The blue box-shadow was drawn for a mark that filled a solid rounded tile: the
+   glow read as the tile's own shadow. The mark is transparent now, so what the
+   shadow outlines is the empty box behind it — a soft blue rectangle with the
+   sharp mark sitting in the middle of it, which is what made the edges look
+   unsharp. The shape needs no shadow to sit on white.
+
+   And both marks were sized against the old chess king, which is narrow and
+   reads small for its height. The Q is nearly square, so the same box makes it
+   much heavier beside the wordmark. These are set against the text they sit
+   next to rather than against the box they used to fill.
+
+   (The cropping that went with this is fixed at its source, where the
+   `object-fit` rule is written, rather than overridden again from here.) */
+.au-cardmark.tile,
+#page-auth .au-cardmark.tile { box-shadow: none; }
+
+.au-mark     { width: 34px; height: 34px; }   /* beside 28px text */
+.au-cardmark { width: 54px; height: 54px; }   /* above 24px text */
+.brand-logo  { height: 30px; }                /* beside the 18px wordmark */
+
+/* The mark also stands in for a missing picture in six places — a card thumb, a
+   gallery cell, a service image, and the profile's cover banner. Those boxes are
+   photo boxes, so they fill with `cover`, and a banner is about four times as
+   wide as it is tall: cover took a horizontal strip out of the middle of the
+   logo. Photos may be cropped; the logo may not, wherever it turns up. */
+img[src$="qubequote-mark.svg"] { object-fit: contain; }
+
+/* and the profile banner, which now shows no image at all until there is a real
+   cover photo, gets a ground of its own rather than a transparent gap */
+#page-company-profile .hero-banner {
+    background: linear-gradient(120deg, #0b3fd0 0%, #0056fd 55%, #2f7bff 100%);
+    }
 
 /* ===== เวิร์ดมาร์ก QubeQuote =====
    Two tones in one word, the way the brand sheet sets it: Qube in the dark
@@ -21325,7 +21365,13 @@ body.kx-auth .kx-burger{ display:none !important; }
         : esc(name.charAt(0).toUpperCase());
     }
     var cover = p.querySelector('.cover');
-    if(cover) cover.src = pr.cover_url || 'assets/img/qubequote-mark.svg';
+    /* No cover photo shows the banner's own ground, not the logo. The banner is
+       about four and a half times as wide as it is tall and fills with `cover`,
+       so a mark dropped in here came out as a horizontal slice through the
+       middle of the Q; `contain` would instead strand a small logo in a wide
+       empty strip. Neither is a cover photo. A tinted ground is. */
+    if(cover) cover.src = pr.cover_url ||
+      'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
 
     var about = p.querySelector('.about-text');
     if(about) about.textContent = pr.about || 'ยังไม่มีข้อมูลแนะนำ';

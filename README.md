@@ -3120,6 +3120,30 @@ Two contours, not three, which is worth knowing before assuming a bug: the ring
 is cut open at the lower right, so its counter is not enclosed and the whole ring
 is one simply-connected C. The second contour is the tail.
 
+**What actually made it look cut and blurred was the CSS, not the artwork.** Two
+rules written for the old mark were still in force, and both did real damage to
+the new one:
+
+- `object-fit: cover` on the sign-in marks. It was correct when the file behind
+  them was the app icon — a square tile that cover made fill its rounded box
+  exactly. Against a bare 230×260 silhouette in a square box, cover scaled it
+  until the *width* fitted and threw away 9px of height: the top and bottom of
+  the Q, gone. A photograph can lose an edge and nobody minds; a logo has no edge
+  that is safe to lose. Fixed where the rule is written rather than overridden
+  from further down the sheet.
+- A blue `box-shadow` behind the card mark. With the old solid tile the glow read
+  as that tile's shadow. The mark is transparent now, so what the shadow outlines
+  is the empty box behind it — a soft blue rectangle with a sharp mark sitting in
+  the middle of it, which is exactly what "the edges aren't sharp" looks like.
+
+Both marks were also sized against the chess king, which is narrow and reads
+small for its height. The Q is nearly square, so the same box makes it much
+heavier beside the wordmark; the sizes are set against the text they sit next to
+now (34px beside 28px, 54px above 24px, 30px beside the 18px wordmark).
+
+A test walks ten pages and fails on any mark that is cropped, stretched, or given
+a shadow that outlines its box instead of its shape.
+
 The tab icon leads with that SVG, so a browser that accepts one draws the mark at
 whatever size the tab happens to be; the three PNGs stay for the ones that do
 not. The old mark needed to be pushed to 94% of the tile to survive 16px — a

@@ -2132,6 +2132,38 @@
       expect(svg).toContain('#0056fd');
     });
 
+    /* `object-fit: cover` was set on the sign-in marks back when the file behind
+       them was the app icon — a square tile that cover made fill its rounded box
+       exactly. Against a bare 230×260 silhouette in a square box, cover scaled
+       it until the width fitted and cut 9px off the top and bottom of the Q.
+       A photograph can lose an edge; a logo cannot. */
+    it('is never cropped, stretched or shadowed, on any page', async function (w) {
+      var pages = ['page-feed', 'page-auth', 'page-company-profile', 'page-settings',
+                   'page-messages', 'page-notifications', 'page-create-post',
+                   'page-dashboard', 'page-saved', 'page-my-offers'];
+      signIn(w);
+      var bad = [];
+      for (var i = 0; i < pages.length; i++) {
+        await w.navigateTo(pages[i], true);
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        var marks = w.document.querySelectorAll('img[src*="qubequote"]');
+        Array.prototype.forEach.call(marks, function (el) {
+          if (!el.offsetParent) return;                 // not on screen here
+          var cs = w.getComputedStyle(el);
+          var host = w.getComputedStyle(el.parentElement);
+          var r = el.getBoundingClientRect();
+          var where = pages[i] + ' .' + (el.parentElement.className || '?');
+          if (cs.objectFit === 'cover') bad.push(where + ': cover crops it');
+          if (host.boxShadow !== 'none')
+            bad.push(where + ': a shadow outlines the empty box, not the mark');
+          if (cs.objectFit === 'fill' && r.height &&
+              Math.abs(r.width / r.height - 230 / 260) > 0.01)
+            bad.push(where + ': stretched to ' + (r.width / r.height).toFixed(3));
+        });
+      }
+      expect(bad).toEqual([]);
+    });
+
     /* The first attempt drew the mark as a stroked hexagon, and half the stroke
        width hung off the left of the viewBox — the browser cut it, so the top
        bar showed a mark with a flat side. A filled outline has no stroke to
