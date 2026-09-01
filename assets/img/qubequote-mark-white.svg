@@ -1,26 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 260" width="230" height="260" role="img" aria-label="QubeQuote">
   <title>QubeQuote</title>
   <!--
-    Traced off the brand sheet, then regularised — not redrawn by eye and not
+    Traced off the brand sheet, then regularised — not redrawn by eye, and not
     left as raw trace either.
 
-    The raw trace followed the artwork to 99.9%, but it followed its raster
-    wobble too: every "straight" edge was a chain of short segments a fraction
-    of a pixel off true, and every corner was a polygon pretending to be an
-    arc. So each long run of the traced outline is fitted to a line whose
+    A raw trace matched the sheet to 99.9%, but it followed the raster wobble
+    along with the shape: every "straight" edge was a chain of short segments a
+    fraction of a pixel off true, and every corner a polygon pretending to be
+    an arc. So each long run of the traced outline is fitted to a line whose
     angle is snapped to the hexagonal set the mark is built on — vertical, or
-    30 degrees off horizontal, nothing else — consecutive lines are
-    intersected for the true corner, and a circular fillet is dropped in.
-    Twelve edges for the ring, four for the tail, which is exactly what the
-    shape has.
+    30 degrees off horizontal, nothing else — consecutive lines are intersected
+    for the true corner, and a circular fillet is dropped in. Twelve edges for
+    the ring, four for the tail, which is what the shape actually has.
 
-    The corners are then rounded harder than the sheet draws them, which is a
-    deliberate difference and the reason this sits at ~97.7% of the original
-    rather than 99.9%. One radius across the ring (18) and a smaller one for
-    the tail (11): the tail is about a third the size, so a single radius made
-    it a lozenge instead of a slanted bar. Each fillet is capped at 45% of
-    either edge it sits between, so no short edge is ever swallowed.
+    Corner radii, in the units of this viewBox (230 x 260, band width 46):
+      ring 9   — 20% of the band
+      tail 5.5 — the tail is about a third the size, and one radius across
+                 both stopped it reading as a slanted bar
+    Each fillet is capped at 45% of either edge it sits between, so a short
+    edge can never be swallowed and the outline can never go wavy again. At
+    these radii nothing is clamped; every corner gets its full value.
   -->
   <!-- White on transparent: the sign-in page's blue panel. -->
-  <path fill="#ffffff" fill-rule="nonzero" d="M198.81 53.81A18 18 0 0 1 207.81 69.4L207.81 151.19A13.74 13.74 0 0 1 187.19 163.09L171 153.74A18 18 0 0 1 162 138.16L162 92.46A18 18 0 0 0 153 76.87L113.23 53.91A18 18 0 0 0 95.23 53.91L55.5 76.84A18 18 0 0 0 46.5 92.43L46.5 147.34A18 18 0 0 0 55.5 162.92L128.37 204.99A12.92 12.92 0 0 1 128.37 227.37L113.69 235.85A18 18 0 0 1 95.69 235.85L9.23 185.93A18 18 0 0 1 0.23 170.34L0.23 69.44A18 18 0 0 1 9.23 53.85L95.05 4.3A18 18 0 0 1 113.05 4.3ZM223.75 206.67A11 11 0 0 1 229.25 216.2L229.25 243.65A11 11 0 0 1 212.75 253.18L167.29 226.93A11 11 0 0 1 161.79 217.4L161.79 189.95A11 11 0 0 1 178.29 180.42Z"/>
+  <path fill="#ffffff" fill-rule="nonzero" d="M203.31 56.41A9 9 0 0 1 207.81 64.2L207.81 159.41A9 9 0 0 1 194.31 167.2L166.5 151.15A9 9 0 0 1 162 143.35L162 87.26A9 9 0 0 0 157.5 79.47L108.73 51.31A9 9 0 0 0 99.73 51.31L51 79.44A9 9 0 0 0 46.5 87.23L46.5 152.53A9 9 0 0 0 51 160.33L134.25 208.39A9 9 0 0 1 134.25 223.98L109.19 238.45A9 9 0 0 1 100.19 238.45L4.73 183.33A9 9 0 0 1 0.23 175.54L0.23 64.24A9 9 0 0 1 4.73 56.45L99.55 1.7A9 9 0 0 1 108.55 1.7ZM226.5 208.26A5.5 5.5 0 0 1 229.25 213.02L229.25 253.18A5.5 5.5 0 0 1 221 257.94L164.54 225.34A5.5 5.5 0 0 1 161.79 220.58L161.79 180.42A5.5 5.5 0 0 1 170.04 175.66Z"/>
 </svg>

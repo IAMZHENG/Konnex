@@ -3124,13 +3124,21 @@ and a circular fillet is dropped in. That yields twelve edges for the ring and
 four for the tail, which is exactly what the shape has, in a 600-byte path where
 every edge is straight by construction rather than by luck.
 
-The corners are then rounded **harder than the sheet draws them**, which is a
-deliberate difference and the reason this sits near 98% of the original rather
-than 99.9%. One radius across the ring (18) and a smaller one for the tail (11):
-the tail is about a third the size, so a single radius stopped it reading as a
-slanted bar and turned it into a lozenge. Each fillet is capped at 45% of either
-edge it sits between, so a short edge can never be swallowed and the outline can
-never go wavy again.
+The corner radii are then set deliberately rather than inherited, which is why
+this sits a little under the raw trace's 99.9% match. In the units of the
+viewBox — 230 × 260, with a band 46 wide:
+
+| | radius | as a share of the band |
+|---|---|---|
+| ring, 12 corners | **9** | 20% |
+| tail, 4 corners | **5.5** | 12% |
+
+The tail is about a third the size of the ring, so one radius across both stopped
+it reading as a slanted bar and turned it into a lozenge; it gets its own,
+scaled to the piece. Each fillet is capped at 45% of either edge it sits between,
+so a short edge can never be swallowed and the outline can never go wavy again —
+at these radii nothing is clamped and every corner gets its full value. Halving
+or doubling the roundness is now two numbers.
 
 It is a filled outline with no stroke, so there is nothing left to overflow the
 box. A test measures the rendered bounds with `getBBox` and fails if any of it
