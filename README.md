@@ -3108,13 +3108,35 @@ those ends came out as rounded blobs, and the corners were softer than the
 original throughout. Worse, half the stroke width hung off the left of the
 viewBox, so the browser cut it and the top bar showed a mark with a flat side.
 
-It is now an **outline followed off the artwork**: the mark is rasterised at 4×,
-its boundary walked as a crack-following contour (each cell/empty boundary is a
-unit edge oriented with the ink on one side, so chaining them traverses each
-contour exactly once), and the result simplified to within 0.4px. That comes to
-99.9% of the original pixel for pixel, in a 1.4KB path. It is a filled outline
-with no stroke, so there is nothing left to overflow the box — and a test now
-asserts that every coordinate in the path lands inside the viewBox.
+It is now an **outline followed off the artwork, then regularised**. The mark is
+rasterised at 4×, its boundary walked as a crack-following contour (each
+cell/empty boundary is a unit edge oriented with the ink on one side, so chaining
+them traverses each contour exactly once). That raw trace hit 99.9% of the
+original pixel for pixel — but it traced the raster's wobble along with its
+shape: every "straight" edge was a chain of short segments a fraction of a pixel
+off true, and every corner was a polygon pretending to be an arc. Faithful, and
+still not right.
+
+So each long run of the traced outline is fitted to a line whose angle is snapped
+to the hexagonal set the mark is actually built on — vertical, or 30° off
+horizontal, nothing else — consecutive lines are intersected for the true corner,
+and a circular fillet is dropped in. That yields twelve edges for the ring and
+four for the tail, which is exactly what the shape has, in a 600-byte path where
+every edge is straight by construction rather than by luck.
+
+The corners are then rounded **harder than the sheet draws them**, which is a
+deliberate difference and the reason this sits near 98% of the original rather
+than 99.9%. One radius across the ring (18) and a smaller one for the tail (11):
+the tail is about a third the size, so a single radius stopped it reading as a
+slanted bar and turned it into a lozenge. Each fillet is capped at 45% of either
+edge it sits between, so a short edge can never be swallowed and the outline can
+never go wavy again.
+
+It is a filled outline with no stroke, so there is nothing left to overflow the
+box. A test measures the rendered bounds with `getBBox` and fails if any of it
+spills out — deliberately *not* by pairing numbers out of the `d` string, since
+an arc carries seven numbers of which only two are coordinates, and a naive
+reader invents overflows that are not there.
 
 Two contours, not three, which is worth knowing before assuming a bug: the ring
 is cut open at the lower right, so its counter is not enclosed and the whole ring

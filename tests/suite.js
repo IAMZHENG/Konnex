@@ -2168,24 +2168,54 @@
        width hung off the left of the viewBox — the browser cut it, so the top
        bar showed a mark with a flat side. A filled outline has no stroke to
        overflow, and every point of it has to land inside the box. */
-    it('keeps every point of the mark inside its own viewBox', async function (w) {
+    /* Measured with getBBox rather than by reading numbers out of the `d`
+       string. Pairing those off as x,y only works while the path is all
+       line-tos; an arc carries seven numbers, of which two are coordinates, so
+       a naive reader reports radii and flags as points and invents overflows
+       that are not there. */
+    it('keeps the whole mark inside its own viewBox', async function (w) {
       var files = ['assets/img/qubequote-mark.svg', 'assets/img/qubequote-mark-white.svg'];
-      for (var f = 0; f < files.length; f++) {
-        var svg = await (await fetch('../' + files[f])).text();
-        var box = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
-        expect(!!box).toBe(true, files[f] + ' should declare a viewBox from the origin');
-        var vw = +box[1], vh = +box[2];
-        expect(/stroke-width/.test(svg)).toBe(false,
-          'a stroke is the thing that overflowed; this is a filled outline');
-        var d = svg.match(/ d="([^"]+)"/)[1];
-        var nums = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
-        var outside = [];
-        for (var i = 0; i < nums.length; i += 2) {
-          if (nums[i] < 0 || nums[i] > vw) outside.push('x=' + nums[i]);
-          if (nums[i + 1] < 0 || nums[i + 1] > vh) outside.push('y=' + nums[i + 1]);
+      var holder = w.document.createElement('div');
+      holder.style.cssText = 'position:absolute;left:-9999px;top:0';
+      w.document.body.appendChild(holder);
+      try {
+        for (var f = 0; f < files.length; f++) {
+          var svgText = await (await fetch('../' + files[f])).text();
+          expect(/stroke-width/.test(svgText)).toBe(false,
+            'a stroke is what overflowed last time; this is a filled outline');
+          holder.innerHTML = svgText;
+          var svg = holder.querySelector('svg');
+          var vb = svg.getAttribute('viewBox').split(/\s+/).map(Number);
+          var b = holder.querySelector('path').getBBox();
+          var over = [];
+          if (b.x < -0.05) over.push('left by ' + (-b.x).toFixed(2));
+          if (b.y < -0.05) over.push('top by ' + (-b.y).toFixed(2));
+          if (b.x + b.width > vb[2] + 0.05)
+            over.push('right by ' + (b.x + b.width - vb[2]).toFixed(2));
+          if (b.y + b.height > vb[3] + 0.05)
+            over.push('bottom by ' + (b.y + b.height - vb[3]).toFixed(2));
+          expect(over).toEqual([], files[f] + ' spills out of the box and gets clipped');
         }
-        expect(outside).toEqual([], files[f] + ' has geometry the viewBox would clip');
-      }
+      } finally { holder.remove(); }
+    });
+
+    /* Every edge snapped to the hexagonal grid the mark is built on, and every
+       corner a real arc. Left as a raw trace they were neither: the "straight"
+       edges wandered by a fraction of a pixel and the corners were polygons. */
+    it('is built from straight edges and true arcs', async function (w) {
+      var d = (await (await fetch('../assets/img/qubequote-mark.svg')).text())
+                .match(/ d="([^"]+)"/)[1];
+      var arcs = (d.match(/A/g) || []).length;
+      expect(arcs >= 12).toBe(true, 'only ' + arcs + ' arcs — corners went back to polygons');
+      expect(/[CQST]/.test(d)).toBe(false,
+        'a corner here is a circular fillet, not a freehand bezier');
+      // a radius is quoted twice per arc; both numbers must agree, or it is an ellipse
+      var bad = [];
+      (d.match(/A(-?[\d.]+) (-?[\d.]+)/g) || []).forEach(function (a) {
+        var n = a.slice(1).split(' ').map(Number);
+        if (Math.abs(n[0] - n[1]) > 0.01) bad.push(a);
+      });
+      expect(bad).toEqual([], 'these arcs are elliptical, not circular');
     });
   });
 
