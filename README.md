@@ -3089,6 +3089,28 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## ช่องว่างระหว่างวงแหวนกับหาง และ [hidden] ที่ไม่ซ่อน
+
+The two gaps between the ring's cut ends and the tail measured **19.5** — 42% of
+the band width, and identical on both sides, which is what made it read as too
+far apart. They are 12 now.
+
+Closing them is one translation, not two: the two gaps face 60° apart, so the
+tail moves along the hexagon's own diagonal (7.5 left, 13 up) and both close by
+the same 7.5. The **viewBox is fitted to the ink** rather than left at 230×260 —
+pulling the tail inward shrank the drawing, and a box with slack on two sides
+makes every `object-fit: contain` in the app draw the mark small and off centre.
+A test now fails on slack as well as on overflow, and the overflow check reads
+the box's origin instead of assuming 0,0.
+
+**`[hidden]` was not hiding anything.** The verification entry points carry
+`hidden`, which is only a UA default of `display:none`; `.av-menu-item` and
+`.link-item` set `display:flex` on top of it, so ยืนยันตัวตน stayed in the avatar
+dropdown. One scoped `[data-verify-entry][hidden]{display:none!important}` fixes
+it. The test that was supposed to catch this used `offsetParent`, which is null
+for anything on an inactive page and so could not tell hidden from off-screen —
+it reads `display` now.
+
 ## `.doc` ชนกับไอคอนไฟล์ Word
 
 The attachment pill on every feed card was showing a large blue square instead of

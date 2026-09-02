@@ -1,23 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 260" width="230" height="260" role="img" aria-label="QubeQuote">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0.23 0.49 221.52 245.19" width="221.52" height="245.19" role="img" aria-label="QubeQuote">
   <title>QubeQuote</title>
   <!--
-    Traced off the brand sheet, then regularised — not redrawn by eye, and not
-    left as raw trace either. Each long run of the traced outline is fitted to
-    a line whose angle is snapped to the hexagonal set the mark is built on —
-    vertical, or 30 degrees off horizontal, nothing else — consecutive lines
-    are intersected for the true corner, and a circular fillet is dropped in.
-    Twelve edges for the ring, four for the tail, which is what the shape has.
+    Traced off the brand sheet, then regularised: every long run of the traced
+    outline is fitted to a line whose angle is snapped to the hexagonal set the
+    mark is built on — vertical, or 30 degrees off horizontal, nothing else —
+    consecutive lines are intersected for the true corner, and a circular
+    fillet is dropped in. Twelve edges for the ring, four for the tail.
 
-    Corner radii, in the units of this viewBox (230 x 260, band width 46):
+    Corner radii, in the units of this viewBox (band width 46):
       ring, hexagon corners  9
-      ring, the two cut ends 5.5  — the ring is open at the lower right, and
-                                    the four corners belonging to those two
-                                    cuts are tighter than the hexagon's own
-      tail                   5.5  — a third the size of the ring, so one
-                                    radius across both made it a lozenge
-    Each fillet is capped at 45% of either edge it sits between, so a short
-    edge can never be swallowed and the outline can never go wavy again.
+      ring, the two cut ends 5.5
+      tail                   5.5
+
+    The tail is moved 7.5 left and 13 up from where the sheet draws it. The
+    two gaps between it and the ring sat at 19.5 — 42% of the band, which read
+    as too far apart. They are 12 now. The move is along the hexagon's own
+    diagonal because the two gaps face 60 degrees apart, and that is the one
+    direction that closes both by the same amount.
+
+    The viewBox is fitted to the ink rather than left at 230x260: moving the
+    tail inward shrank the drawing, and a box with slack on two sides makes
+    every `object-fit: contain` in the app render the mark small and off
+    centre.
   -->
   <!-- White on transparent: the sign-in page's blue panel. -->
-  <path fill="#ffffff" fill-rule="nonzero" d="M203.31 56.41A9 9 0 0 1 207.81 64.2L207.81 165.47A5.5 5.5 0 0 1 199.56 170.23L164.75 150.14A5.5 5.5 0 0 1 162 145.37L162 87.26A9 9 0 0 0 157.5 79.47L108.73 51.31A9 9 0 0 0 99.73 51.31L51 79.44A9 9 0 0 0 46.5 87.23L46.5 152.53A9 9 0 0 0 51 160.33L139.5 211.42A5.5 5.5 0 0 1 139.5 220.95L107.44 239.46A5.5 5.5 0 0 1 101.94 239.46L4.73 183.33A9 9 0 0 1 0.23 175.54L0.23 64.24A9 9 0 0 1 4.73 56.45L99.55 1.7A9 9 0 0 1 108.55 1.7ZM226.5 208.26A5.5 5.5 0 0 1 229.25 213.02L229.25 253.18A5.5 5.5 0 0 1 221 257.94L164.54 225.34A5.5 5.5 0 0 1 161.79 220.58L161.79 180.42A5.5 5.5 0 0 1 170.04 175.66Z"/>
+  <path fill="#ffffff" fill-rule="nonzero" d="M203.31 56.41A9 9 0 0 1 207.81 64.2L207.81 165.47A5.5 5.5 0 0 1 199.56 170.23L164.75 150.14A5.5 5.5 0 0 1 162 145.37L162 87.26A9 9 0 0 0 157.5 79.47L108.73 51.31A9 9 0 0 0 99.73 51.31L51 79.44A9 9 0 0 0 46.5 87.23L46.5 152.53A9 9 0 0 0 51 160.33L139.5 211.42A5.5 5.5 0 0 1 139.5 220.95L107.44 239.46A5.5 5.5 0 0 1 101.94 239.46L4.73 183.33A9 9 0 0 1 0.23 175.54L0.23 64.24A9 9 0 0 1 4.73 56.45L99.55 1.7A9 9 0 0 1 108.55 1.7ZM219 195.27A5.5 5.5 0 0 1 221.75 200.03L221.75 240.19A5.5 5.5 0 0 1 213.5 244.95L157.04 212.35A5.5 5.5 0 0 1 154.29 207.59L154.29 167.43A5.5 5.5 0 0 1 162.54 162.67Z"/>
 </svg>

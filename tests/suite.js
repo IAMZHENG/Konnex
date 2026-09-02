@@ -2200,16 +2200,27 @@
             'a stroke is what overflowed last time; this is a filled outline');
           holder.innerHTML = svgText;
           var svg = holder.querySelector('svg');
+          /* The viewBox no longer starts at the origin — it is fitted to the
+             ink — so the right and bottom edges are x+width, not width. */
           var vb = svg.getAttribute('viewBox').split(/\s+/).map(Number);
           var b = holder.querySelector('path').getBBox();
           var over = [];
-          if (b.x < -0.05) over.push('left by ' + (-b.x).toFixed(2));
-          if (b.y < -0.05) over.push('top by ' + (-b.y).toFixed(2));
-          if (b.x + b.width > vb[2] + 0.05)
-            over.push('right by ' + (b.x + b.width - vb[2]).toFixed(2));
-          if (b.y + b.height > vb[3] + 0.05)
-            over.push('bottom by ' + (b.y + b.height - vb[3]).toFixed(2));
+          if (b.x < vb[0] - 0.05) over.push('left by ' + (vb[0] - b.x).toFixed(2));
+          if (b.y < vb[1] - 0.05) over.push('top by ' + (vb[1] - b.y).toFixed(2));
+          if (b.x + b.width > vb[0] + vb[2] + 0.05)
+            over.push('right by ' + (b.x + b.width - vb[0] - vb[2]).toFixed(2));
+          if (b.y + b.height > vb[1] + vb[3] + 0.05)
+            over.push('bottom by ' + (b.y + b.height - vb[1] - vb[3]).toFixed(2));
           expect(over).toEqual([], files[f] + ' spills out of the box and gets clipped');
+
+          /* And the other way round: slack on two sides makes every
+             `object-fit: contain` in the app draw the mark small and off
+             centre, which is what fitting the box to the ink prevents. */
+          var slack = Math.max(b.x - vb[0], b.y - vb[1],
+                               vb[0] + vb[2] - b.x - b.width,
+                               vb[1] + vb[3] - b.y - b.height);
+          expect(slack < 1.5).toBe(true,
+            files[f] + ' leaves ' + slack.toFixed(2) + ' of empty box around the mark');
         }
       } finally { holder.remove(); }
     });
@@ -2498,9 +2509,17 @@
     });
 
     it('shows no verification anywhere a person can see', function (w) {
-      var open = Array.prototype.filter.call(
-        w.document.querySelectorAll('[data-verify-entry]'), function (e) { return e.offsetParent; });
-      expect(open.length).toBe(0);
+      var entries = w.document.querySelectorAll('[data-verify-entry]');
+      expect(entries.length > 0).toBe(true, 'the entry points should still be in the markup');
+      /* offsetParent is null for anything inside a page that is not active, so
+         it cannot tell a hidden item from an off-screen one. `display` answers
+         the actual question — and it is the one that was wrong: [hidden] is a
+         UA default of display:none, and .av-menu-item sets display:flex over
+         the top of it, so ยืนยันตัวตน stayed in the dropdown. */
+      var shown = Array.prototype.filter.call(entries, function (e) {
+        return w.getComputedStyle(e).display !== 'none';
+      });
+      expect(shown.length).toBe(0, 'these still render while verification is off');
       // even for an account the database says is verified
       var was = w.kxCurrentUser;
       try {

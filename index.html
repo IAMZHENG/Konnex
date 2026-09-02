@@ -16795,6 +16795,12 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
     background: linear-gradient(120deg, #0b3fd0 0%, #0056fd 55%, #2f7bff 100%);
     }
 
+/* The verification entry points are marked hidden, but [hidden] is only a UA
+   default of display:none and .av-menu-item / .link-item set display:flex on
+   top of it — the dropdown kept showing ยืนยันตัวตน. Scoped to these elements
+   so nothing else that leans on [hidden] is affected. */
+[data-verify-entry][hidden] { display: none !important; }
+
 /* ===== คำเตือนตรงจุดที่เลือกไฟล์ ===== */
 .cp-file-warn {
     display: flex; gap: 9px; align-items: flex-start;
