@@ -8265,7 +8265,7 @@ html, body{
        checks is_admin as its first statement. */
     var nav = KX_NAV.slice();
     if(window.kxCurrentUser && window.kxCurrentUser.is_admin){
-      nav.push(['page-admin-verify','shield','ตรวจสอบการยืนยันตัวตน']);
+      if(window.KX_VERIFY_ENABLED) nav.push(['page-admin-verify','shield','ตรวจสอบการยืนยันตัวตน']);
     }
     var html = nav.map(function(it){
       if(it[0]==='__g') return '<div class="side-group-label">'+it[2]+'</div>';
@@ -11854,7 +11854,10 @@ html, body{
                documents and an approval. The profiles.tax_id column stays so the
                numbers already stored keep their value, but nothing in the app
                asks for one any more. -->
-          <div class="au-row2"><div class="au-field"><label id="auContactLabel">ชื่อผู้ติดต่อ <span class="au-req">*</span></label><input type="text" id="auContactInput" placeholder="ชื่อ-นามสกุล"></div><div class="au-field"><label>เบอร์โทรศัพท์ <span class="au-req">*</span></label><input type="tel" id="auPhoneInput" placeholder="08x-xxx-xxxx"></div></div>
+          <!-- เบอร์โทรศัพท์ stood here beside ชื่อผู้ติดต่อ. It is not needed to open an
+               account — a listing reaches its owner through the app, and profiles.phone
+               is still there for anyone who wants to publish one from แก้ไขโปรไฟล์. -->
+          <div class="au-field"><label id="auContactLabel">ชื่อผู้ติดต่อ <span class="au-req">*</span></label><input type="text" id="auContactInput" placeholder="ชื่อ-นามสกุล"></div>
           <div class="au-field"><label>อีเมล <span class="au-req">*</span></label><input id="auRegEmail" type="email" placeholder="you@company.co.th"></div>
           <div class="au-field"><label>รหัสผ่าน <span class="au-req">*</span></label><input id="auRegPassword" type="password" placeholder="อย่างน้อย 8 ตัวอักษร"></div>
           <label class="au-check"><input id="auRegTerms" type="checkbox"> <span class="au-check-t">ยอมรับ <a class="au-link" onclick="event.preventDefault();navigateTo('page-terms')">ข้อกำหนดการใช้งาน</a> และ <a class="au-link" onclick="event.preventDefault();navigateTo('page-privacy')">นโยบายความเป็นส่วนตัว</a></span></label>
@@ -12603,7 +12606,7 @@ html, body{
      have been a promise the software does not keep. -->
 <div id="page-terms" class="app-page">
   <div class="doc-wrap">
-    <article class="doc">
+    <article class="legal-doc">
       <header class="doc-head">
         <div class="doc-brand">
           <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
@@ -12638,7 +12641,7 @@ html, body{
       <p>2.1 ผู้ใช้ต้องมีอายุไม่ต่ำกว่า 20 ปี หรือมีอำนาจผูกพันนิติบุคคลที่ตนลงทะเบียนแทน</p>
       <p>2.2 บัญชีหนึ่งบัญชีใช้งานได้ทั้งบทบาทผู้ซื้อและผู้ขาย ผู้ใช้ต้องให้ข้อมูลที่ถูกต้อง ครบถ้วน
         และปรับปรุงให้เป็นปัจจุบัน</p>
-      <p>2.3 การสมัครสมาชิกขอเพียงชื่อ ชื่อผู้ติดต่อ เบอร์โทรศัพท์ อีเมล และรหัสผ่าน
+      <p>2.3 การสมัครสมาชิกขอเพียงชื่อ ชื่อผู้ติดต่อ อีเมล และรหัสผ่าน
         <b>เราไม่ขอเลขบัตรประชาชนหรือเลขประจำตัวผู้เสียภาษีในขั้นตอนสมัคร</b></p>
       <p>2.4 ผู้ใช้มีหน้าที่รักษารหัสผ่านเป็นความลับ และรับผิดชอบต่อการกระทำทั้งหมดที่เกิดขึ้นภายใต้บัญชีของตน
         หากพบการเข้าถึงโดยไม่ได้รับอนุญาต ต้องแจ้งเราทันที</p>
@@ -12728,7 +12731,7 @@ html, body{
 
 <div id="page-privacy" class="app-page">
   <div class="doc-wrap">
-    <article class="doc">
+    <article class="legal-doc">
       <header class="doc-head">
         <div class="doc-brand">
           <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
@@ -12748,8 +12751,8 @@ html, body{
       <table class="doc-table">
         <thead><tr><th>ประเภทข้อมูล</th><th>ตัวอย่าง</th></tr></thead>
         <tbody>
-          <tr><td>ข้อมูลบัญชี</td><td>ชื่อ อีเมล เบอร์โทรศัพท์ ชื่อผู้ติดต่อ รหัสผ่าน (เก็บแบบเข้ารหัสทางเดียวโดยผู้ให้บริการยืนยันตัวตน)</td></tr>
-          <tr><td>ข้อมูลโปรไฟล์</td><td>ชื่อบริษัท ประเภทธุรกิจ ที่อยู่ จังหวัด เว็บไซต์ เวลาทำการ รูปโปรไฟล์และรูปปก</td></tr>
+          <tr><td>ข้อมูลบัญชี</td><td>ชื่อ ชื่อผู้ติดต่อ อีเมล รหัสผ่าน (เก็บแบบเข้ารหัสทางเดียวโดยผู้ให้บริการระบบบัญชี)</td></tr>
+          <tr><td>ข้อมูลโปรไฟล์ <span class="doc-opt">(ไม่บังคับ)</span></td><td>เบอร์โทรศัพท์ ชื่อบริษัท ประเภทธุรกิจ ที่อยู่ จังหวัด เว็บไซต์ เวลาทำการ รูปโปรไฟล์และรูปปก — กรอกเองภายหลังที่หน้าแก้ไขโปรไฟล์ ไม่ได้ขอตอนสมัคร</td></tr>
           <tr><td>ข้อมูลการใช้งาน</td><td>ประกาศ ใบเสนอราคา ไฟล์แนบ คำถาม–คำตอบ ข้อความ รีวิว ประกาศที่บันทึกไว้ ประวัติการเข้าชม</td></tr>
           <tr><td>ข้อมูลทางเทคนิค</td><td>บันทึกการเข้าสู่ระบบและข้อมูลที่ระบบสร้างขึ้นเพื่อความปลอดภัย</td></tr>
         </tbody>
@@ -12883,7 +12886,7 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
   function fill(){
     body.innerHTML = '';
     ['page-terms', 'page-privacy'].forEach(function(id, i){
-      var src = document.querySelector('#' + id + ' .doc');
+      var src = document.querySelector('#' + id + ' .legal-doc');
       if(!src) return;
       var copy = src.cloneNode(true);
       copy.classList.add('kxc-doc');
@@ -13656,7 +13659,9 @@ window.kxLoadDashboard = async function(){
   var h1 = document.querySelector('#page-dashboard .dash-head h1');
   if(h1) h1.textContent = 'สวัสดี, ' + ((window.kxCurrentUser && window.kxCurrentUser.company_name) || 'คุณ') + ' 👋';
   var banner = document.getElementById('dashVerifyBanner');
-  if(banner) banner.style.display = (window.kxCurrentUser && window.kxCurrentUser.is_verified) ? 'none' : '';
+  // nothing to nudge anyone towards while the feature is off
+  if(banner) banner.style.display =
+    (!window.KX_VERIFY_ENABLED || (window.kxCurrentUser && window.kxCurrentUser.is_verified)) ? 'none' : '';
 
   // what I have already bid on — so งานใหม่ can exclude it
   var mine = await sb.from('quotes')
@@ -16851,7 +16856,7 @@ body.kxc-open { overflow: hidden; }
 /* ===== ข้อกำหนดการใช้งาน / นโยบายความเป็นส่วนตัว ===== */
 #page-terms, #page-privacy { background: var(--bg, #f6f8fc); }
 .doc-wrap { max-width: 860px; margin: 0 auto; padding: 28px 18px 72px; }
-.doc {
+.legal-doc {
     background: #fff; border: 1px solid var(--line, #e6e7f0); border-radius: 14px;
     padding: 34px 38px 40px; color: var(--ink, #1c1a18);
     font-size: 15px; line-height: 1.75;
@@ -16865,13 +16870,13 @@ body.kxc-open { overflow: hidden; }
 .doc-name { font-size: 20px; font-weight: 700; letter-spacing: .2px; }
 .doc-tag { font-size: 13px; color: var(--ink-soft, #565b6e); }
 .doc-ver { font-size: 12.5px; color: var(--ink-soft, #565b6e); text-align: right; line-height: 1.6; }
-.doc h1 { font-size: 27px; font-weight: 700; margin: 0 0 10px; line-height: 1.4; }
+.legal-doc h1 { font-size: 27px; font-weight: 700; margin: 0 0 10px; line-height: 1.4; }
 .doc-lead { color: var(--ink-soft, #565b6e); margin: 0 0 26px; }
-.doc h2 {
+.legal-doc h2 {
     font-size: 16px; font-weight: 700; color: #0846c7;
     margin: 30px 0 10px; line-height: 1.5;
     }
-.doc p { margin: 0 0 12px; }
+.legal-doc p { margin: 0 0 12px; }
 .doc-note {
     background: #eef3ff; border-left: 4px solid #0056fd; border-radius: 0 8px 8px 0;
     padding: 15px 18px; margin: 16px 0 18px; font-size: 14.5px; line-height: 1.8;
@@ -16897,8 +16902,8 @@ body.kxc-open { overflow: hidden; }
 .doc-fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-soft, #565b6e); line-height: 1.7; }
 @media (max-width: 640px) {
     .doc-wrap { padding: 14px 10px 56px; }
-    .doc { padding: 22px 18px 28px; font-size: 14.5px; }
-    .doc h1 { font-size: 23px; }
+    .legal-doc { padding: 22px 18px 28px; font-size: 14.5px; }
+    .legal-doc h1 { font-size: 23px; }
     .doc-head { flex-direction: column; align-items: flex-start; gap: 10px; }
     .doc-ver { text-align: left; }
     /* a table of two columns has nowhere to shrink to on a phone, so the rows
@@ -17176,7 +17181,6 @@ body.kxc-open { overflow: hidden; }
     // else's sample data the moment you land
     var name    = (document.getElementById('auNameInput')    || {}).value || '';
     var contact = (document.getElementById('auContactInput') || {}).value || '';
-    var phone   = (document.getElementById('auPhoneInput')   || {}).value || '';
     var mail    = document.getElementById('auRegEmail');
     var pw      = document.getElementById('auRegPassword');
     var terms   = document.getElementById('auRegTerms');
@@ -17202,10 +17206,6 @@ body.kxc-open { overflow: hidden; }
     if(!isPerson && !contact.trim()){
       var ci = document.getElementById('auContactInput');
       ci.classList.add('bad'); ci.focus(); kxToast('กรุณากรอกชื่อผู้ติดต่อ'); return;
-    }
-    if(!phone.trim()){
-      var pi = document.getElementById('auPhoneInput');
-      pi.classList.add('bad'); pi.focus(); kxToast('กรุณากรอกเบอร์โทรศัพท์'); return;
     }
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test((mail.value || '').trim())){
       mail.classList.add('bad'); mail.focus(); kxToast('กรุณากรอกอีเมลให้ถูกต้อง'); return;
@@ -17236,7 +17236,6 @@ body.kxc-open { overflow: hidden; }
         email: mail.value.trim(), company_name: name.trim(),
         // an individual who left it blank is their own contact
         contact_name: contact.trim() || (isPerson ? name.trim() : ''),
-        phone: phone.trim(),
         business_type: isPerson ? 'person' : 'company',
         // which versions were on screen when they pressed ยอมรับ, and when
         policy: window.kxPolicyAccepted
@@ -19707,7 +19706,6 @@ body.kxc-open { overflow: hidden; }
       id: user.id,
       company_name: (pending && pending.company_name) || null,
       contact_name: pending ? pending.contact_name : null,
-      phone:        pending ? pending.phone        : null,
       avatar_url:   photo,
       email:        user.email || null,
       business_type: (pending && pending.business_type) || 'company'
@@ -21795,7 +21793,8 @@ body.kxc-open { overflow: hidden; }
     }
 
     var pill = p.querySelector('.hero-idblock .verified-pill');
-    if(pill) pill.style.display = pr.is_verified ? '' : 'none';
+    // the badge cannot be earned while the feature is off, so it never shows
+    if(pill) pill.style.display = (window.KX_VERIFY_ENABLED && pr.is_verified) ? '' : 'none';
 
     var meta = document.getElementById('pfHeroMeta');
     if(meta){
@@ -21959,7 +21958,7 @@ body.kxc-open { overflow: hidden; }
       var first = h1.firstChild;
       if(first && first.nodeType === 3) first.nodeValue = name + ' ';
       var pill = h1.querySelector('.verified-pill, .pill, span');
-      if(pill) pill.style.display = pr.is_verified ? '' : 'none';
+      if(pill) pill.style.display = (window.KX_VERIFY_ENABLED && pr.is_verified) ? '' : 'none';
     }
     var logo = p.querySelector('.hero-logo');
     if(logo){
@@ -23424,6 +23423,10 @@ body.kxc-open { overflow: hidden; }
   window.kxRenderVerify = function(pr, isOwner){
     var card = document.getElementById('pfVerifyCard');
     if(!card) return;
+    /* Phase one has no verification, so the card is not a card that says "not
+       verified yet" — it is a card about a thing that does not exist. */
+    if(!window.KX_VERIFY_ENABLED){ card.hidden = true; return; }
+    card.hidden = false;
     var ok = !!(pr && pr.is_verified);
     var person = pr && pr.business_type === 'person';
     card.innerHTML =

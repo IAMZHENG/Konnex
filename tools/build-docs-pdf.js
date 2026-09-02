@@ -49,7 +49,7 @@ const src = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 function docOf(pageId) {
   const page = src.indexOf('<div id="' + pageId + '" class="app-page">');
   if (page < 0) throw new Error('ไม่พบ ' + pageId + ' ใน index.html');
-  const a = src.indexOf('<article class="doc">', page);
+  const a = src.indexOf('<article class="legal-doc">', page);
   const b = src.indexOf('</article>', a);
   if (a < 0 || b < 0) throw new Error('โครงสร้าง ' + pageId + ' เปลี่ยนไป');
   return src.slice(a, b + '</article>'.length);
@@ -80,16 +80,16 @@ body{ margin:0; background:#fff; color:var(--ink);
   -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 ${docCss}
 /* on paper the page is the card, so the card chrome goes */
-.doc{ border:0; border-radius:0; padding:0; font-size:13.5px; line-height:1.85; }
-.doc h1{ font-size:23px; }
-.doc h2{ font-size:14.5px; margin:22px 0 8px; }
+.legal-doc{ border:0; border-radius:0; padding:0; font-size:13.5px; line-height:1.85; }
+.legal-doc h1{ font-size:23px; }
+.legal-doc h2{ font-size:14.5px; margin:22px 0 8px; }
 .doc-head{ margin-bottom:20px; }
 .doc-foot{ display:none; }              /* an in-app link is not a thing on paper */
 .page-break{ break-after:page; page-break-after:always; height:0; }
 /* a heading stranded at the foot of a page is the one thing print gets wrong
    that a screen never does */
-.doc h1, .doc h2{ break-after:avoid; page-break-after:avoid; }
-.doc p, .doc-note, .doc-table, .doc-contact{ break-inside:avoid; page-break-inside:avoid; }
+.legal-doc h1, .legal-doc h2{ break-after:avoid; page-break-after:avoid; }
+.legal-doc p, .doc-note, .doc-table, .doc-contact{ break-inside:avoid; page-break-inside:avoid; }
 .doc-table{ font-size:12.5px; }
 @page{ size:A4; margin:16mm 15mm 18mm; }
 </style></head><body>

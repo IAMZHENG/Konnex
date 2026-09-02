@@ -3089,6 +3089,26 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## `.doc` ชนกับไอคอนไฟล์ Word
+
+The attachment pill on every feed card was showing a large blue square instead of
+a 17px file icon. The cause was a class-name collision introduced with the legal
+pages: the document card was `class="doc"`, and a Word attachment's icon is
+`class="fic doc"`, so a 17px `<i>` inherited a legal document's `padding: 34px
+38px 40px` and a white card background.
+
+`doc` is far too generic for a codebase that already uses it as a file kind. The
+card is `legal-doc` now, and a test walks the parsed stylesheets and fails on any
+bare `.doc` selector, which is the shape of the mistake rather than this one
+instance of it.
+
+Worth knowing for the next time this is debugged: **a `CSSStyleRule` in current
+Chrome also has a `.cssRules` property** (empty, for nested CSS). A rule walker
+written as `if (r.cssRules) { recurse; continue; }` therefore skips every plain
+style rule and reports that nothing matches — which is exactly the wrong answer,
+and it sent the first pass of this investigation looking for a CSS parse error
+that did not exist. Test `selectorText` first.
+
 ## เฟสแรก: เก็บเท่าที่จำเป็น
 
 The goal set for launch was "open as fast as possible without taking on more

@@ -2073,7 +2073,9 @@
       restore(w);
       var row = sb._writes[0].row;
       expect(row.company_name).toBe('บจก. ที่พิมพ์เอง', 'the person typed this themselves');
-      expect(row.phone).toBe('0899999999');
+      expect(row.contact_name).toBe('สมชาย');
+      // signup stopped asking for a phone number, so the insert must not invent one
+      expect('phone' in row).toBe(false);
       expect(w.localStorage.getItem('kx.pendingProfile')).toBe(null, 'and it is spent');
     });
     it('ignores a stash left by a different email', async function (w) {
@@ -2238,7 +2240,7 @@
     function fillSignup(w) {
       w.authTab('register'); w.authEntity('company');
       var v = { auNameInput: 'บจก. ทดสอบ', auContactInput: 'สมชาย',
-                auPhoneInput: '0812345678', auRegEmail: 'x@y.co.th',
+                auRegEmail: 'x@y.co.th',
                 auRegPassword: 'abcd1234' };
       Object.keys(v).forEach(function (id) { w.document.getElementById(id).value = v[id]; });
       return { reset: function () {
@@ -2445,6 +2447,70 @@
       expect(warn.textContent).toContain('ความลับทางการค้า');
     });
 
+    /* The document card was class `doc`, and a Word attachment's icon is class
+       `fic doc`. So the 17px icon on every feed card inherited a legal
+       document's 34px padding and came out as a large blue square. `doc` is far
+       too generic for a codebase that already uses it as a file kind. */
+    it('does not style anything outside itself', function (w) {
+      var sheets = w.document.querySelectorAll('style');
+      var bare = [];
+      Array.prototype.forEach.call(sheets, function (st) {
+        var rules; try { rules = st.sheet.cssRules; } catch (e) { return; }
+        var walk = function (list) {
+          for (var i = 0; i < list.length; i++) {
+            var r = list[i];
+            // selectorText first: a plain style rule also carries an empty cssRules
+            if (r.selectorText) {
+              if (/(^|[\s,>+~])\.doc([\s,>+~:]|$)/.test(r.selectorText)) bare.push(r.selectorText);
+            } else if (r.cssRules) walk(r.cssRules);
+          }
+        };
+        walk(rules);
+      });
+      expect(bare).toEqual([], '`.doc` collides with the doc file-kind icon');
+    });
+
+    it('leaves the attachment icon at the size it was drawn for', async function (w) {
+      var docs = [{ file_kind: 'doc', file_url: 'x', file_name: 'a.docx' }];
+      var feed = w.document.getElementById('page-feed');
+      var host = w.document.createElement('div');
+      host.className = 'post-card';
+      host.innerHTML = '<div class="pc-text">' + w.kxFilesSummary(docs, '', false) + '</div>';
+      host.style.cssText = 'position:absolute;left:0;top:0;width:600px';
+      feed.appendChild(host);
+      var had = feed.classList.contains('active');
+      feed.classList.add('active');
+      try {
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        var r = host.querySelector('.fic').getBoundingClientRect();
+        expect(Math.round(r.width)).toBe(17);
+        expect(Math.round(r.height)).toBe(17);
+      } finally { host.remove(); if (!had) feed.classList.remove('active'); }
+    });
+
+    it('asks for no phone number to open an account', function (w) {
+      expect(!!w.document.getElementById('auPhoneInput')).toBe(false);
+      var terms = w.document.getElementById('page-terms').textContent;
+      expect(terms).toContain('ขอเพียงชื่อ ชื่อผู้ติดต่อ อีเมล และรหัสผ่าน');
+      // it is still offered on the profile, so the policy lists it there
+      var priv = w.document.getElementById('page-privacy').textContent;
+      expect(priv).toContain('ไม่ได้ขอตอนสมัคร');
+    });
+
+    it('shows no verification anywhere a person can see', function (w) {
+      var open = Array.prototype.filter.call(
+        w.document.querySelectorAll('[data-verify-entry]'), function (e) { return e.offsetParent; });
+      expect(open.length).toBe(0);
+      // even for an account the database says is verified
+      var was = w.kxCurrentUser;
+      try {
+        w.kxCurrentUser = { id: ME, is_verified: true, business_type: 'company' };
+        if (w.kxRenderVerify) w.kxRenderVerify(w.kxCurrentUser, true);
+        var card = w.document.getElementById('pfVerifyCard');
+        expect(card.hidden).toBe(true, 'the card is about a thing that does not exist yet');
+      } finally { w.kxCurrentUser = was; }
+    });
+
     it('carries a version and an effective date on both', function (w) {
       ['page-terms', 'page-privacy'].forEach(function (id) {
         var v = w.document.querySelector('#' + id + ' .doc-ver');
@@ -2566,7 +2632,6 @@
       w.authTab('register'); w.authEntity('company');
       w.document.getElementById('auNameInput').value    = 'บจก. ทดสอบ';
       w.document.getElementById('auContactInput').value = 'สมชาย';
-      w.document.getElementById('auPhoneInput').value   = '0812345678';
       w.document.getElementById('auRegEmail').value     = 'x@y.co.th';
       w.document.getElementById('auRegPassword').value  = 'abcd1234';
       w.document.getElementById('auRegTerms').checked   = true;
@@ -2588,7 +2653,7 @@
       var stash = JSON.parse(w.localStorage.getItem('kx.pendingProfile') || 'null');
       expect(!!stash).toBe(true, 'the rest of the form still carries over');
       expect('tax_id' in stash).toBe(false);
-      expect(stash.phone).toBe('0812345678', 'the fields that remain still work');
+      expect(stash.contact_name).toBe('สมชาย', 'the fields that remain still work');
       w.localStorage.removeItem('kx.pendingProfile');
       w.kxPolicyAccepted = null;
     });
@@ -2860,12 +2925,22 @@
       var nav = w.document.querySelector('#page-feed .side-nav').textContent;
       expect(/ตรวจสอบการยืนยันตัวตน/.test(nav)).toBe(false);
     });
-    it('shows it to an administrator', function (w) {
+    /* The queue is gone from the rail while verification is off — but only
+       because of that flag, which is the whole point of switching the feature
+       off at one place. Flipping it back has to bring the entry with it. */
+    it('is out of the rail while verification is off, and returns with it', function (w) {
       asAdmin(w, true);
-      w.renderSidebars('page-feed');
-      var nav = w.document.querySelector('#page-feed .side-nav').textContent;
-      expect(/ตรวจสอบการยืนยันตัวตน/.test(nav)).toBe(true);
-      w.kxCurrentUser = null;
+      var was = w.KX_VERIFY_ENABLED;
+      try {
+        w.KX_VERIFY_ENABLED = false;
+        w.renderSidebars('page-feed');
+        expect(w.document.querySelector('#page-feed .side-nav').textContent)
+          .notToContain('ตรวจสอบการยืนยันตัวตน');
+        w.KX_VERIFY_ENABLED = true;
+        w.renderSidebars('page-feed');
+        expect(w.document.querySelector('#page-feed .side-nav').textContent)
+          .toContain('ตรวจสอบการยืนยันตัวตน', 'nothing was deleted, only switched off');
+      } finally { w.KX_VERIFY_ENABLED = was; w.kxCurrentUser = null; }
     });
     it('turns an ordinary account away from the page', async function (w) {
       asAdmin(w, false);
