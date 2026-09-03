@@ -12909,13 +12909,26 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
     hint.classList.toggle('done', atEnd);
   }
 
-  window.kxConsentOpen = function(after){
+  var required = false;
+
+  window.kxConsentOpen = function(after, opts){
     ov = el('kxConsent'); body = el('kxcBody');
     accept = el('kxcAccept'); hint = el('kxcHint');
     if(!ov) { if(after) after(); return; }          // nothing to show: do not block signup
     onAccept = after || null;
+    required = !!(opts && opts.required);
     lastFocus = document.activeElement;
     fill();
+    /* Required mode is for an account that already exists but has never been
+       shown these — a Google or Facebook sign-in, which has no signup form to
+       put them in front of. There is no way past it but to accept: the cancel
+       button signs out, and the backdrop and Escape stop dismissing. */
+    var cancel = ov.querySelector('.kxc-btn:not(.primary)');
+    if(cancel) cancel.textContent = required ? 'ออกจากระบบ' : 'ยกเลิก';
+    var sub = el('kxcSub');
+    if(sub) sub.textContent = required
+      ? 'บัญชีนี้ยังไม่ได้ยอมรับข้อกำหนด โปรดอ่านและกดยอมรับเพื่อใช้งานต่อ'
+      : 'โปรดอ่านก่อนสมัครสมาชิก';
     ov.hidden = false;
     document.body.classList.add('kxc-open');
     body.scrollTop = 0;
@@ -12925,10 +12938,39 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
 
   window.kxConsentClose = function(){
     if(!ov) return;
+    if(required){
+      // the only way out of required mode that is not acceptance
+      required = false;
+      ov.hidden = true;
+      document.body.classList.remove('kxc-open');
+      onAccept = null;
+      if(window.sb && sb.auth) sb.auth.signOut();
+      if(typeof navigateTo === 'function') navigateTo('page-auth');
+      if(typeof kxToast === 'function') kxToast('ต้องยอมรับข้อกำหนดก่อนใช้งาน');
+      return;
+    }
     ov.hidden = true;
     document.body.classList.remove('kxc-open');
     onAccept = null;
     if(lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
+  };
+
+  /* Called on every landing. A brand-new account that reached here without a
+     consent stash — which is every Google and Facebook sign-up, and any email
+     sign-up confirmed on a different device from the one that filled the form —
+     is shown the documents now and its acceptance written then. Deliberately
+     not written on their behalf: an account that never saw the documents has
+     not accepted them, and a record saying otherwise would be worse than none. */
+  window.kxConsentRequireIfMissing = function(){
+    if(!window.kxNeedsConsent) return false;
+    window.kxNeedsConsent = false;
+    var uid = window.kxSession && window.kxSession.user && window.kxSession.user.id;
+    kxConsentOpen(function(){
+      if(uid && window.kxRecordPolicyAcceptance)
+        kxRecordPolicyAcceptance(uid, window.kxPolicyAccepted);
+      window.kxPolicyAccepted = null;
+    }, { required: true });
+    return true;
   };
 
   window.kxConsentAccept = function(){
@@ -12952,9 +12994,11 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
   document.addEventListener('DOMContentLoaded', function(){
     var b = el('kxcBody'), o = el('kxConsent');
     if(b) b.addEventListener('scroll', checkScrolled);
-    if(o) o.addEventListener('click', function(e){ if(e.target === o) kxConsentClose(); });
+    // in required mode kxConsentClose signs out, which is not what a stray
+    // click on the backdrop should do — so those two dismissals are dropped there
+    if(o) o.addEventListener('click', function(e){ if(e.target === o && !required) kxConsentClose(); });
     document.addEventListener('keydown', function(e){
-      if(e.key === 'Escape' && o && !o.hidden) kxConsentClose();
+      if(e.key === 'Escape' && o && !o.hidden && !required) kxConsentClose();
     });
     // one version number, shown wherever the documents show one
     var v = window.KX_DOC;
@@ -17264,7 +17308,7 @@ body.kxc-open { overflow: hidden; }
     if(typeof kxSeedProfile === 'function') kxSeedProfile({ name: name });
 
     if(res.data.session){
-      // email confirmation is off on this project — signed in immediately
+      // a session came back, so the project is not asking for email confirmation
       await kxEnsureProfile(res.data.user);
       kxToast('สมัครสมาชิกสำเร็จ');
       navigateTo(window.kxAuthLanding());
@@ -19727,8 +19771,16 @@ body.kxc-open { overflow: hidden; }
        hang off. It is written after the insert and never before it: the foreign
        key would refuse it, and a consent record for an account that failed to
        be created is a record of nothing. */
-    if(window.kxRecordPolicyAcceptance && pending && pending.policy)
-      await kxRecordPolicyAcceptance(user.id, pending.policy);
+    if(pending && pending.policy){
+      if(window.kxRecordPolicyAcceptance) await kxRecordPolicyAcceptance(user.id, pending.policy);
+    } else {
+      /* No stash: this account was made through Google or Facebook, which have
+         no signup form and so never showed the documents — or the confirmation
+         link was opened on a different device from the one that filled the
+         form. Either way nobody has accepted anything yet, so the landing has
+         to ask before letting them in. */
+      window.kxNeedsConsent = true;
+    }
     window.kxPolicyAccepted = null;
     // the same three the existing-row branch runs, so a first sign-in lands in
     // the same state as every one after it
@@ -19745,6 +19797,8 @@ body.kxc-open { overflow: hidden; }
      login form, signup-with-immediate-session, and boot() after an OAuth
      round-trip — so they cannot drift apart. */
   window.kxAuthLanding = function(){
+    // an account that has never accepted the documents stops here first
+    if(window.kxConsentRequireIfMissing && window.kxConsentRequireIfMissing()) return 'page-auth';
     if(!window.kxProfileIsNew) return 'page-feed';
     window.kxProfileIsNew = false;          // only on the first landing
     kxToast('ยินดีต้อนรับ! กรอกโปรไฟล์ให้ครบเพื่อเริ่มใช้งาน');

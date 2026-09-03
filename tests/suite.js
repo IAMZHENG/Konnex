@@ -2530,6 +2530,77 @@
       } finally { w.kxCurrentUser = was; }
     });
 
+    /* The signup form is not the only way an account comes into existence.
+       Google and Facebook have no form to put the documents in front of, and an
+       email signup confirmed on a different device from the one that filled the
+       form arrives without its stash either. Both used to walk straight in. */
+    it('stops a new account that has accepted nothing', async function (w) {
+      var hadS = w.kxSession, hadN = w.kxProfileIsNew;
+      try {
+        w.kxSession = { user: { id: ME } };
+        w.kxProfileIsNew = true;
+        w.kxNeedsConsent = true;
+        var landing = w.kxAuthLanding();
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        expect(landing).toBe('page-auth', 'it must not land in the app');
+        expect(w.document.getElementById('kxConsent').hidden).toBe(false);
+        var cancel = w.document.querySelector('#kxConsent .kxc-btn:not(.primary)');
+        expect(cancel.textContent).toBe('ออกจากระบบ',
+          'there is no cancel here — the only way past it is to accept');
+      } finally {
+        w.kxSession = hadS; w.kxProfileIsNew = hadN;
+        w.kxNeedsConsent = false; w.kxConsentAccept && (w.document.getElementById('kxConsent').hidden = true);
+        w.document.body.classList.remove('kxc-open');
+      }
+    });
+
+    it('cannot be dismissed by the backdrop or Escape when it is required', async function (w) {
+      var hadS = w.kxSession;
+      try {
+        w.kxSession = { user: { id: ME } };
+        w.kxNeedsConsent = true;
+        w.kxConsentRequireIfMissing();
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        var ov = w.document.getElementById('kxConsent');
+        expect(ov.hidden).toBe(false);
+        ov.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
+        expect(ov.hidden).toBe(false, 'a stray click on the backdrop would sign them out');
+        w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        expect(ov.hidden).toBe(false);
+      } finally {
+        w.kxSession = hadS; w.kxNeedsConsent = false;
+        w.document.getElementById('kxConsent').hidden = true;
+        w.document.body.classList.remove('kxc-open');
+      }
+    });
+
+    /* Never written on anyone's behalf: an account that has not seen the
+       documents has not accepted them, and a record saying otherwise is worse
+       than no record at all. */
+    it('records the acceptance only once it has actually been given', async function (w) {
+      var hadS = w.kxSession, real = w.kxRecordPolicyAcceptance, wrote = null;
+      try {
+        w.kxSession = { user: { id: ME } };
+        w.kxNeedsConsent = true;
+        w.kxRecordPolicyAcceptance = async function (id, stamp) { wrote = { id: id, stamp: stamp }; };
+        w.kxConsentRequireIfMissing();
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        expect(wrote).toBe(null, 'nothing is written just for showing the documents');
+        var b = w.document.getElementById('kxcBody');
+        b.scrollTop = b.scrollHeight;
+        b.dispatchEvent(new w.Event('scroll'));
+        w.document.getElementById('kxcAccept').click();
+        for (var g = 0; g < 5; g++) await Promise.resolve();
+        expect(!!wrote).toBe(true, 'accepting must leave a record');
+        expect(wrote.id).toBe(ME);
+        expect(wrote.stamp.terms).toBe(w.KX_DOC.terms);
+      } finally {
+        w.kxSession = hadS; w.kxRecordPolicyAcceptance = real; w.kxNeedsConsent = false;
+        w.document.getElementById('kxConsent').hidden = true;
+        w.document.body.classList.remove('kxc-open');
+      }
+    });
+
     it('carries a version and an effective date on both', function (w) {
       ['page-terms', 'page-privacy'].forEach(function (id) {
         var v = w.document.querySelector('#' + id + ' .doc-ver');

@@ -3089,6 +3089,31 @@ Three tests hold it: no such input on either entity and no copy left asking for 
 submitted registration whose stash carries no `tax_id`, and a profile save whose update
 does not name the column. Restoring the one line in `PROFILE_COLS` fails the third.
 
+## เข้าสู่ระบบด้วย Google / Facebook แล้วไม่เคยเห็นข้อกำหนด
+
+Turning the social providers on opened a hole in the consent system: `kxConsentOpen`
+was called from exactly one place, the email signup form. A Google or Facebook
+sign-up has no form to put the documents in front of, so those accounts were
+created having seen nothing and with no row in `policy_acceptances`.
+
+Enabling email confirmation widened it. `signUp()` now returns no session, so the
+profile row is built at first *sign-in* from `kx.pendingProfile` in localStorage
+— and a confirmation link opened on a different device from the one that filled
+the form arrives without that stash.
+
+Both are the same shape, so both get the same fix. `kxEnsureProfile` sets
+`kxNeedsConsent` when it creates a row with no acceptance behind it, and
+`kxAuthLanding` — the one place all three sign-in paths land — puts the documents
+up before letting anyone through. In that mode there is no cancel: the button
+says ออกจากระบบ and signs out, and the backdrop and Escape stop dismissing,
+because a stray click should not silently sign someone out.
+
+**The acceptance is never written on anyone's behalf.** It would have been easy
+to stamp the current versions onto every new profile and call the record
+complete, and it would have been a lie: an account that has not seen the
+documents has not accepted them, and a record saying otherwise is worse than no
+record. Three tests hold that line.
+
 ## ช่องว่างระหว่างวงแหวนกับหาง และ [hidden] ที่ไม่ซ่อน
 
 The two gaps between the ring's cut ends and the tail measured **19.5** — 42% of
