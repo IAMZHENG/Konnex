@@ -100,6 +100,58 @@ ${bodyHtml}
 const terms = docOf('page-terms');
 const privacy = docOf('page-privacy');
 
+/* ---------------------------------------------------------------------------
+ * Standalone web pages at real paths.
+ *
+ * Inside the app these documents live behind a hash route, and a hash never
+ * reaches a server: nothing that fetches the URL — Facebook's app review,
+ * Google's OAuth consent screen, a link checker — can see anything but the app
+ * shell. Both of those require a privacy policy URL before they will let an
+ * app go live, so the documents need an address of their own.
+ *
+ * Same extraction as the PDFs, so there is still only one source for the
+ * wording, and the same stylesheet, so they look like the app.
+ * ------------------------------------------------------------------------- */
+function webPage(bodyHtml, title, otherHref, otherLabel) {
+  return `<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<link rel="icon" type="image/svg+xml" href="assets/img/qubequote-icon.svg">
+<style>
+${faces.join('\n')}
+:root{ --ink:#1c1a18; --ink-soft:#565b6e; --line:#e6e7f0; --bg:#f6f8fc; --blue-700:#0846c7; }
+*{ box-sizing:border-box; }
+body{ margin:0; background:var(--bg); color:var(--ink);
+  font-family:'IBM Plex Sans Thai','IBM Plex Sans',system-ui,sans-serif; }
+${docCss}
+.doc-foot a{ color:var(--blue-700); text-decoration:none; font-weight:600; }
+.doc-foot a:hover{ text-decoration:underline; }
+</style></head><body>
+<div class="doc-wrap">
+${bodyHtml}
+<p style="max-width:860px;margin:16px auto 0;font-size:13px;color:var(--ink-soft);text-align:center">
+  <a href="/" style="color:var(--blue-700);text-decoration:none">← กลับไปที่ QubeQuote</a>
+  &nbsp;·&nbsp;
+  <a href="${otherHref}" style="color:var(--blue-700);text-decoration:none">${otherLabel}</a>
+</p>
+</div>
+</body></html>`;
+}
+
+// the in-app cross-link navigates the SPA; on a standalone page it must be a href
+const asWeb = (html, href, label) =>
+  html.replace(/<a class="au-link"[^>]*>[^<]*<\/a>/,
+               '<a class="au-link" href="' + href + '">' + label + '</a>');
+
+fs.writeFileSync(path.join(ROOT, 'terms.html'), webPage(
+  asWeb(terms, 'privacy.html', 'อ่านนโยบายความเป็นส่วนตัว →'),
+  'ข้อกำหนดการใช้งาน — QubeQuote', 'privacy.html', 'นโยบายความเป็นส่วนตัว'));
+fs.writeFileSync(path.join(ROOT, 'privacy.html'), webPage(
+  asWeb(privacy, 'terms.html', 'อ่านข้อกำหนดการใช้งาน →'),
+  'นโยบายความเป็นส่วนตัว — QubeQuote', 'terms.html', 'ข้อกำหนดการใช้งาน'));
+console.log('   เขียน terms.html และ privacy.html (หน้าแยก มี URL จริง)');
+
 const JOBS = [
   { file: '_print-both.html',
     html: pageHtml(terms + '\n<div class="page-break"></div>\n' + privacy,
