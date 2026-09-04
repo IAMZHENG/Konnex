@@ -1,11 +1,16 @@
 # QubeQuote has no server-side code — Supabase is called directly from the browser —
 # so this deploys as a Worker that serves static assets only, no Worker script needed.
 #
-# `name` is deliberately still `konnex`: it is the Worker's identity, and it is what
-# puts the site at konnex.xeeb0262.workers.dev. Changing it here does not rename
-# anything — it deploys a second, empty-history Worker at a new hostname and leaves
-# the old one serving the old build at the old address. Moving the site to a
-# qubequote address is a deploy decision, not a find-and-replace.
+# The public address is https://qubequote.com, attached to this Worker as a custom
+# domain in the Cloudflare dashboard (Workers & Pages → this worker → Domains &
+# Routes). It is deliberately not a `routes` entry here: the dashboard creates the
+# DNS record and the certificate with it, and a route in this file that does not
+# match the zone fails the build instead of the request.
+#
+# `name` is deliberately still `konnex`. It is the Worker's identity, not the
+# site's address — changing it renames nothing, it deploys a second, empty-history
+# Worker and leaves the old one serving the old build. konnex.xeeb0262.workers.dev
+# keeps working alongside the custom domain; both reach this same Worker.
 name = "konnex"
 compatibility_date = "2026-01-01"
 
