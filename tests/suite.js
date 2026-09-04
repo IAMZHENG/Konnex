@@ -2157,6 +2157,95 @@
       /* and the landing is no longer held by *this* check. It can still stop at
          page-auth for the consent it has never been given, which is a different
          gate with its own tests — so this asserts the flag, not the page. */
+      w.kxNeedsConsent = false;
+    });
+  });
+
+  /* The consent gate reads the table, not a flag.
+     What decided this before was window.kxNeedsConsent, set in exactly one place
+     — the moment a profiles row was created. So a failed acceptance write was
+     never noticed and never retried, an account that predated the feature was
+     never asked at all, and bumping KX_DOC would have asked nobody. */
+  describe('kxPolicyOnRecord — what the consent gate asks', function () {
+    function rows(w, data, error) {
+      return plan(w, { policy_acceptances: { _: { data: data, error: error || null } } });
+    }
+    function both(w) {
+      return [{ document: 'terms',   version: w.KX_DOC.terms },
+              { document: 'privacy', version: w.KX_DOC.privacy }];
+    }
+    it('says yes when both current versions are on record', async function (w) {
+      rows(w, both(w));
+      var on = await w.kxPolicyOnRecord(ME);
+      restore(w);
+      expect(on).toBe(true);
+    });
+    it('says no when the account has nothing on record', async function (w) {
+      rows(w, []);
+      var on = await w.kxPolicyOnRecord(ME);
+      restore(w);
+      expect(on).toBe(false, 'every account that predates this feature is in here');
+    });
+    it('says no when only an older version was accepted', async function (w) {
+      rows(w, [{ document: 'terms', version: w.KX_DOC.terms },
+               { document: 'privacy', version: '0.9' }]);
+      var on = await w.kxPolicyOnRecord(ME);
+      restore(w);
+      expect(on).toBe(false, 'the table is keyed by version so a bump can re-ask');
+    });
+    it('says "cannot tell" rather than no when the table is missing', async function (w) {
+      rows(w, null, ERR.tableMissing);
+      var on = await w.kxPolicyOnRecord(ME);
+      restore(w);
+      expect(on).toBe(null,
+        'gating on an answer we could not get locks everyone behind a modal ' +
+        'whose acceptance cannot be stored either');
+    });
+    it('does not gate on "cannot tell"', async function (w) {
+      rows(w, null, ERR.tableMissing);
+      await w.kxRefreshConsentNeed(ME);
+      restore(w);
+      expect(w.kxNeedsConsent).toBe(false);
+    });
+    it('gates an existing account that has nothing on record', async function (w) {
+      plan(w, { profiles: { _: { data: { id: ME, company_name: 'บจก. เก่า' }, error: null } },
+                policy_acceptances: { _: { data: [], error: null } } });
+      w.kxNeedsConsent = false;
+      await w.kxEnsureProfile({ id: ME, email: 'a@b.c', user_metadata: {} });
+      restore(w);
+      expect(w.kxNeedsConsent).toBe(true,
+        'this branch is the one a never-asked account comes back through');
+      w.kxNeedsConsent = false;
+    });
+  });
+
+  describe('kxConsentAccept — accepting is not the way out that signs you out', function () {
+    it('leaves the session alone when the modal was required', async function (w) {
+      var hadS = w.kxSession, real = w.kxRecordPolicyAcceptance;
+      var signedOut = false, went = [];
+      var realNav = w.navigateTo, realSb = w.sb;
+      try {
+        w.kxSession = { user: { id: ME } };
+        w.kxNeedsConsent = true;
+        w.kxRecordPolicyAcceptance = async function () { return { error: null }; };
+        w.sb = { auth: { signOut: function () { signedOut = true; return Promise.resolve({ error: null }); } } };
+        w.navigateTo = function (id) { went.push(id); };
+        w.kxConsentRequireIfMissing();
+        for (var f = 0; f < 5; f++) await Promise.resolve();
+        var b = w.document.getElementById('kxcBody');
+        b.scrollTop = b.scrollHeight;
+        b.dispatchEvent(new w.Event('scroll'));
+        w.document.getElementById('kxcAccept').click();
+        for (var g = 0; g < 8; g++) await Promise.resolve();
+        expect(signedOut).toBe(false,
+          'agreeing used to run the cancel path: signed out, and told to agree');
+        expect(went).notToContain('page-auth');
+      } finally {
+        w.kxSession = hadS; w.kxRecordPolicyAcceptance = real;
+        w.sb = realSb; w.navigateTo = realNav; w.kxNeedsConsent = false;
+        w.document.getElementById('kxConsent').hidden = true;
+        w.document.body.classList.remove('kxc-open');
+      }
     });
   });
 

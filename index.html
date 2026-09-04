@@ -12964,10 +12964,18 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
     if(!window.kxNeedsConsent) return false;
     window.kxNeedsConsent = false;
     var uid = window.kxSession && window.kxSession.user && window.kxSession.user.id;
-    kxConsentOpen(function(){
-      if(uid && window.kxRecordPolicyAcceptance)
-        kxRecordPolicyAcceptance(uid, window.kxPolicyAccepted);
+    kxConsentOpen(async function(){
+      var stamp = window.kxPolicyAccepted;
       window.kxPolicyAccepted = null;
+      if(!uid || !window.kxRecordPolicyAcceptance) return;
+      /* Awaited, and its result read. This used to be fired off and forgotten,
+         so a write that failed left the account inside the app with nothing on
+         record and nothing able to notice. Saying so is the honest half; the
+         other half is that kxPolicyOnRecord asks the table again on the next
+         sign-in, so the ask comes back on its own. */
+      var res = await kxRecordPolicyAcceptance(uid, stamp);
+      if(res && res.error)
+        kxToast('บันทึกการยอมรับไม่สำเร็จ — ระบบจะถามอีกครั้งเมื่อเข้าสู่ระบบครั้งหน้า');
     }, { required: true });
     return true;
   };
@@ -12986,6 +12994,13 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
       at: new Date().toISOString()
     };
     var go = onAccept;
+    /* Cleared before closing, and this is not a detail. kxConsentClose's
+       required branch is the way *out* of required mode that is not acceptance:
+       it signs the account out and says "ต้องยอมรับข้อกำหนดก่อนใช้งาน". Accepting
+       used to fall straight through it, so anyone shown the documents because
+       their account had no record on file — every Google and Facebook sign-up —
+       was signed out at the moment they agreed, and told they had to agree. */
+    required = false;
     kxConsentClose();
     if(go) go();
   };
@@ -13022,12 +13037,59 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
     var res = await sb.from('policy_acceptances')
       .upsert(rows, { onConflict: 'profile_id,document,version', ignoreDuplicates: true });
     if(res.error){
-      // the table is the record, not a gate: a signup must not fail over it
+      // a signup must not fail over it — but it must not be forgotten either.
+      // kxPolicyOnRecord below re-asks on the next landing, because it reads the
+      // table rather than trusting that this write happened.
       console.error('kxRecordPolicyAcceptance failed', res.error);
       if(window.kxTableMissing && window.kxTableMissing(res.error))
         console.warn('ยังไม่ได้รัน database/policy_acceptances.sql');
     }
     return res;
+  };
+
+  /* Is this account on record as having accepted the versions that are current
+     right now?
+
+     What decided this before was window.kxNeedsConsent, a flag set in exactly
+     one place — the moment kxEnsureProfile created a profiles row. Three things
+     fell through that:
+
+       · the acceptance write failed (table missing, RLS, a dropped request) and
+         nothing noticed, because the flag had already been cleared and the write
+         was not awaited. The account was never asked again: every later sign-in
+         takes the row-already-exists branch, which never set the flag.
+       · accounts created before this feature shipped were never asked at all,
+         for the same reason.
+       · bumping KX_DOC.terms would have asked nobody, though the table is keyed
+         by version precisely so that it could.
+
+     The table is the record, so the table is what decides.
+
+     null means the question could not be answered — the migration has not been
+     run, or the request did not land. A null must never gate: holding everyone
+     behind a modal whose acceptance cannot be stored either is worse than the
+     gap it closes. */
+  window.kxPolicyOnRecord = async function(profileId){
+    if(!profileId) return null;
+    var res = await sb.from('policy_acceptances')
+      .select('document, version').eq('profile_id', profileId);
+    if(res.error){
+      console.error('kxPolicyOnRecord failed', res.error);
+      if(window.kxTableMissing && window.kxTableMissing(res.error))
+        console.warn('ยังไม่ได้รัน database/policy_acceptances.sql');
+      return null;
+    }
+    var have = res.data || [];
+    return [['terms', window.KX_DOC.terms], ['privacy', window.KX_DOC.privacy]]
+      .every(function(w){
+        return have.some(function(r){ return r.document === w[0] && r.version === w[1]; });
+      });
+  };
+
+  // the one place kxNeedsConsent is set, so it can never drift from the table
+  window.kxRefreshConsentNeed = async function(profileId){
+    window.kxNeedsConsent = (await window.kxPolicyOnRecord(profileId)) === false;
+    return window.kxNeedsConsent;
   };
 
   /* What ตั้งค่า shows: the versions this account is on record as having
@@ -19731,6 +19793,10 @@ body.kxc-open { overflow: hidden; }
       // person/company-only field matches whoever just signed in
       if(window.kxSyncEntity) window.kxSyncEntity(existing.data.business_type);
       window.kxProfileIsNew = false;
+      /* Every sign-in, not only the first. This branch is the one an account
+         that was never asked — or whose acceptance failed to store — comes back
+         through, so it is the only place that can catch either. */
+      if(window.kxRefreshConsentNeed) await window.kxRefreshConsentNeed(user.id);
       return existing.data;
     }
     var pending = null;
@@ -19793,16 +19859,15 @@ body.kxc-open { overflow: hidden; }
        hang off. It is written after the insert and never before it: the foreign
        key would refuse it, and a consent record for an account that failed to
        be created is a record of nothing. */
-    if(pending && pending.policy){
-      if(window.kxRecordPolicyAcceptance) await kxRecordPolicyAcceptance(user.id, pending.policy);
-    } else {
-      /* No stash: this account was made through Google or Facebook, which have
-         no signup form and so never showed the documents — or the confirmation
-         link was opened on a different device from the one that filled the
-         form. Either way nobody has accepted anything yet, so the landing has
-         to ask before letting them in. */
-      window.kxNeedsConsent = true;
+    if(pending && pending.policy && window.kxRecordPolicyAcceptance){
+      await kxRecordPolicyAcceptance(user.id, pending.policy);
     }
+    /* Then ask the table, rather than assume the line above worked or that a
+       missing stash means nobody accepted. No stash is the ordinary case for a
+       Google or Facebook sign-up, which never saw a signup form — and for an
+       email confirmation opened on a different device from the one that filled
+       it in. Both must be asked. So must a write that just failed. */
+    if(window.kxRefreshConsentNeed) await window.kxRefreshConsentNeed(user.id);
     window.kxPolicyAccepted = null;
     // the same three the existing-row branch runs, so a first sign-in lands in
     // the same state as every one after it
@@ -19931,6 +19996,10 @@ body.kxc-open { overflow: hidden; }
          below, so a broken profile would sail past its check. Stop here too —
          without a profiles row none of these pages can do anything anyway. */
       if(window.kxProfileError){ navigateTo('page-auth'); return; }
+      /* Refreshing onto any page but page-auth also skips kxAuthLanding, and the
+         consent gate lives there. Without this, an account with nothing on record
+         only ever gets asked if it happens to land on the login page. */
+      if(window.kxNeedsConsent && window.kxConsentRequireIfMissing) kxConsentRequireIfMissing();
       // not awaited: none of these should hold up the app
       if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
       if(window.kxWarmInterest) window.kxWarmInterest();
@@ -23195,9 +23264,12 @@ body.kxc-open { overflow: hidden; }
     /* Uploaded one at a time and in order, so the array matches what was picked.
        Each goes through kxImageFile like every other upload — phone photos
        arrive as multi-megabyte HEIC, and the canvas pass normalises both. A
-       photo that fails is skipped rather than losing the whole entry. */
+       photo that fails is skipped rather than losing the whole entry, which is
+       the right trade — but it used to be skipped silently, and the entry then
+       saved under "เพิ่มผลงานแล้ว" with the picture simply gone. Count them and
+       say so, so the person knows to try that photo again. */
     var files = Array.prototype.slice.call(document.getElementById('pwImage').files || []);
-    var urls = [];
+    var urls = [], failed = 0;
     for(var i = 0; i < files.length; i++){
       if(!window.kxUploadFile) break;
       btn.textContent = 'กำลังอัปโหลดรูป ' + (i + 1) + '/' + files.length + '...';
@@ -23205,7 +23277,7 @@ body.kxc-open { overflow: hidden; }
         var norm = window.kxImageFile
           ? await window.kxImageFile(URL.createObjectURL(files[i]), files[i].name) : files[i];
         urls.push(await window.kxUploadFile('post-images', norm || files[i]));
-      }catch(e){ console.error('portfolio image upload failed', e); }
+      }catch(e){ failed++; console.error('portfolio image upload failed', e); }
     }
     btn.textContent = 'กำลังบันทึก...';
     var res = await sb.from('portfolio').insert({
@@ -23223,7 +23295,9 @@ body.kxc-open { overflow: hidden; }
       return;
     }
     kxCloseWork();
-    kxToast('เพิ่มผลงานแล้ว');
+    kxToast(failed
+      ? 'เพิ่มผลงานแล้ว แต่อัปโหลดรูปไม่สำเร็จ ' + failed + ' รูป — แก้ไขผลงานเพื่อลองใหม่'
+      : 'เพิ่มผลงานแล้ว');
     kxLoadPortfolio(window.kxSession.user.id, true);
   };
 
