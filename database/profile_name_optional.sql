@@ -1,0 +1,44 @@
+-- profiles.company_name ต้องเป็น null ได้
+--
+-- อาการที่ผู้ใช้เจอ: โพสต์ประกาศแล้วขึ้น
+--   insert or update on table "posts" violates foreign key constraint
+--   "posts_owner_id_fkey"
+--
+-- posts.owner_id อ้างถึง profiles(id) ข้อความนี้จึงแปลว่า "บัญชีนี้ไม่มีแถวใน
+-- profiles" ไม่ใช่ปัญหาที่ตาราง posts เลย
+--
+-- ทำไมถึงไม่มีแถว: schema.sql ประกาศ company_name เป็น `not null` แต่โค้ด
+-- kxEnsureProfile ตั้งใจเขียน null ลงไปเมื่อไม่มีชื่อที่ผู้ใช้พิมพ์เอง ซึ่ง
+-- เกิดขึ้นสองกรณี
+--
+--   1. สมัคร/เข้าสู่ระบบด้วย Google หรือ Facebook — ไม่มีฟอร์มสมัคร จึงไม่มี
+--      ชื่อบริษัท และเราตั้งใจไม่หยิบชื่อที่ผู้ให้บริการให้มาใส่แทน เพราะบัญชี
+--      ใหม่ที่เปิดมาแล้วมีชื่อที่เจ้าตัวไม่เคยกรอก อ่านแล้วเหมือนข้อมูลคนอื่น
+--   2. กดลิงก์ยืนยันอีเมลคนละเครื่องกับที่กรอกฟอร์ม — ค่าที่ฟอร์มพักไว้อยู่ใน
+--      localStorage ของอีกเครื่อง
+--
+-- ทั้งสองกรณี insert ล้มด้วย not-null violation แล้วบัญชีนั้นก็ไม่มีโปรไฟล์
+-- ตลอดไป ทุกอย่างที่อ้างถึง profiles จึงพังตามกันหมด
+--
+-- ฝั่งฐานข้อมูลถูกเขียนไว้รองรับ null อยู่แล้ว — ฟังก์ชันแจ้งเตือนใน
+-- notifications.sql, connections.sql, portfolio_v2.sql และ rename_qubequote.sql
+-- ล้วนใช้ coalesce(company_name, 'ผู้ใช้ QubeQuote') มีแต่ตัวคอนสเตรนต์ที่ไม่ได้
+-- ผ่อนตาม
+--
+-- รันครั้งเดียวใน Supabase SQL editor รันซ้ำได้ ไม่มีผลข้างเคียง
+
+alter table profiles alter column company_name drop not null;
+
+-- ตรวจว่าสำเร็จ: ควรได้ is_nullable = YES
+--
+--   select column_name, is_nullable
+--     from information_schema.columns
+--    where table_name = 'profiles' and column_name = 'company_name';
+--
+-- บัญชีที่พังไปแล้วจะซ่อมตัวเอง — kxEnsureProfile ทำงานทุกครั้งที่เข้าสู่ระบบ
+-- และจะ insert ใหม่ให้เมื่อยังไม่มีแถว เจ้าของบัญชีแค่เข้าสู่ระบบอีกครั้ง
+--
+-- นับบัญชีที่ยังไม่มีโปรไฟล์:
+--
+--   select count(*) from auth.users u
+--    where not exists (select 1 from profiles p where p.id = u.id);

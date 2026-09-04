@@ -2099,6 +2099,67 @@
     });
   });
 
+  /* The insert that fails.
+     company_name was declared NOT NULL in schema.sql while the code deliberately
+     writes null for anyone who arrived without a signup form — Google, Facebook,
+     or an email link opened on a second device. The row was refused, the failure
+     was logged and swallowed, and the app handed back the object it had just
+     failed to store. Everything looked signed in until the first post, which
+     came back as
+         violates foreign key constraint "posts_owner_id_fkey"
+     — a message about a table the person never touched.
+     database/profile_name_optional.sql drops the constraint; these are about the
+     half that is this file's job: never reporting a failed write as a success. */
+  describe('kxEnsureProfile — when the insert is refused', function () {
+    function refused(w) {
+      return plan(w, { profiles: { select: { data: null, error: null },
+                                   insert: { data: null, error: ERR.notNull } } });
+    }
+    it('does not hand back a profile it failed to store', async function (w) {
+      refused(w);
+      w.localStorage.removeItem('kx.pendingProfile');
+      w.kxCurrentUser = { id: 'stale' };
+      var got = await w.kxEnsureProfile({ id: ME, email: 'a@b.c', user_metadata: {} });
+      restore(w);
+      expect(got).toBe(null, 'a row that was not written is not a profile');
+      expect(w.kxCurrentUser).toBe(null,
+        'it used to keep the unsaved object here, which is what made the app look fine');
+      expect(!!w.kxProfileError).toBe(true);
+      w.kxProfileError = null;   // it gates kxAuthLanding for every test after this
+    });
+    it('keeps the stash so a retry still has the name and the consent', async function (w) {
+      refused(w);
+      w.localStorage.setItem('kx.pendingProfile', JSON.stringify({
+        email: 'typed@example.com', company_name: 'บจก. ที่พิมพ์เอง',
+        policy: { terms: '1.0', privacy: '1.0' } }));
+      await w.kxEnsureProfile({ id: ME, email: 'typed@example.com', user_metadata: {} });
+      restore(w);
+      var kept = JSON.parse(w.localStorage.getItem('kx.pendingProfile') || 'null');
+      expect(!!kept).toBe(true, 'spending it on a failed insert leaves the retry with nothing');
+      expect(kept.company_name).toBe('บจก. ที่พิมพ์เอง');
+      expect(!!kept.policy).toBe(true, 'the accepted versions are the only copy too');
+      w.localStorage.removeItem('kx.pendingProfile');
+      w.kxProfileError = null;
+    });
+    it('holds the sign-in at page-auth instead of letting it into the feed', function (w) {
+      w.kxProfileError = ERR.notNull;
+      w.kxProfileIsNew = false;
+      expect(w.kxAuthLanding()).toBe('page-auth',
+        'the feed would only defer the failure to the first thing touching profiles');
+      w.kxProfileError = null;
+    });
+    it('clears the flag once the row is finally there', async function (w) {
+      w.kxProfileError = ERR.notNull;
+      plan(w, { profiles: { select: { data: { id: ME, company_name: null }, error: null } } });
+      await w.kxEnsureProfile({ id: ME, email: 'a@b.c', user_metadata: {} });
+      restore(w);
+      expect(w.kxProfileError).toBe(null, 'an earlier failed sign-in has healed');
+      /* and the landing is no longer held by *this* check. It can still stop at
+         page-auth for the consent it has never been given, which is a different
+         gate with its own tests — so this asserts the flag, not the page. */
+    });
+  });
+
   // ============================================ ชื่อและโลโก้ QubeQuote ===
   /* The app shipped as Konnex. Two things keep that name deliberately and both
      would be silently wrong to "fix": the Cloudflare Worker's name, which is

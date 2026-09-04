@@ -19710,7 +19710,8 @@ body.kxc-open { overflow: hidden; }
   window.kxEnsureProfile = async function(user){
     var existing = await sb.from('profiles').select('*').eq('id', user.id).maybeSingle();
     if(existing.data){
-      window.kxCurrentUser = existing.data;
+      window.kxCurrentUser  = existing.data;
+      window.kxProfileError = null;   // an earlier failed sign-in has healed
       if(window.kxApplyAvatars) window.kxApplyAvatars();
       /* The rail was drawn before this row arrived, so its account line still
          read the "บัญชีของฉัน" placeholder — until the first navigation redrew
@@ -19763,11 +19764,30 @@ body.kxc-open { overflow: hidden; }
       business_type: (pending && pending.business_type) || 'company'
     };
     var ins = await sb.from('profiles').insert(row).select().single();
-    if(pending){ try{ localStorage.removeItem('kx.pendingProfile'); }catch(e){} }
     // reaching the insert at all means there was no row a moment ago: this
     // account has never been signed into before
     window.kxProfileIsNew = true;
-    if(ins.error){ console.error('profile insert failed', ins.error); window.kxCurrentUser = row; return row; }
+    if(ins.error){
+      /* This used to hand back `row` — the very object that had just failed to
+         store — and let the app carry on. The session was real, so everything
+         looked signed in, and the failure surfaced much later as
+
+             violates foreign key constraint "posts_owner_id_fkey"
+
+         on the first attempt to post, naming a table the person never touched.
+         A row that was not written is not a profile. Say so here instead.
+
+         The stash is deliberately NOT cleared: the name and the accepted
+         document versions it holds are the only copy, and spending them on a
+         failed insert leaves the retry with nothing. */
+      console.error('profile insert failed', ins.error);
+      window.kxCurrentUser  = null;
+      window.kxProfileError = ins.error;
+      kxToast('สร้างโปรไฟล์ไม่สำเร็จ: ' + (ins.error.message || 'กรุณาลองเข้าสู่ระบบอีกครั้ง'));
+      return null;
+    }
+    window.kxProfileError = null;
+    if(pending){ try{ localStorage.removeItem('kx.pendingProfile'); }catch(e){} }
     window.kxCurrentUser = ins.data;
     /* Now that the profiles row exists there is something for the consent to
        hang off. It is written after the insert and never before it: the foreign
@@ -19799,6 +19819,11 @@ body.kxc-open { overflow: hidden; }
      login form, signup-with-immediate-session, and boot() after an OAuth
      round-trip — so they cannot drift apart. */
   window.kxAuthLanding = function(){
+    /* A sign-in whose profiles row could not be written is not a working
+       session. Letting it into the feed only defers the failure to the first
+       thing that points at profiles — posting, quoting, saving — where it
+       arrives as a foreign-key error about a table the person never touched. */
+    if(window.kxProfileError) return 'page-auth';
     // an account that has never accepted the documents stops here first
     if(window.kxConsentRequireIfMissing && window.kxConsentRequireIfMissing()) return 'page-auth';
     if(!window.kxProfileIsNew) return 'page-feed';
@@ -19902,6 +19927,10 @@ body.kxc-open { overflow: hidden; }
     }
     if(window.kxSession){
       await kxEnsureProfile(window.kxSession.user);
+      /* Refreshing on any page other than page-auth skips the landing helper
+         below, so a broken profile would sail past its check. Stop here too —
+         without a profiles row none of these pages can do anything anyway. */
+      if(window.kxProfileError){ navigateTo('page-auth'); return; }
       // not awaited: none of these should hold up the app
       if(window.kxRefreshWaitingCount) window.kxRefreshWaitingCount();
       if(window.kxWarmInterest) window.kxWarmInterest();

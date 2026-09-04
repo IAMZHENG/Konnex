@@ -136,7 +136,9 @@
   var ERR = {
     tableMissing: { code: 'PGRST205', message: "Could not find the table 'public.x' in the schema cache" },
     fnMissing:    { code: 'PGRST202', message: 'Could not find the function public.x' },
-    rlsRefused:   { code: '42501',    message: 'new row violates row-level security policy' }
+    rlsRefused:   { code: '42501',    message: 'new row violates row-level security policy' },
+    // what profiles.insert really answered while company_name was still NOT NULL
+    notNull:      { code: '23502',    message: 'null value in column "company_name" of relation "profiles" violates not-null constraint' }
   };
 
   // ------------------------------------------------------------------- run ---
