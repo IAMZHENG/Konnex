@@ -396,6 +396,9 @@ body{ margin:0; background:var(--bg); color:var(--ink);
     padding: 16px 20px; line-height: 2; font-size: 14.5px;
     }
 .doc-contact b { color: #cddcff; }
+/* the card is solid blue, so an unstyled link would render in the UA's own
+   dark blue and disappear into the background */
+.doc-contact a { color: #fff; text-decoration: underline; }
 .doc-foot { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line, #e6e7f0); }
 .doc-foot .au-link { cursor: pointer; font-weight: 600; }
 .doc-fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-soft, #565b6e); line-height: 1.7; }
