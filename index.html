@@ -12856,6 +12856,117 @@ html, body{
   </div>
 </div>
 
+<!-- แชร์ประกาศ -->
+<div class="kxsh-ov" id="kxShare" role="dialog" aria-modal="true" aria-labelledby="kxshTitle" hidden
+     onclick="if(event.target.id==='kxShare')kxShareClose()">
+  <div class="kxsh-box">
+    <div class="kxsh-title" id="kxshTitle">แชร์ประกาศนี้</div>
+    <div class="kxsh-name" id="kxshName"></div>
+    <div class="kxsh-row">
+      <button type="button" class="kxsh-app" onclick="kxShareTo('line')">
+        <span class="kxsh-ic line">LINE</span><span>LINE</span></button>
+      <button type="button" class="kxsh-app" onclick="kxShareTo('facebook')">
+        <span class="kxsh-ic fb">f</span><span>Facebook</span></button>
+      <button type="button" class="kxsh-app" onclick="kxShareTo('email')">
+        <span class="kxsh-ic mail">✉</span><span>อีเมล</span></button>
+    </div>
+    <div class="kxsh-link">
+      <!-- select-on-click is bound in script: an inline this.select() reads as a
+           call to an undefined global to anything scanning these attributes -->
+      <input type="text" id="kxshUrl" readonly aria-label="ลิงก์ประกาศ">
+      <button type="button" class="kxsh-copy" id="kxshCopy" onclick="kxShareCopy()">คัดลอก</button>
+    </div>
+    <button type="button" class="kxsh-close" onclick="kxShareClose()">ปิด</button>
+  </div>
+</div>
+
+<script>
+/* ===== แชร์ประกาศไปยัง LINE / Facebook / อีเมล =====
+
+   The link is the listing's own permalink — the same #page-rfq-detail/<id> the
+   detail page already writes into the address bar, so what the recipient opens
+   is the listing and not the feed.
+
+   Note for whoever reads this next: an unauthenticated visitor who follows one
+   of these links is sent to page-auth by the session guard, because detail pages
+   are not in KX_OPEN_PAGES. Sharing therefore reaches people who already have an
+   account. Opening listings to signed-out visitors is a product decision with an
+   RLS side to it, not a tweak to this file. */
+(function(){
+  var shareUrl = '', shareTitle = '';
+  var ov = null;
+
+  window.kxShareOpen = function(el, postId, kind){
+    // the six demo cards in the feed markup carry no id, exactly as with saving
+    if(!postId || postId === 'undefined'){
+      kxToast('ตัวอย่างประกาศ — แชร์ได้เฉพาะประกาศจริง'); return;
+    }
+    var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
+    shareUrl = location.origin + location.pathname + '#' + page + '/' + postId;
+    /* Read off the card rather than passed in: a title goes through an inline
+       onclick otherwise, where an apostrophe in someone's listing would end the
+       argument early and break the handler. */
+    var card = el && el.closest ? el.closest('.post-card') : null;
+    var t = card && card.querySelector('.post-title');
+    shareTitle = (t && t.textContent.trim()) || 'ประกาศบน QubeQuote';
+
+    ov = document.getElementById('kxShare');
+    if(!ov) return;
+    document.getElementById('kxshName').textContent = shareTitle;
+    var field = document.getElementById('kxshUrl');
+    field.value = shareUrl;
+    if(!field._kxSelectBound){
+      field._kxSelectBound = true;
+      field.addEventListener('click', function(){ this.select(); });
+    }
+    var c = document.getElementById('kxshCopy');
+    if(c) c.textContent = 'คัดลอก';
+    ov.hidden = false;
+  };
+
+  window.kxShareClose = function(){
+    var o = document.getElementById('kxShare');
+    if(o) o.hidden = true;
+  };
+
+  window.kxShareTo = function(net){
+    if(!shareUrl) return;
+    var u = encodeURIComponent(shareUrl), t = encodeURIComponent(shareTitle);
+    if(net === 'email'){
+      location.href = 'mailto:?subject=' + t +
+        '&body=' + encodeURIComponent(shareTitle + '\n\n' + shareUrl);
+    } else {
+      var go = net === 'line'
+        ? 'https://social-plugins.line.me/lineit/share?url=' + u
+        : 'https://www.facebook.com/sharer/sharer.php?u=' + u;
+      window.open(go, '_blank', 'noopener,noreferrer');
+    }
+    kxShareClose();
+  };
+
+  window.kxShareCopy = async function(){
+    var btn = document.getElementById('kxshCopy');
+    try{
+      await navigator.clipboard.writeText(shareUrl);
+    }catch(e){
+      // clipboard needs a secure context and a permission; the field is there to
+      // be selected by hand when it is refused, so say that rather than nothing
+      var f = document.getElementById('kxshUrl');
+      if(f){ f.focus(); f.select(); }
+      kxToast('คัดลอกอัตโนมัติไม่ได้ — กด Ctrl+C เพื่อคัดลอกลิงก์ที่เลือกไว้');
+      return;
+    }
+    if(btn) btn.textContent = 'คัดลอกแล้ว';
+    kxToast('คัดลอกลิงก์แล้ว');
+  };
+
+  document.addEventListener('keydown', function(e){
+    var o = document.getElementById('kxShare');
+    if(e.key === 'Escape' && o && !o.hidden) kxShareClose();
+  });
+})();
+</script>
+
 <script>
 /* ===== ยอมรับข้อกำหนดก่อนสมัคร และเก็บบันทึกไว้ =====
 
@@ -13176,6 +13287,11 @@ var currentPage = null;
     '📣':'<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15 8a5 5 0 0 1 0 8"/>',
     '🔔':'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
     '🔖':'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+    /* Same three-node share glyph the icon system already draws elsewhere. It
+       has to live in this map too: this is the one kxApplyIcons walks, and an
+       emoji it does not know stays an emoji — beside 💬 ถาม, drawn as a stroked
+       icon, the difference reads as a mistake. */
+    '🔗':'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5 15.4 17M15.4 7 8.6 10.5"/>',
     '🕘':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     '🕗':'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     '⏰':'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M5 3 2 6M19 3l3 3"/>',
@@ -13843,7 +13959,17 @@ window.kxApplySavedMarks = function(root){
     var on = !!window.kxSavedIds[el.getAttribute('data-post-id')];
     el.setAttribute('data-saved', on ? '1' : '0');
     el.style.color = on ? 'var(--blue-600)' : '';
-    el.textContent = on ? '🔖 บันทึกแล้ว' : '🔖 บันทึก';
+    /* The one in the card's top corner is the mark itself, with no room for a
+       word beside it — writing the label in would replace the icon with text
+       the corner cannot hold. Its state is carried by colour and by the title,
+       which is also what a screen reader reads. */
+    if(el.getAttribute('data-icon-only')){
+      el.textContent = '🔖';
+      el.setAttribute('title', on ? 'บันทึกไว้แล้ว — กดเพื่อเอาออก' : 'บันทึกประกาศนี้');
+      el.setAttribute('aria-label', el.getAttribute('title'));
+    } else {
+      el.textContent = on ? '🔖 บันทึกแล้ว' : '🔖 บันทึก';
+    }
     if(window.kxApplyIcons) window.kxApplyIcons(el);
   });
 };
@@ -15594,6 +15720,23 @@ body.kx-auth .kx-burger{ display:none !important; }
 }
 #page-feed .pc-kind.sell{ background:#0f7a43; }
 
+/* the top-right corner: kind badge, then บันทึก. Unscoped because the profile
+   wall builds its cards with the same function and needs the same corner. */
+.pc-head-right{
+  flex:none; align-self:flex-start;
+  display:flex; align-items:center; gap:8px;
+}
+.pc-save-top{
+  width:32px; height:32px; flex:none; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:var(--ink-soft, #565b6e);
+  background:transparent; transition:background .12s, color .12s;
+}
+.pc-save-top:hover{ background:var(--bg, #f6f8fc); color:var(--blue-600, #0a5bff); }
+.pc-save-top:focus-visible{ outline:2px solid var(--blue-600, #0a5bff); outline-offset:2px; }
+.pc-save-top[data-saved="1"]{ color:var(--blue-600, #0a5bff) !important; }
+.pc-save-top svg{ width:19px; height:19px; }
+
 /* what they said */
 #page-feed .pc-text{ padding:0 16px 12px; }
 /* 15, below the 15.5 of the poster's name. The card is a person posting a
@@ -16953,6 +17096,59 @@ body.kxc-open { overflow: hidden; }
 .kxc-btn.primary { background: #0056fd; border-color: #0056fd; color: #fff; }
 .kxc-btn.primary:disabled { background: #b9c6dd; border-color: #b9c6dd; cursor: not-allowed; }
 .set-policy-row { font-size: 14px; line-height: 1.9; color: var(--ink, #1c1a18); }
+
+/* ---- แชร์ประกาศ ---- */
+.kxsh-ov {
+    position: fixed; inset: 0; z-index: 4100;
+    background: rgba(12, 20, 40, .58);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+    }
+.kxsh-ov[hidden] { display: none !important; }
+.kxsh-box {
+    background: #fff; border-radius: 16px; width: 420px; max-width: 100%;
+    padding: 22px 22px 18px; box-shadow: 0 26px 70px rgba(15, 25, 50, .35);
+    }
+.kxsh-title { font-size: 17px; font-weight: 700; color: var(--ink, #1c1a18); }
+.kxsh-name {
+    font-size: 14px; color: var(--ink-soft, #565b6e); margin: 5px 0 16px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+.kxsh-row { display: flex; gap: 10px; }
+.kxsh-app {
+    flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 6px; border: 1.5px solid var(--line, #e6e7f0); border-radius: 12px;
+    background: #fff; color: var(--ink, #1c1a18);
+    font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+    }
+.kxsh-app:hover { border-color: var(--blue-600, #0a5bff); background: var(--bg, #f6f8fc); }
+.kxsh-ic {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 15px;
+    }
+.kxsh-ic.line { background: #06c755; font-size: 11px; letter-spacing: .3px; }
+.kxsh-ic.fb   { background: #1877f2; font-size: 20px; }
+.kxsh-ic.mail { background: #565b6e; font-size: 18px; }
+.kxsh-link { display: flex; gap: 8px; margin: 16px 0 4px; }
+.kxsh-link input {
+    flex: 1 1 auto; min-width: 0; font-family: inherit; font-size: 13.5px;
+    padding: 10px 12px; border: 1.5px solid var(--line, #e6e7f0); border-radius: 10px;
+    color: var(--ink-soft, #565b6e); background: var(--bg, #f6f8fc);
+    }
+.kxsh-copy {
+    flex: none; border: 1.5px solid #0056fd; background: #0056fd; color: #fff;
+    border-radius: 10px; padding: 10px 16px; font-family: inherit;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+.kxsh-close {
+    width: 100%; margin-top: 12px; border: 0; background: none;
+    color: var(--ink-soft, #565b6e); font-family: inherit; font-size: 14px;
+    font-weight: 600; padding: 8px; cursor: pointer;
+    }
+.kxsh-close:hover { color: var(--ink, #1c1a18); }
+@media (max-width: 640px) {
+    .kxsh-app { padding: 12px 4px; font-size: 12.5px; }
+    }
 @media (max-width: 640px) {
     .kxc-ov { padding: 0; }
     .kxc-box { max-height: 100vh; height: 100%; border-radius: 0; width: 100%; }
@@ -21172,8 +21368,19 @@ body.kxc-open { overflow: hidden; }
            so the emoji survived — and an emoji is at the mercy of the system font:
            on Windows the cart came through as a hairline outline, invisible on a
            saturated blue pill. An inline svg has a stroke width we control. */
-        '<span class="pc-kind ' + (isRfq ? 'buy' : 'sell') + '">' + kindIconSVG(isRfq) +
-          (isRfq ? 'ต้องการซื้อ' : 'ประกาศขาย') + '</span>' +
+        /* The kind badge and บันทึก share the top-right corner. Saving moved up
+           here from the action row so that row could hold แชร์ instead: saving
+           is something you do to a card, sharing is something you do with it,
+           and the row along the bottom is where doing-with lives. */
+        '<span class="pc-head-right">' +
+          '<span class="pc-kind ' + (isRfq ? 'buy' : 'sell') + '">' + kindIconSVG(isRfq) +
+            (isRfq ? 'ต้องการซื้อ' : 'ประกาศขาย') + '</span>' +
+          '<span class="bookmark-ic pc-save-top" data-post-id="' + post.id + '"' +
+            ' data-icon-only="1" role="button" tabindex="0" aria-label="บันทึกประกาศนี้"' +
+            ' title="บันทึกประกาศนี้"' +
+            ' data-saved="' + (window.kxSavedIds && window.kxSavedIds[post.id] ? '1' : '0') + '"' +
+            ' onclick="event.stopPropagation();kxToggleSave(this,\'' + post.id + '\')">🔖</span>' +
+        '</span>' +
       '</div>' +
       '<div class="pc-text">' +
         '<div class="post-title">' + esc(post.title) + '</div>' +
@@ -21193,9 +21400,8 @@ body.kxc-open { overflow: hidden; }
           '<b class="pc-price-num">' + priceText + '</b></span>' +
       '</span></div>' +
       '<div class="pc-actions">' +
-        '<span class="bookmark-ic pc-act" data-post-id="' + post.id + '"' +
-          ' data-saved="' + (window.kxSavedIds && window.kxSavedIds[post.id] ? '1' : '0') + '"' +
-          ' onclick="event.stopPropagation();kxToggleSave(this,\'' + post.id + '\')">🔖 บันทึก</span>' +
+        '<span class="pc-act pc-share" onclick="event.stopPropagation();' +
+          'kxShareOpen(this,\'' + post.id + '\',\'' + (isRfq ? 'rfq' : 'offer') + '\')">🔗 แชร์</span>' +
         '<span class="pc-act" onclick="event.stopPropagation();' + openCall + '">💬 ถาม ' + askCount + '</span>' +
         '<span class="pc-act primary" onclick="event.stopPropagation();' + openCall + '">' +
           actionLabel + '</span>' +

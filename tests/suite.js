@@ -122,6 +122,99 @@
     it('escapes a title that looks like markup', function (w) {
       expect(w.kxPostCardHTML(post({ title: '<script>x</' + 'script>' }))).notToContain('<script>x<');
     });
+
+    /* บันทึก moved to the card's top-right corner and แชร์ took its place in the
+       action row. Saving is something you do to a card; sharing is something you
+       do with it, and the row along the bottom is where doing-with lives. */
+    it('puts บันทึก in the top-right corner, beside the kind badge', function (w) {
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML(post());
+      var corner = d.querySelector('.pc-head .pc-head-right .pc-save-top');
+      expect(!!corner).toBe(true);
+      expect(corner.getAttribute('data-post-id')).toBe('p1');
+      expect(!!d.querySelector('.pc-head-right .pc-kind')).toBe(true,
+        'the badge and the mark share the corner');
+    });
+    it('leaves no บันทึก in the action row', function (w) {
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML(post());
+      expect(!!d.querySelector('.pc-actions .bookmark-ic')).toBe(false);
+      expect(!!d.querySelector('.pc-actions .pc-share')).toBe(true, 'แชร์ took the slot');
+    });
+    it('hands แชร์ the kind, so the link points at the right detail page', function (w) {
+      expect(w.kxPostCardHTML(post({ kind: 'rfq' }))).toContain("kxShareOpen(this,'p1','rfq')");
+      expect(w.kxPostCardHTML(post({ kind: 'offer' }))).toContain("kxShareOpen(this,'p1','offer')");
+    });
+    /* The title is read off the card at click time rather than passed in. An
+       apostrophe in someone's listing would otherwise close the argument early
+       and leave a handler that throws. */
+    it('never puts the title inside the แชร์ handler', function (w) {
+      var html = w.kxPostCardHTML(post({ title: "ท่อ 6' แป๊บเหลี่ยม" }));
+      var call = html.slice(html.indexOf('kxShareOpen'));
+      call = call.slice(0, call.indexOf('"'));
+      expect(call).notToContain('แป๊บเหลี่ยม');
+    });
+  });
+
+  describe('kxShareOpen — the link that gets shared', function () {
+    function card(w, id, kind, title) {
+      var d = w.document.createElement('div');
+      d.innerHTML = '<div class="post-card"><div class="pc-text"><div class="post-title">' +
+                    (title || 'ชื่อประกาศ') + '</div></div>' +
+                    '<div class="pc-actions"><span class="pc-share"></span></div></div>';
+      w.document.body.appendChild(d);
+      var el = d.querySelector('.pc-share');
+      w.kxShareOpen(el, id, kind);
+      var out = { url: w.document.getElementById('kxshUrl').value,
+                  name: w.document.getElementById('kxshName').textContent,
+                  open: !w.document.getElementById('kxShare').hidden };
+      w.kxShareClose();
+      d.remove();
+      return out;
+    }
+    it('builds the listing permalink, not a link to the feed', function (w) {
+      var r = card(w, 'abc', 'rfq');
+      expect(r.url).toContain('#page-rfq-detail/abc');
+      expect(r.open).toBe(true);
+    });
+    it('sends an offer to the offer page', function (w) {
+      expect(card(w, 'abc', 'offer').url).toContain('#page-offer-detail/abc');
+    });
+    it('takes the name from the card it was clicked on', function (w) {
+      expect(card(w, 'abc', 'rfq', 'ดิจิตอลไมโครสโคป').name).toBe('ดิจิตอลไมโครสโคป');
+    });
+    it('refuses a demo card that has no id', function (w) {
+      w.kxShareOpen(null, '', 'rfq');
+      expect(w.document.getElementById('kxShare').hidden).toBe(true,
+        'the six sample cards in the feed markup carry no id');
+    });
+  });
+
+  describe('kxApplySavedMarks — the corner mark stays a mark', function () {
+    it('does not write a label over the icon in the corner', function (w) {
+      var d = w.document.createElement('div');
+      d.innerHTML = '<span class="bookmark-ic pc-save-top" data-post-id="p9" data-icon-only="1"></span>';
+      w.document.body.appendChild(d);
+      w.kxSavedIds = { p9: true };
+      w.kxApplySavedMarks(d);
+      var el = d.querySelector('.bookmark-ic');
+      expect(el.textContent).notToContain('บันทึก',
+        'the corner has no room for a word, and the label would replace the icon');
+      expect(el.getAttribute('data-saved')).toBe('1');
+      expect(el.getAttribute('title')).toContain('บันทึกไว้แล้ว', 'state is carried by the title');
+      w.kxSavedIds = {};
+      d.remove();
+    });
+    it('still writes the label where there is room for one', function (w) {
+      var d = w.document.createElement('div');
+      d.innerHTML = '<span class="bookmark-ic" data-post-id="p9"></span>';
+      w.document.body.appendChild(d);
+      w.kxSavedIds = { p9: true };
+      w.kxApplySavedMarks(d);
+      expect(d.querySelector('.bookmark-ic').textContent).toContain('บันทึกแล้ว');
+      w.kxSavedIds = {};
+      d.remove();
+    });
   });
 
   // ============================================================ feed ordering ===
