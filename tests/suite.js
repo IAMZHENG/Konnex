@@ -573,6 +573,30 @@
     });
   });
 
+  /* The magnifier in the top bar sat next to a bell drawn at 30px and was drawn
+     at 18. The button around it was always the same 40px box — it was the glyph
+     that was small — so the fix is to build it the way every other icon in that
+     bar is built and let the icon system size it. */
+  describe('the search icon in the top bar', function () {
+    it('is built with the shared icon wrapper, not its own pixel size', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var i = src.indexOf('var SEARCH_SVG');
+      var decl = src.slice(i, i + 400);
+      expect(decl).toContain('kx-ico', 'the same wrapper the bell beside it uses');
+      expect(/width:\s*\d+px/.test(decl)).toBe(false,
+        'a size of its own is what let it drift away from its neighbours');
+    });
+    /* Hiding the wordmark is not cosmetic. .brand-word is flex:none and
+       white-space:nowrap on mobile, so it does not squash — it runs past
+       .nav-left and ends up under the search button. Small ink hid that; a
+       full-size icon does not. */
+    it('gives the wordmark room by dropping it on a phone', async function (w) {
+      var src = (await (await fetch('../index.html')).text()).replace(/\s+/g, ' ');
+      expect(src).toContain('@media (max-width: 480px){ .navbar .brand-word, .sh-nav .brand-word{ display:none; }',
+        'below 480px the mark carries the brand on its own');
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];

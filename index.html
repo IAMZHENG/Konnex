@@ -17100,6 +17100,19 @@ body.kx-auth .kx-burger{ display:none !important; }
   /* wordmark was collapsing to 0-32px while the name needs its full width */
   .navbar .logo, .sh-nav .logo{ flex:none; }
   .brand-word{ flex:none; white-space:nowrap; }
+}
+
+/* On a phone the word does not fit, and refusing to shrink it (above) turns
+   that into an overlap rather than a squash: .nav-left keeps its own width,
+   the word runs 38px past it, and it ends up underneath the search icon. It
+   was invisible while that icon was drawn small — the ink cleared the letters
+   even though the button did not — so growing the icon to match the bell is
+   what finally showed it.
+   At this width the mark carries the brand on its own, which is what every
+   other app does here. Measured: 14+38+12+27 = 91 for the left, 177 for the
+   right, 14 of padding — 282 in a 375px bar, with room to spare. */
+@media (max-width: 480px){
+  .navbar .brand-word, .sh-nav .brand-word{ display:none; }
 
   /* Profile tabs squashed to 9-15px each. Six Thai labels come to 784px against
      282px of room, so no font/spacing tweak fits them on one line — the strip
@@ -18574,8 +18587,17 @@ body.kx-guest #load-more-offers { display: none !important; }
 // Both still have their own entries in the drawer and the bottom bar, so nothing
 // becomes unreachable. Search had no home at all before this.
 (function(){
-  var SEARCH_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round">'
-                 + '<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>';
+  /* Wrapped in .kx-ico and left unstyled, which is how every other icon in this
+     bar is built. It used to carry its own inline 18px, so it sat next to a bell
+     the icon system had drawn at 30 — the button was always the same 40px box as
+     its neighbour, it was the glyph inside that was small.
+
+     .kx-ico sizes in em against the button's own font-size, so this now matches
+     whatever the page gives the bell rather than agreeing with it on one page
+     and drifting on the next. The geometry is the same magnifier the icon map
+     draws everywhere else. */
+  var SEARCH_SVG = '<span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true">'
+                 + '<circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path></svg></span>';
 
   function rebuild(){
     document.querySelectorAll('.navbar .nav-right').forEach(function(right){
