@@ -13571,6 +13571,49 @@ function editPost(type, id){
   var h=document.getElementById('cpHeading'); if(h) h.textContent='แก้ไขประกาศ';
   navigateTo('page-create-post');
 }
+
+/* ลบประกาศของตัวเอง.
+   The database already allowed it — schema.sql grants the owner `for all` on
+   posts, which includes delete — there was simply no way to ask for it. Eight
+   foreign keys cascade from posts, so the pictures, files, questions, bookmarks
+   and quotes go with it; three are `on delete set null`, which is why a
+   notification about a listing survives the listing.
+
+   Deleting is not the same as closing, and the two are easy to confuse when one
+   of them is irreversible. ปิดรับข้อเสนอ keeps the listing and its history;
+   this does not. So the confirmation says what will be destroyed and, when
+   anyone has already put a quote in, says that too — those are other companies'
+   work, and their disappearing is the part the owner cannot see. */
+window.kxDeletePost = async function(kind, id, title, offers){
+  if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+  if(!id) return;
+  var n = Number(offers) || 0;
+  var what = kind === 'offer' ? 'ประกาศขาย' : 'ประกาศซื้อ';
+  var msg = 'ลบ' + what + ' "' + (title || '') + '" ถาวรใช่หรือไม่?\n\n' +
+    'รูป ไฟล์แนบ คำถาม และการบันทึกไว้ จะถูกลบไปด้วย และกู้คืนไม่ได้';
+  if(n > 0){
+    msg += '\n\nประกาศนี้มี ' + n + ' ข้อเสนอจากผู้ขาย ข้อเสนอเหล่านั้นจะหายไปด้วย';
+  }
+  msg += '\n\nถ้าเพียงต้องการหยุดรับข้อเสนอ ให้ใช้ "ปิดรับข้อเสนอ" แทน';
+  if(!confirm(msg)) return;
+
+  var res = await sb.from('posts').delete().eq('id', id);
+  if(res.error){
+    console.error('kxDeletePost failed', res.error);
+    kxToast('ลบไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+    return;
+  }
+  kxToast('ลบประกาศแล้ว');
+  // the lists that could be showing it, and the feed it was in
+  if(window.kxLoadMyPosts) window.kxLoadMyPosts();
+  if(window.kxLoadMyOffers) window.kxLoadMyOffers();
+  if(window.kxLoadFeed) window.kxLoadFeed();
+  // and if the detail page for it is open, there is nothing left to look at
+  var active = (document.querySelector('.app-page.active') || {}).id;
+  if(active === 'page-rfq-detail' || active === 'page-offer-detail'){
+    navigateTo(kind === 'offer' ? 'page-my-offers' : 'page-rfq-offers');
+  }
+};
 function navigateTo(pageId, skipHistory){
   if(!skipHistory && currentPage && currentPage !== pageId){
     navHistory.push(currentPage);
@@ -15623,6 +15666,25 @@ body.kx-auth .kx-burger{ display:none !important; }
   display:flex; align-items:center; justify-content:flex-end; gap:8px;
   margin-bottom:10px;
 }
+/* ลบประกาศ sits beside แก้ไขประกาศ as the same 34px ghost icon, deliberately
+   not red until you are over it: a destructive control that shouts from across
+   the page gets pressed by accident more often than one that answers when
+   reached for. The confirmation is where the weight belongs. */
+#page-rfq-offers .btn-del-offer,
+#page-my-offers .btn-del-offer{
+  width:34px !important; height:34px !important; flex:none;
+  display:inline-flex !important; align-items:center; justify-content:center;
+  padding:0 !important; background:#fff !important;
+  border:1.5px solid var(--line) !important; border-radius:9px !important;
+  color:#565b6e !important; line-height:1; cursor:pointer; font-family:inherit;
+  transition:border-color .15s ease, color .15s ease;
+}
+#page-rfq-offers .btn-del-offer:hover,
+#page-my-offers .btn-del-offer:hover{
+  border-color:#dc2626 !important; color:#dc2626 !important;
+}
+#page-rfq-offers .btn-del-offer svg,
+#page-my-offers .btn-del-offer svg{ width:16px; height:16px; }
 #page-rfq-offers .btn-edit-offer,
 #page-my-offers .btn-edit-offer{
   width:34px !important; height:34px !important; flex:none;
@@ -21409,6 +21471,14 @@ body.kx-guest #load-more-offers { display: none !important; }
       return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c];
     });
   }
+  /* For a value that ends up inside a single-quoted JS string inside a
+     double-quoted HTML attribute — onclick="fn('here')". esc() alone is not
+     enough there: it leaves an apostrophe as an apostrophe, which closes the
+     argument early and breaks the handler for the whole card. Backslash first,
+     or the escapes escape each other. */
+  function attrq(s){
+    return esc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+  }
   function relTime(iso){
     var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
     if(mins < 1) return 'เมื่อสักครู่';
@@ -22798,7 +22868,12 @@ body.kx-guest #load-more-offers { display: none !important; }
       '</div>' +
       '<div class="rfq-status-col">' +
         '<div class="status-top"><span class="status-live"><span class="dot"></span>' + statusLabel + '</span>' +
-          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'rfq\',\'' + post.id + '\')">✎</button></div>' +
+          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'rfq\',\'' + post.id + '\')">✎</button>' +
+          /* Title and offer count are handed over so the confirmation can name
+             the listing and warn about the quotes that go with it. Read from
+             `post`, not from the DOM, and escaped for a single-quoted attribute
+             — an apostrophe in a listing name would end the argument early. */
+          '<button class="btn-del-offer" title="ลบประกาศ" aria-label="ลบประกาศ" onclick="event.stopPropagation();kxDeletePost(\'rfq\',\'' + post.id + '\',\'' + attrq(post.title) + '\',' + prices.length + ')">🗑</button></div>' +
         '<div class="deadline-label">สิ้นสุด</div><div class="deadline-date">' + fmtDateBE(post.deadline) + '</div>' +
       '</div>' +
     '</div>';
@@ -22828,7 +22903,8 @@ body.kx-guest #load-more-offers { display: none !important; }
       '</div>' +
       '<div class="offer-status-col">' +
         '<div class="offer-status-top"><span class="status-pill ' + pill[0] + '"><span class="dot"></span>' + pill[1] + '</span>' +
-          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'offer\',\'' + post.id + '\')">✎</button></div>' +
+          '<button class="btn-edit-offer" title="แก้ไขประกาศ" aria-label="แก้ไขประกาศ" onclick="event.stopPropagation();editPost(\'offer\',\'' + post.id + '\')">✎</button>' +
+          '<button class="btn-del-offer" title="ลบประกาศ" aria-label="ลบประกาศ" onclick="event.stopPropagation();kxDeletePost(\'offer\',\'' + post.id + '\',\'' + attrq(post.title) + '\',' + reqs + ')">🗑</button></div>' +
         '<div class="offer-action-btns"><div class="offer-status-drop"><button class="offer-status-btn" onclick="event.stopPropagation();toggleStatusMenu(this)">เปลี่ยนสถานะ ⌄</button>' +
           '<div class="offer-status-menu">' +
             '<div class="osm-item" onclick="event.stopPropagation();setOfferStatus(this,\'active\')"><span class="osm-dot g"></span>เปิดอยู่</div>' +

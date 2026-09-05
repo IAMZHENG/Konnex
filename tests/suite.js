@@ -362,6 +362,76 @@
     });
   });
 
+  /* ลบประกาศของตัวเอง. The database always allowed it — schema.sql grants the
+     owner `for all` on posts — there was just no way to ask. */
+  describe('kxDeletePost — the owner can remove their own listing', function () {
+    it('asks before it deletes, and does nothing if the answer is no', async function (w) {
+      var sb = plan(w, { posts: { delete: { data: null, error: null } } });
+      signIn(w);
+      var real = w.confirm, asked = '';
+      w.confirm = function (m) { asked = m; return false; };
+      await w.kxDeletePost('rfq', 'p1', 'อุปกรณ์ vaccuum handle', 0);
+      w.confirm = real; restore(w);
+      expect(sb._writes.length).toBe(0, 'saying no must not delete anything');
+      expect(asked).toContain('อุปกรณ์ vaccuum handle', 'the prompt names the listing');
+      expect(asked).toContain('ปิดรับข้อเสนอ',
+        'closing and deleting are easy to confuse, and one of them is forever');
+    });
+    it('warns that other companies lose their quotes too', async function (w) {
+      plan(w, { posts: { delete: { data: null, error: null } } });
+      signIn(w);
+      var real = w.confirm, asked = '';
+      w.confirm = function (m) { asked = m; return false; };
+      await w.kxDeletePost('rfq', 'p1', 'งานกลึง', 4);
+      w.confirm = real; restore(w);
+      expect(asked).toContain('4 ข้อเสนอ',
+        'those are other people’s work, and the owner cannot see them go');
+    });
+    it('deletes by id and lets RLS decide whose it is', async function (w) {
+      var sb = plan(w, { posts: { delete: { data: null, error: null } } });
+      signIn(w);
+      var real = w.confirm; w.confirm = function () { return true; };
+      await w.kxDeletePost('rfq', 'p1', 'งานกลึง', 0);
+      w.confirm = real; restore(w);
+      expect(sb._writes.length).toBe(1);
+      expect(sb._writes[0].table).toBe('posts');
+      expect(sb._writes[0].op).toBe('delete');
+    });
+    it('says so when the delete is refused', async function (w) {
+      plan(w, { posts: { delete: { data: null, error: ERR.rlsRefused } } });
+      signIn(w);
+      var real = w.confirm; w.confirm = function () { return true; };
+      var was = (w.document.querySelector('.app-page.active') || {}).id;
+      await w.kxDeletePost('rfq', 'p1', 'ของคนอื่น', 0);
+      w.confirm = real; restore(w);
+      expect((w.document.querySelector('.app-page.active') || {}).id).toBe(was,
+        'a refused delete must not navigate as though it had worked');
+    });
+    /* An apostrophe in a listing name would close the argument early — and it
+       would break every handler on the card, not only this one. */
+    it('survives an apostrophe in the listing name', async function (w) {
+      signIn(w);
+      plan(w, { posts: { select: { data: [{
+        id: 'p1', kind: 'rfq', title: "ท่อ 6' แป๊บเหลี่ยม", description: 'x',
+        status: 'open', owner_id: ME, province: 'ชลบุรี', category_id: 'mfg',
+        created_at: '2026-08-24T00:00:00Z', deadline: '2026-09-24T00:00:00Z',
+        price_low: 1, price_high: 2,
+        post_images: [], post_attachments: [], quotes: []
+      }], error: null } } });
+      await w.kxLoadMyPosts('rfq');
+      restore(w);
+      var btn = w.document.querySelector('#page-rfq-offers .btn-del-offer');
+      expect(!!btn).toBe(true, 'the card renders a ลบประกาศ button');
+      var call = btn.getAttribute('onclick');
+      expect(call).toContain("kxDeletePost('rfq','p1'");
+      expect(call).toContain("\\'", 'the apostrophe is escaped, not left to end the argument');
+      // and the handler is still callable: parsing it is the whole point
+      var fn = null;
+      try { fn = new w.Function('event', call); } catch (e) { fn = null; }
+      expect(!!fn).toBe(true, 'an unescaped quote makes this throw a SyntaxError');
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];
