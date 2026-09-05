@@ -16856,10 +16856,11 @@ body.kx-auth .kx-burger{ display:none !important; }
   .ep-cert-x{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; }
   .ep-area{ padding:10px 16px; }
 }
-@media (max-width: 360px){
-  /* below this the wordmark's 67px is the difference between fitting and not */
-  .navbar .brand-word{ display:none; }
-}
+/* The wordmark used to be dropped below 360px, because at the old spacing its
+   67px really was the difference between fitting and not. The bar now spends 44
+   fewer pixels on gaps and padding and 23 fewer on the ▾ beside the avatar, so
+   the name fits: 38 + 12 + 27 + 6 + 86 on the left, 134 on the right, 12 between
+   and 20 of padding — 335 in a 360px bar. It stays. */
 
 /* ===== Province dropdown: scroll instead of spilling =====
    The panel is capped at 340px but left overflow visible, while the list itself had
@@ -17102,18 +17103,49 @@ body.kx-auth .kx-burger{ display:none !important; }
   .brand-word{ flex:none; white-space:nowrap; }
 }
 
-/* On a phone the word does not fit, and refusing to shrink it (above) turns
-   that into an overlap rather than a squash: .nav-left keeps its own width,
-   the word runs 38px past it, and it ends up underneath the search icon. It
-   was invisible while that icon was drawn small — the ink cleared the letters
-   even though the button did not — so growing the icon to match the bell is
-   what finally showed it.
-   At this width the mark carries the brand on its own, which is what every
-   other app does here. Measured: 14+38+12+27 = 91 for the left, 177 for the
-   right, 14 of padding — 282 in a 375px bar, with room to spare. */
-@media (max-width: 480px){
-  .navbar .brand-word, .sh-nav .brand-word{ display:none; }
+/* On a phone the top bar wants more room than it has, and .brand-word is
+   flex:none with white-space:nowrap (above), so it does not squash — it runs
+   past .nav-left and ends up underneath the search button. That was invisible
+   while the search icon was drawn small: its ink cleared the letters even
+   though its button did not.
 
+   Measured at 375px: 28 of bar padding + 196 on the left (burger 38, a 28px
+   gap, mark 27, 6, word 97) + 12 between the halves + 177 on the right (three
+   controls with 20px gaps) = 413. Thirty-eight over.
+
+   The name stays. What goes is the spacing, which was set for a desktop bar and
+   is simply generous here — the gaps do the whole job, and the wordmark is
+   untouched at this width. */
+@media (max-width: 480px){
+  .navbar, .sh-nav{ padding-left:10px; padding-right:10px; }
+  /* !important, and not out of laziness: every page ships its own
+     `#page-x .nav-left{gap:28px}` (1,1,0), which outranks anything written as
+     `.navbar .nav-left` (0,2,0) no matter which media query it sits in. There is
+     already a pair of rules at 1024px trying exactly this and losing silently —
+     they are why the gaps here still measured 28 and 20 after the first attempt. */
+  .navbar .nav-left,  .sh-nav .nav-left{ gap:12px !important; }
+  .navbar .nav-right, .sh-nav .nav-right{ gap:10px !important; }
+  /* The ▾ beside the avatar costs 23px with its gap, and it is the one thing in
+     this row that says nothing a tap does not already say — the avatar opens the
+     menu whether the arrow is there or not. It is a bare text node, so font-size
+     is the only handle; .av-usericon inside is sized in px and does not follow. */
+  .navbar .avatar-chip, .sh-nav .avatar-chip{ font-size:0; gap:0; }
+}
+
+/* Below this the gaps alone no longer cover it — a 360px phone is still a few
+   pixels short. Two points off the wordmark buys those back and reads the same;
+   cutting the name in half or hiding it would not. */
+@media (max-width: 400px){
+  .navbar .brand-word, .sh-nav .brand-word{ font-size:16px; }
+  /* and a little tighter again, so a 360px phone clears the letters by 11px
+     rather than 5 — close enough to touching to read as a mistake */
+  .navbar .nav-left,  .sh-nav .nav-left{ gap:10px !important; }
+  .navbar .nav-right, .sh-nav .nav-right{ gap:8px !important; }
+}
+
+/* …and back to the 1024px block the two above were carved out of. Everything
+   below here is the original mobile-overflow set and belongs at 1024, not 400. */
+@media (max-width: 1024px){
   /* Profile tabs squashed to 9-15px each. Six Thai labels come to 784px against
      282px of room, so no font/spacing tweak fits them on one line — the strip
      scrolls, and the edge fades below advertise that there is more either side. */

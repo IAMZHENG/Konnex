@@ -586,14 +586,36 @@
       expect(/width:\s*\d+px/.test(decl)).toBe(false,
         'a size of its own is what let it drift away from its neighbours');
     });
-    /* Hiding the wordmark is not cosmetic. .brand-word is flex:none and
-       white-space:nowrap on mobile, so it does not squash — it runs past
-       .nav-left and ends up under the search button. Small ink hid that; a
-       full-size icon does not. */
-    it('gives the wordmark room by dropping it on a phone', async function (w) {
+    /* .brand-word is flex:none and white-space:nowrap on mobile, so it does not
+       squash — it runs past .nav-left and lands under the search button. The
+       room comes out of the spacing instead, and the name stays. */
+    it('keeps the wordmark and takes the room from the spacing', async function (w) {
       var src = (await (await fetch('../index.html')).text()).replace(/\s+/g, ' ');
-      expect(src).toContain('@media (max-width: 480px){ .navbar .brand-word, .sh-nav .brand-word{ display:none; }',
-        'below 480px the mark carries the brand on its own');
+      expect(src).notToContain('.navbar .brand-word{ display:none; }',
+        'the name is not the thing to drop');
+      expect(src).toContain('.navbar .nav-left, .sh-nav .nav-left{ gap:12px !important; }');
+    });
+    /* !important here is load-bearing. Every page ships its own
+       `#page-x .nav-left{gap:28px}` at (1,1,0), which outranks `.navbar
+       .nav-left` at (0,2,0) from inside any media query — there is already a
+       pair of rules at 1024px that lose to it and have never applied. */
+    it('wins against the per-page gap rules', async function (w) {
+      var L = w.document.querySelector('#page-feed .navbar .nav-left');
+      if (!L) return;
+      var wins = false;
+      for (var i = 0; i < w.document.styleSheets.length; i++) {
+        var rules; try { rules = w.document.styleSheets[i].cssRules; } catch (e) { continue; }
+        (function walk(rs) {
+          for (var j = 0; j < rs.length; j++) {
+            var r = rs[j];
+            if (r.cssRules && r.media) { walk(r.cssRules); continue; }
+            if (r.selectorText && /\.navbar \.nav-left/.test(r.selectorText) &&
+                r.style && r.style.getPropertyPriority('gap') === 'important') wins = true;
+          }
+        })(rules);
+      }
+      expect(wins).toBe(true,
+        'without it the gap silently stays at the page rule’s 28px');
     });
   });
 
