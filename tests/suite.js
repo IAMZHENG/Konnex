@@ -286,6 +286,70 @@
     });
   });
 
+  /* แจ้งปัญหา / เสนอแนะ. Written into a table rather than handed to a mailto:
+     link — a mailto does nothing at all on a machine with no mail client set up,
+     and we would never learn that someone had tried to tell us something. */
+  describe('kxFeedback — telling us something is broken', function () {
+    function open(w) {
+      var had = w.kxSession;
+      signIn(w);
+      w.kxFeedbackOpen();
+      return had;
+    }
+    function shut(w, had) { w.kxFeedbackClose(); w.kxSession = had; restore(w); }
+
+    it('is in the rail, and runs rather than navigates', function (w) {
+      signIn(w); w.kxAuthChecked = true;
+      w.renderSidebars('page-feed');
+      var link = Array.prototype.filter.call(
+        w.document.querySelectorAll('.side-nav .side-link'),
+        function (a) { return /แจ้งปัญหา/.test(a.textContent); })[0];
+      expect(!!link).toBe(true);
+      expect(link.getAttribute('onclick')).toContain('kxFeedbackOpen()');
+    });
+    it('asks a signed-out visitor to sign in first', function (w) {
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      w.kxSession = null;
+      w.kxFeedbackOpen();
+      expect(w.document.getElementById('kxFb').hidden).toBe(true, 'no form without an account');
+      expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+      w.kxSession = had; if (was) w.navigateTo(was, true);
+    });
+    it('writes nothing when there is nothing to read', async function (w) {
+      var sb = plan(w, { feedback: { insert: { data: null, error: null } } });
+      var had = open(w);
+      w.document.getElementById('kxfbBody').value = 'พัง';
+      await w.kxFeedbackSend();
+      expect(sb._writes.length).toBe(0, 'one word is not a report anyone can act on');
+      shut(w, had);
+    });
+    it('sends what was typed, with the page it was typed on', async function (w) {
+      var sb = plan(w, { feedback: { insert: { data: null, error: null } } });
+      var had = open(w);
+      w.document.getElementById('kxfbBody').value = 'กดเสนอราคาแล้วไม่มีอะไรเกิดขึ้นเลย';
+      var idea = w.document.querySelector('input[name="kxfbKind"][value="idea"]');
+      idea.checked = true;
+      await w.kxFeedbackSend();
+      var row = sb._writes[0].row;
+      expect(sb._writes[0].table).toBe('feedback');
+      expect(row.profile_id).toBe(ME, 'the row is written in your own name, which RLS also checks');
+      expect(row.kind).toBe('idea');
+      expect(row.body).toBe('กดเสนอราคาแล้วไม่มีอะไรเกิดขึ้นเลย');
+      expect(row.page).toContain('page-', 'where they were when it happened');
+      expect(w.document.getElementById('kxFb').hidden).toBe(true, 'and it closes on success');
+      shut(w, had);
+    });
+    it('names the migration when the table is not there yet', async function (w) {
+      plan(w, { feedback: { insert: { data: null, error: ERR.tableMissing } } });
+      var had = open(w);
+      w.document.getElementById('kxfbBody').value = 'อยากให้มีปุ่มลบประกาศ';
+      await w.kxFeedbackSend();
+      expect(w.document.getElementById('kxFb').hidden).toBe(false,
+        'the form stays open with the text in it, so nothing typed is lost');
+      shut(w, had);
+    });
+  });
+
   describe('kxApplySavedMarks — the corner mark stays a mark', function () {
     it('does not write a label over the icon in the corner', function (w) {
       var d = w.document.createElement('div');

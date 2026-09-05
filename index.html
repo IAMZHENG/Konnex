@@ -8207,6 +8207,8 @@ html, body{
     bell:      '<path d="M18 8.5a6 6 0 0 0-12 0c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/>',
     bookmark:  '<path d="M18.5 20.5l-6.5-4.6-6.5 4.6V5.5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2z"/>',
     clock:     '<circle cx="12" cy="12" r="8.75"/><path d="M12 7v5.3l3.4 2"/>',
+    // แจ้งปัญหา / เสนอแนะ — a megaphone, drawn in the same stroked style
+    megaphone: '<path d="M3 10.5v3a1.5 1.5 0 0 0 1.5 1.5H7l6 4.5V5L7 9.5H4.5A1.5 1.5 0 0 0 3 11z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M7 15v4.5"/>',
     gear:      '<circle cx="12" cy="12" r="3.1"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.65l.05.06a1.8 1.8 0 1 1-2.55 2.55l-.06-.06a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.91 1.37v.17a1.8 1.8 0 1 1-3.6 0v-.09a1.5 1.5 0 0 0-.98-1.37 1.5 1.5 0 0 0-1.65.3l-.06.06a1.8 1.8 0 1 1-2.55-2.55l.06-.06a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.91h-.17a1.8 1.8 0 1 1 0-3.6h.09a1.5 1.5 0 0 0 1.37-.98 1.5 1.5 0 0 0-.3-1.65l-.06-.06a1.8 1.8 0 1 1 2.55-2.55l.06.06a1.5 1.5 0 0 0 1.65.3h.07a1.5 1.5 0 0 0 .91-1.37v-.17a1.8 1.8 0 1 1 3.6 0v.09a1.5 1.5 0 0 0 .91 1.37 1.5 1.5 0 0 0 1.65-.3l.06-.06a1.8 1.8 0 1 1 2.55 2.55l-.06.06a1.5 1.5 0 0 0-.3 1.65v.07a1.5 1.5 0 0 0 1.37.91h.17a1.8 1.8 0 1 1 0 3.6h-.09a1.5 1.5 0 0 0-1.37.91z"/>'
   };
   function kxNavIco(k){
@@ -8230,7 +8232,12 @@ html, body{
     ['page-notifications','bell','แจ้งเตือน'],
     ['page-saved','bookmark','บันทึกไว้'],
     ['page-history','clock','ประวัติการเข้าชม'],
-    ['page-settings','gear','ตั้งค่า']
+    ['page-settings','gear','ตั้งค่า'],
+    /* '__b' is a rail entry that runs something instead of going somewhere.
+       แจ้งปัญหา is a short form, and a whole page for it would mean leaving
+       whatever you were looking at when the problem appeared — which is the one
+       thing you want to still be on screen while you describe it. */
+    ['__b','megaphone','แจ้งปัญหา / เสนอแนะ','kxFeedbackOpen()']
   ];
 
   // The spec sheet ends the rail with a divider and a profile row, so renderSidebars
@@ -8288,6 +8295,9 @@ html, body{
     }
     var html = nav.map(function(it){
       if(it[0]==='__g') return '<div class="side-group-label">'+it[2]+'</div>';
+      // runs something rather than navigating; see the note on '__b' in KX_NAV
+      if(it[0]==='__b') return '<a href="#" onclick="'+it[3]+';return false;" class="side-link">'+
+        kxNavIco(it[1])+'<span class="side-label">'+it[2]+'</span></a>';
       if(it[0]==='__p'){
         var kids = it[3]||[];
         var anyOn = kids.some(function(k){ return k[0]===navActive; });
@@ -12912,6 +12922,27 @@ html, body{
   </div>
 </div>
 
+<!-- แจ้งปัญหา / เสนอแนะ -->
+<div class="kxsh-ov" id="kxFb" role="dialog" aria-modal="true" aria-labelledby="kxfbTitle" hidden
+     onclick="if(event.target.id==='kxFb')kxFeedbackClose()">
+  <div class="kxsh-box">
+    <div class="kxsh-title" id="kxfbTitle">แจ้งปัญหา / เสนอแนะ</div>
+    <div class="kxsh-name">เราอ่านทุกฉบับ และใช้ปรับปรุง QubeQuote จริง</div>
+    <div class="kxfb-kinds">
+      <label class="kxfb-kind">
+        <input type="radio" name="kxfbKind" value="problem" checked><span>แจ้งปัญหา</span></label>
+      <label class="kxfb-kind">
+        <input type="radio" name="kxfbKind" value="idea"><span>ข้อเสนอแนะ</span></label>
+    </div>
+    <textarea id="kxfbBody" class="kxfb-body" rows="5"
+      placeholder="เกิดอะไรขึ้น กดตรงไหน แล้วเห็นอะไร — ยิ่งบอกละเอียดยิ่งแก้ได้เร็ว"></textarea>
+    <div class="kxfb-foot">
+      <button type="button" class="kxfb-btn" onclick="kxFeedbackClose()">ยกเลิก</button>
+      <button type="button" class="kxfb-btn primary" id="kxfbSend" onclick="kxFeedbackSend()">ส่ง</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ===== แชร์ประกาศไปยัง LINE / Facebook / อีเมล =====
 
@@ -12994,6 +13025,72 @@ html, body{
   document.addEventListener('keydown', function(e){
     var o = document.getElementById('kxShare');
     if(e.key === 'Escape' && o && !o.hidden) kxShareClose();
+  });
+})();
+
+/* ===== แจ้งปัญหา / เสนอแนะ =====
+
+   Written into a table rather than handed to a mailto: link. A mailto only does
+   anything on a machine with a mail client configured, which a lot of desktops
+   are not — the button appears to do nothing, and we never learn that someone
+   tried. See database/feedback.sql. */
+(function(){
+  window.kxFeedbackOpen = function(){
+    if(!window.kxSession){
+      kxToast('กรุณาเข้าสู่ระบบก่อนแจ้งปัญหา'); navigateTo('page-auth'); return;
+    }
+    var ov = document.getElementById('kxFb');
+    if(!ov) return;
+    document.getElementById('kxfbBody').value = '';
+    var first = document.querySelector('input[name="kxfbKind"][value="problem"]');
+    if(first) first.checked = true;
+    var btn = document.getElementById('kxfbSend');
+    if(btn){ btn.disabled = false; btn.textContent = 'ส่ง'; }
+    ov.hidden = false;
+    document.getElementById('kxfbBody').focus();
+  };
+
+  window.kxFeedbackClose = function(){
+    var ov = document.getElementById('kxFb');
+    if(ov) ov.hidden = true;
+  };
+
+  window.kxFeedbackSend = async function(){
+    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    var field = document.getElementById('kxfbBody');
+    var body = (field.value || '').trim();
+    if(body.length < 10){
+      field.focus();
+      kxToast('เขียนรายละเอียดอีกหน่อยครับ อย่างน้อย 10 ตัวอักษร');
+      return;
+    }
+    var picked = document.querySelector('input[name="kxfbKind"]:checked');
+    var btn = document.getElementById('kxfbSend');
+    if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+    /* Which page they were on when they pressed it. Sent along so a report that
+       says "กดแล้วไม่ขึ้น" can still be traced without writing back to ask. */
+    var where = (document.querySelector('.app-page.active') || {}).id || '';
+    var res = await sb.from('feedback').insert({
+      profile_id: window.kxSession.user.id,
+      kind: (picked && picked.value) === 'idea' ? 'idea' : 'problem',
+      body: body,
+      page: where + (location.hash ? ' ' + location.hash : '')
+    });
+    if(btn){ btn.disabled = false; btn.textContent = 'ส่ง'; }
+    if(res.error){
+      console.error('kxFeedbackSend failed', res.error);
+      kxToast(window.kxTableMissing && window.kxTableMissing(res.error)
+        ? 'ยังส่งไม่ได้ (ยังไม่ได้รัน database/feedback.sql)'
+        : 'ส่งไม่สำเร็จ: ' + (res.error.message || 'กรุณาลองใหม่'));
+      return;
+    }
+    kxFeedbackClose();
+    kxToast('ส่งแล้ว ขอบคุณครับ — เราอ่านทุกฉบับ');
+  };
+
+  document.addEventListener('keydown', function(e){
+    var o = document.getElementById('kxFb');
+    if(e.key === 'Escape' && o && !o.hidden) kxFeedbackClose();
   });
 })();
 </script>
@@ -17206,6 +17303,31 @@ body.kx-guest #load-more-offers { display: none !important; }
     font-weight: 600; padding: 8px; cursor: pointer;
     }
 .kxsh-close:hover { color: var(--ink, #1c1a18); }
+
+/* ---- แจ้งปัญหา / เสนอแนะ ---- */
+.kxfb-kinds { display: flex; gap: 10px; margin-bottom: 12px; }
+.kxfb-kind {
+    flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 1.5px solid var(--line, #e6e7f0); border-radius: 10px; padding: 11px 8px;
+    font-size: 14.5px; font-weight: 600; color: var(--ink, #1c1a18); cursor: pointer;
+    }
+.kxfb-kind:has(input:checked) { border-color: #0056fd; color: #0056fd; background: var(--bg, #f6f8fc); }
+.kxfb-kind input { accent-color: #0056fd; }
+.kxfb-body {
+    width: 100%; box-sizing: border-box; font-family: inherit; font-size: 15px;
+    line-height: 1.7; padding: 12px 14px; resize: vertical;
+    border: 1.5px solid var(--line, #e6e7f0); border-radius: 10px;
+    color: var(--ink, #1c1a18); background: #fff;
+    }
+.kxfb-body:focus { outline: none; border-color: #0056fd; }
+.kxfb-foot { display: flex; gap: 10px; margin-top: 14px; }
+.kxfb-btn {
+    flex: 1 1 0; border: 1.5px solid var(--line, #e6e7f0); background: #fff;
+    color: var(--ink, #1c1a18); border-radius: 10px; padding: 11px 16px;
+    font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+.kxfb-btn.primary { background: #0056fd; border-color: #0056fd; color: #fff; }
+.kxfb-btn:disabled { opacity: .6; cursor: not-allowed; }
 @media (max-width: 640px) {
     .kxsh-app { padding: 12px 4px; font-size: 12.5px; }
     }
