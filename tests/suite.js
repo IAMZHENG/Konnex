@@ -237,6 +237,23 @@
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-terms');
       });
     });
+
+    /* What a visitor may see of the bidding. The count and the average are shown
+       to everyone — the owner's decision, made knowing that an average over one
+       offer is that offer's price: a listing carrying the going rate attracts
+       the next supplier, and the lowest bid winning is the market working.
+       Who bid is a different disclosure and stays behind a sign-in; those are
+       supplier names, and they did not put them on a public page. */
+    it('shows the count and the average to a visitor, but not who bid', function (w) {
+      var had = w.kxSession, hadChecked = w.kxAuthChecked;
+      w.kxSession = null; w.kxAuthChecked = true;
+      w.renderSidebars('page-rfq-detail');
+      var css = w.getComputedStyle(w.document.getElementById('offerList')).display;
+      var sub = w.getComputedStyle(w.document.getElementById('rfqCompareSub')).display;
+      w.kxSession = had; w.kxAuthChecked = hadChecked; w.renderSidebars('page-feed');
+      expect(css).toBe('none', 'the bidder list is not part of the public page');
+      expect(sub).notToContain('none', 'the count and the average are');
+    });
   });
 
   describe('renderSidebars — what a visitor is offered instead of the menu', function () {

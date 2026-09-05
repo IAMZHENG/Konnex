@@ -17121,12 +17121,17 @@ body.kxc-open { overflow: hidden; }
 body.kx-guest .nav-right .icon-btn,
 body.kx-guest .nav-right .avatar-chip,
 body.kx-guest .mobile-bottom-nav { display: none !important; }
-/* Who bid, and the average of what they bid. posts.quote_avg is readable with
-   the anon key, and an average over one offer is that offer's price — so on a
-   listing with a single bid this block hands a sealed price to anyone holding
-   the link. It stays for signed-in members, where it always was; it does not
-   become part of the new public surface. */
-body.kx-guest #compareOffersSection { display: none !important; }
+/* จำนวนข้อเสนอกับราคาเฉลี่ยแสดงให้ทุกคนเห็น รวมถึงคนที่ยังไม่ได้เข้าสู่ระบบ
+   The owner's call, made knowing that an average over a single offer is that
+   offer's price: a buyer's listing is more attractive to the next supplier when
+   the going rate is on it, and the lowest bid winning is the point of the
+   market rather than something to hide.
+
+   The list of who bid is a different disclosure and stays behind a sign-in:
+   those are supplier names, and they did not choose to have them on a page that
+   anyone with the link can read. */
+body.kx-guest #offerList,
+body.kx-guest #load-more-offers { display: none !important; }
 .side-guest { padding: 18px 14px; display: flex; flex-direction: column; gap: 10px; }
 .side-guest-t {
     font-size: 14px; line-height: 1.7; color: var(--ink-soft, #565b6e); margin-bottom: 4px;
