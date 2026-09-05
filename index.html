@@ -478,7 +478,16 @@
 .nav-back{ display:none; align-items:center; justify-content:center; width:38px; height:38px; padding:0; border-radius:50%; background:#fff; border:1px solid var(--line); color:var(--ink); cursor:pointer; flex:none; vertical-align:middle; }
 body.kx-show-back #kx-back{ display:inline-flex; }
 .kx-head-flex{ display:flex; align-items:center; gap:12px; }
-.kx-head-flex > #kx-back{ align-self:flex-start; margin-top:2px; }nt-size:13px; cursor:pointer; flex-shrink:0; margin-right:2px; font-family:'IBM Plex Sans Thai','IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; transition:background .15s ease, color .15s ease, border-color .15s ease; }
+.kx-head-flex > #kx-back{ align-self:flex-start; margin-top:2px; }
+/* There used to be a fragment of a dead rule on the line above, starting at
+   `nt-size:13px` — the head of it, selector and all, was already missing in the
+   first commit. It was not harmless. A declaration list with no selector is not
+   a rule, so the parser threw away everything up to the next `{` it could find,
+   and the next `{` belonged to `body.kx-show-back .nav-back` below: that rule
+   was swallowed whole and never reached the page. Nothing in the markup carries
+   .nav-back today, so removing the fragment restores the rule without changing
+   what is on screen — but the next person to add one would have spent an
+   afternoon on it. */
 body.kx-show-back .nav-back{ display:inline-flex; }
 .kx-auth .mobile-bottom-nav{ display:none !important; }
 .kx-auth .nav-back{ display:none !important; }
@@ -7900,6 +7909,12 @@ html, body{
 .kx-backbar .kx-bb-btn:hover{ border-color:var(--blue-700); color:var(--blue-700); }
 .kx-backbar .kx-bb-src{ font-size:15px; color:var(--ink-soft); }
 @media (max-width:768px){ .kx-backbar{ top:0; } }
+/* ข้อกำหนดการใช้งาน และ นโยบายความเป็นส่วนตัว ไม่มีแถบบนของตัวเอง
+   Every other page starts with its own .navbar, and the 57px offset above is
+   what keeps the back bar sitting under it. These two are a document on a plain
+   ground with no navbar at all, so that offset had nothing to clear: it pushed
+   the bar down and left an empty band across the top of the page. */
+#page-terms .kx-backbar, #page-privacy .kx-backbar{ top:0; }
 </style>
 </head>
 <body>
@@ -13637,7 +13652,12 @@ document.addEventListener('keydown', function(e){
 });
 
 (function(){
-  var validPages = ['page-auth','page-dashboard','page-my-requests','page-feed','page-rfq-offers','page-rfq-detail','page-company-profile','page-edit-profile','page-create-post','page-messages','page-notifications','page-my-bids','page-my-offers','page-offer-detail','page-settings','page-saved','page-history','page-admin-verify'];
+  var validPages = ['page-auth','page-dashboard','page-my-requests','page-feed','page-rfq-offers','page-rfq-detail','page-company-profile','page-edit-profile','page-create-post','page-messages','page-notifications','page-my-bids','page-my-offers','page-offer-detail','page-settings','page-saved','page-history','page-admin-verify',
+    // the two documents. Missing from this list, #page-privacy typed or followed
+    // straight into the address bar fell back to page-auth before anything else
+    // got a say — and those are the links printed on Facebook's and Google's
+    // consent screens.
+    'page-terms','page-privacy'];
   // a detail hash carries its post: #page-rfq-detail/<uuid>. Take the page half.
   function pageOf(h){ var i = h.indexOf('/'); return i < 0 ? h : h.slice(0, i); }
   // captured before navigateTo, which replaces the hash with the bare page id
@@ -20460,7 +20480,12 @@ body.kx-guest #load-more-offers { display: none !important; }
          login page. */
       var guestPost = window.kxPostFromHash && window.kxPostFromHash();
       if(guestPost) kxOpenPost(guestPost.id, guestPost.kind);
-      else if(activeId && activeId !== 'page-auth') navigateTo('page-auth');
+      /* Asked of KX_OPEN_PAGES rather than compared against page-auth alone.
+         The old test let a visitor stay only on the login page, so opening
+         #page-privacy or #page-terms directly — the links printed on Facebook's
+         and Google's consent screens — bounced them to a login form instead of
+         the document they were sent to read. */
+      else if(activeId && !KX_OPEN_PAGES[activeId]) navigateTo('page-auth');
     }
   })();
 

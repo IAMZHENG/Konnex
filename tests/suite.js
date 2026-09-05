@@ -237,6 +237,18 @@
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-terms');
       });
     });
+    /* The startup router only restores a hash it recognises, and its list left
+       the two documents out — so #page-privacy typed straight into the address
+       bar fell back to the login page before the guard above ever ran. Those are
+       the links printed on Facebook's and Google's consent screens. */
+    it('restores a document page from the address bar', function (w) {
+      var was = (w.document.querySelector('.app-page.active') || {}).id;
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain("'page-terms','page-privacy'");
+      w.navigateTo('page-privacy', true);
+      expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-privacy');
+      if (was) w.navigateTo(was, true);
+    });
 
     /* What a visitor may see of the bidding. The count and the average are shown
        to everyone — the owner's decision, made knowing that an average over one
@@ -347,6 +359,32 @@
       expect(w.document.getElementById('kxFb').hidden).toBe(false,
         'the form stays open with the text in it, so nothing typed is lost');
       shut(w, had);
+    });
+  });
+
+  describe('the stylesheet parses as written', function () {
+    function selectors(w) {
+      var out = [];
+      for (var i = 0; i < w.document.styleSheets.length; i++) {
+        var rules;
+        try { rules = w.document.styleSheets[i].cssRules; } catch (e) { continue; }
+        for (var j = 0; j < rules.length; j++) if (rules[j].selectorText) out.push(rules[j].selectorText);
+      }
+      return out;
+    }
+    /* A fragment of a dead rule sat in the CSS from the first commit — a
+       declaration list whose selector was already gone, starting mid-word at
+       `nt-size:13px`. CSS error recovery discards everything up to the next `{`,
+       and that `{` belonged to the rule below, which was swallowed with it. The
+       symptom is a rule you can read in the file and cannot find on the page. */
+    it('does not drop a rule into a stray fragment', function (w) {
+      expect(selectors(w)).toContain('body.kx-show-back .nav-back',
+        'this rule is in the file; if it is missing here the parser ate it');
+    });
+    /* ข้อกำหนด and นโยบาย have no navbar of their own, so the back bar's 57px
+       offset had nothing to clear and left an empty band across the top. */
+    it('sits the back bar at the top on the pages with no navbar', function (w) {
+      expect(selectors(w)).toContain('#page-terms .kx-backbar, #page-privacy .kx-backbar');
     });
   });
 
