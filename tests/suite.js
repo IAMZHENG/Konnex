@@ -432,6 +432,113 @@
     });
   });
 
+  /* หน้าผู้ดูแลระบบ. The page is a view onto four RPCs; the RPCs check
+     kx_is_admin() themselves. What these tests hold is that the client asks
+     through those functions and never writes to the tables directly — a broad
+     "admins can update profiles" policy would also let an admin rewrite someone
+     else's company name, which is not what a suspend button is for. */
+  describe('หน้าผู้ดูแลระบบ', function () {
+    function asAdmin(w, on) {
+      signIn(w);
+      w.kxCurrentUser = { id: ME, company_name: 'ผู้ดูแล', is_admin: on !== false };
+    }
+    it('is offered in the rail only to an administrator', function (w) {
+      asAdmin(w, true); w.kxAuthChecked = true;
+      w.renderSidebars('page-feed');
+      expect((w.document.querySelector('.side-nav') || {}).innerText).toContain('ผู้ดูแลระบบ');
+      asAdmin(w, false);
+      w.renderSidebars('page-feed');
+      expect((w.document.querySelector('.side-nav') || {}).innerText).notToContain('ผู้ดูแลระบบ');
+    });
+    it('turns a non-administrator away rather than showing empty panes', async function (w) {
+      asAdmin(w, false);
+      plan(w, {});
+      var was = (w.document.querySelector('.app-page.active') || {}).id;
+      await w.kxAdminLoad();
+      restore(w);
+      expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-feed');
+      if (was) w.navigateTo(was, true);
+    });
+    it('closes a listing through the function, not by writing to posts', async function (w) {
+      asAdmin(w, true);
+      var sb = plan(w, { _rpc: { kx_admin_set_post_status: { data: null, error: null },
+                                 kx_admin_stats: { data: {}, error: null } } });
+      await w.kxAdminSetStatus('p1', 'closed');
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_admin_set_post_status'; })[0];
+      expect(!!call).toBe(true);
+      expect(call.args.p_post).toBe('p1');
+      expect(call.args.p_status).toBe('closed');
+      expect(sb._writes.filter(function (x) { return x.table === 'posts'; }).length).toBe(0,
+        'no direct write: the function is where the admin check lives');
+    });
+    it('asks before deleting a listing, and stops at no', async function (w) {
+      asAdmin(w, true);
+      var sb = plan(w, { _rpc: { kx_admin_delete_post: { data: null, error: null } } });
+      var real = w.confirm, asked = '';
+      w.confirm = function (m) { asked = m; return false; };
+      await w.kxAdminDeletePost('p1', 'ประกาศไม่เหมาะสม');
+      w.confirm = real; restore(w);
+      expect(sb._calls.filter(function (c) { return c.rpc; }).length).toBe(0);
+      expect(asked).toContain('ปิดประกาศ', 'the reversible option is named in the prompt');
+    });
+    it('suspends through the function, and says what it does and does not do', async function (w) {
+      asAdmin(w, true);
+      var sb = plan(w, { _rpc: { kx_admin_set_suspended: { data: null, error: null },
+                                 kx_admin_stats: { data: {}, error: null } } });
+      var real = w.confirm, asked = '';
+      w.confirm = function (m) { asked = m; return true; };
+      await w.kxAdminSuspend('u9', true, 'บจก. ทดสอบ');
+      w.confirm = real; restore(w);
+      var call = sb._calls.filter(function (c) { return c.rpc === 'kx_admin_set_suspended'; })[0];
+      expect(!!call).toBe(true);
+      expect(call.args.p_profile).toBe('u9');
+      expect(call.args.p_on).toBe(true);
+      expect(asked).toContain('ยังเข้ามาดูได้',
+        'suspension stops writing, not reading — the prompt has to say which');
+      expect(sb._writes.filter(function (x) { return x.table === 'profiles'; }).length).toBe(0);
+    });
+    /* The database refuses it too — kx_admin_set_suspended raises on
+       p_profile = auth.uid() — but a button that exists and always fails is a
+       trap, so the row for your own account does not offer one. */
+    it('never offers to suspend the account doing the suspending', async function (w) {
+      asAdmin(w, true);
+      plan(w, {
+        _rpc: { kx_admin_stats: { data: {}, error: null } },
+        posts:    { _: { data: [], error: null } },
+        feedback: { _: { data: [], error: null } },
+        profiles: { _: { data: [
+          { id: ME,   company_name: 'ผู้ดูแล',    created_at: '2026-01-01T00:00:00Z', suspended_at: null, is_admin: true },
+          { id: 'u9', company_name: 'บจก. อื่น', created_at: '2026-01-02T00:00:00Z', suspended_at: null, is_admin: false }
+        ], error: null } }
+      });
+      await w.kxAdminLoad();
+      restore(w);
+      var rows = w.document.querySelectorAll('#adPeople .ad-row');
+      expect(rows.length).toBe(2);
+      expect(rows[0].innerHTML).toContain('บัญชีของคุณ');
+      expect(rows[0].querySelector('.ad-btn')).toBeFalsy('no button on your own row');
+      expect(rows[1].querySelector('.ad-btn').textContent).toContain('ระงับบัญชี');
+    });
+    it('shows a suspended account as suspended, and offers the way back', async function (w) {
+      asAdmin(w, true);
+      plan(w, {
+        _rpc: { kx_admin_stats: { data: {}, error: null } },
+        posts:    { _: { data: [], error: null } },
+        feedback: { _: { data: [], error: null } },
+        profiles: { _: { data: [
+          { id: 'u9', company_name: 'บจก. ถูกระงับ', created_at: '2026-01-02T00:00:00Z',
+            suspended_at: '2026-09-01T00:00:00Z', is_admin: false }
+        ], error: null } }
+      });
+      await w.kxAdminLoad();
+      restore(w);
+      var row = w.document.querySelector('#adPeople .ad-row');
+      expect(row.innerHTML).toContain('ถูกระงับ');
+      expect(row.querySelector('.ad-btn').textContent).toContain('ปลดระงับ');
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];
