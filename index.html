@@ -8257,6 +8257,25 @@ html, body{
   }
 
   function renderSidebars(activePage){
+    /* A visitor reading a shared listing has no account, and every entry in this
+       rail needs one — nine doors that all open onto the same login form. Give
+       them the way in instead, and mark the body so the notification, message
+       and account controls in the top bar can go with it.
+
+       Gated on kxAuthChecked, not on kxSession alone: this function also runs
+       once at parse time, before getSession has answered, and a member would
+       otherwise watch the guest rail flash past on every page load. */
+    var guest = window.kxAuthChecked && !window.kxSession;
+    document.body.classList.toggle('kx-guest', !!guest);
+    if(guest){
+      var g = '<div class="side-guest">' +
+        '<div class="side-guest-t">เข้าสู่ระบบเพื่อเสนอราคา ถามคำถาม และบันทึกประกาศ</div>' +
+        '<a href="#" class="side-guest-btn primary" onclick="navigateTo(\'page-auth\');return false;">เข้าสู่ระบบ</a>' +
+        '<a href="#" class="side-guest-btn" onclick="navigateTo(\'page-auth\');return false;">สมัครสมาชิกฟรี</a>' +
+      '</div>';
+      document.querySelectorAll('.side-nav').forEach(function(nav){ nav.innerHTML = g; });
+      return;
+    }
     var navActive = (activePage === 'page-my-offers') ? 'page-rfq-offers' : (activePage === 'page-my-requests') ? 'page-my-bids' : activePage;
     /* ตรวจสอบการยืนยันตัวตน is only in the rail for an administrator — the rail
        is rebuilt on every navigation, so this follows the account rather than
@@ -12887,11 +12906,10 @@ html, body{
    detail page already writes into the address bar, so what the recipient opens
    is the listing and not the feed.
 
-   Note for whoever reads this next: an unauthenticated visitor who follows one
-   of these links is sent to page-auth by the session guard, because detail pages
-   are not in KX_OPEN_PAGES. Sharing therefore reaches people who already have an
-   account. Opening listings to signed-out visitors is a product decision with an
-   RLS side to it, not a tweak to this file. */
+   A signed-out visitor who follows one of these links sees the listing: the two
+   detail pages are in KX_OPEN_PAGES, and boot() loads a post named in the hash
+   even with no session. They are asked to sign in at the first thing they try to
+   do with it, not at the door. */
 (function(){
   var shareUrl = '', shareTitle = '';
   var ov = null;
@@ -17097,6 +17115,30 @@ body.kxc-open { overflow: hidden; }
 .kxc-btn.primary:disabled { background: #b9c6dd; border-color: #b9c6dd; cursor: not-allowed; }
 .set-policy-row { font-size: 14px; line-height: 1.9; color: var(--ink, #1c1a18); }
 
+/* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
+/* Controls that need an account. Left in the markup and hidden here rather than
+   built conditionally: they sit in eight copies of the navbar across the page. */
+body.kx-guest .nav-right .icon-btn,
+body.kx-guest .nav-right .avatar-chip,
+body.kx-guest .mobile-bottom-nav { display: none !important; }
+/* Who bid, and the average of what they bid. posts.quote_avg is readable with
+   the anon key, and an average over one offer is that offer's price — so on a
+   listing with a single bid this block hands a sealed price to anyone holding
+   the link. It stays for signed-in members, where it always was; it does not
+   become part of the new public surface. */
+body.kx-guest #compareOffersSection { display: none !important; }
+.side-guest { padding: 18px 14px; display: flex; flex-direction: column; gap: 10px; }
+.side-guest-t {
+    font-size: 14px; line-height: 1.7; color: var(--ink-soft, #565b6e); margin-bottom: 4px;
+    }
+.side-guest-btn {
+    display: block; text-align: center; text-decoration: none;
+    border: 1.5px solid var(--line, #e6e7f0); border-radius: 10px; padding: 11px 14px;
+    font-size: 15px; font-weight: 600; color: var(--ink, #1c1a18); background: #fff;
+    }
+.side-guest-btn.primary { background: #0056fd; border-color: #0056fd; color: #fff; }
+.side-guest-btn:hover { border-color: #0056fd; }
+
 /* ---- แชร์ประกาศ ---- */
 .kxsh-ov {
     position: fixed; inset: 0; z-index: 4100;
@@ -20094,7 +20136,10 @@ body.kxc-open { overflow: hidden; }
   window.kxSignOut = async function(){
     if(!confirm('ออกจากระบบใช่หรือไม่?')) return;
     await sb.auth.signOut();
-    // onAuthStateChange's SIGNED_OUT branch below does the actual navigateTo
+    /* Navigated here rather than left to onAuthStateChange: that branch now
+       stays put on pages open to visitors, which is right for someone arriving
+       on a shared listing and wrong for someone who just pressed ออกจากระบบ. */
+    navigateTo('page-auth');
   };
 
   // "ออกจากระบบทุกอุปกรณ์" — the one thing about other sessions the client can
@@ -20143,7 +20188,14 @@ body.kxc-open { overflow: hidden; }
       // the next person to sign in on this browser must not find the last
       // one's answers already in the แก้ไขโปรไฟล์ fields
       if(window.kxProfileReset) window.kxProfileReset();
-      navigateTo('page-auth');
+      /* Only off pages that need an account. This event also arrives once at
+         startup when there is no session at all, and it used to navigate
+         unconditionally — so a visitor arriving on a shared listing was thrown
+         to the login form a moment after the listing had been put on screen,
+         which looked like the link itself being rejected. kxSignOut does its own
+         navigating, so a deliberate sign-out still lands on the login page. */
+      var here = (document.querySelector('.app-page.active') || {}).id;
+      if(!KX_OPEN_PAGES[here]) navigateTo('page-auth');
       return;
     }
     /* Arriving from the reset email. supabase-js reads the token out of the
@@ -20161,14 +20213,36 @@ body.kxc-open { overflow: hidden; }
   // have resolved, so it is let through unguarded; it already defaults to page-auth
   // unless the URL hash names a page, and boot() below corrects course the moment the
   // real answer is in, before the person has had time to click anything.
-  var KX_OPEN_PAGES = { 'page-auth': 1, 'page-terms': 1, 'page-privacy': 1 };
+  /* Pages that open without a session.
+     The two detail pages are here because a listing is the thing that gets
+     shared. A link posted into a LINE group has to show the listing to whoever
+     opens it; sending a stranger to a login form to see what they were sent is
+     the door that only opens from the inside again.
+
+     This is safe to do from the client only because the database already draws
+     the line in the right place. Checked against the live project with nothing
+     but the anon key: posts (open ones), profiles, post_images, post_attachments
+     and post_questions come back; quotes, quote_requests, saved_posts and
+     policy_acceptances come back empty. Prices and who bid stay private, which
+     is what sealed bidding means. Every action on these pages — เสนอราคา, ขอใบ
+     เสนอราคา, ถาม, บันทึก, ส่งข้อความ — already checks kxSession for itself. */
+  var KX_OPEN_PAGES = {
+    'page-auth': 1, 'page-terms': 1, 'page-privacy': 1,
+    'page-rfq-detail': 1, 'page-offer-detail': 1
+  };
   var _kxNav = window.navigateTo;
   window.navigateTo = function(id, skipHistory){
     /* ข้อกำหนดการใช้งาน and นโยบายความเป็นส่วนตัว open without a session, because
        the links to them are on the signup form: sending someone who has not
        signed up yet back to the signup form to read what they are agreeing to
        is a door that only opens from the inside. */
-    if(kxAuthChecked && !KX_OPEN_PAGES[id] && !window.kxSession) return _kxNav('page-auth', skipHistory);
+    if(kxAuthChecked && !KX_OPEN_PAGES[id] && !window.kxSession){
+      /* Say why. Now that a stranger can be reading a listing, the next thing
+         they click may well be the poster's name or the feed, and landing on a
+         login form with no explanation reads as the site having broken. */
+      if(typeof kxToast === 'function') kxToast('เข้าสู่ระบบเพื่อใช้งานส่วนนี้');
+      return _kxNav('page-auth', skipHistory);
+    }
     return _kxNav(id, skipHistory);
   };
 
@@ -20176,6 +20250,22 @@ body.kxc-open { overflow: hidden; }
     var res = await sb.auth.getSession();
     window.kxSession = res.data.session;
     kxAuthChecked = true;
+    // renderSidebars lives in another script block and needs to know the answer
+    // is in, so it can tell "no session" from "not asked yet"
+    window.kxAuthChecked = true;
+    /* Wait for the rest of the document before deciding where to send anyone.
+       Half the functions this routing calls — kxPostFromHash, kxOpenPost,
+       kxLoadProfile — are defined further down the page, and getSession()
+       resolves off local storage. With a session that takes long enough that
+       parsing wins; with none it returns almost immediately, so `window.kxOpenPost`
+       was still undefined and every `window.fn && fn()` guard here quietly did
+       nothing. A shared listing fell through to the login page for exactly the
+       visitors it was meant for. */
+    if(document.readyState === 'loading'){
+      await new Promise(function(done){
+        document.addEventListener('DOMContentLoaded', done, { once:true });
+      });
+    }
     var activeId = (document.querySelector('.app-page.active') || {}).id;
     // arrived from a reset email: the session exists only so a new password can
     // be set, so stop here instead of forwarding into the app
@@ -20222,8 +20312,15 @@ body.kxc-open { overflow: hidden; }
            this is the same page, not a new step. */
         navigateTo(activeId, true);
       }
-    }else if(activeId && activeId !== 'page-auth'){
-      navigateTo('page-auth');
+    }else{
+      /* Signed out. A shared listing has to open for whoever follows the link,
+         so a post in the hash is loaded here rather than redirected away — the
+         detail page has no loader hooked to navigateTo, so arriving on it is not
+         the same as it having anything on it. Everything else still goes to the
+         login page. */
+      var guestPost = window.kxPostFromHash && window.kxPostFromHash();
+      if(guestPost) kxOpenPost(guestPost.id, guestPost.kind);
+      else if(activeId && activeId !== 'page-auth') navigateTo('page-auth');
     }
   })();
 

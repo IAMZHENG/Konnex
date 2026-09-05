@@ -190,6 +190,85 @@
     });
   });
 
+  /* Sharing is only worth a button if the link opens for the person it was sent
+     to. The two detail pages are therefore open without a session — safe from
+     the client only because the database already draws the line: with the anon
+     key, posts/profiles/post_images/post_attachments/post_questions read, and
+     quotes/quote_requests/saved_posts/policy_acceptances come back empty. */
+  describe('the session guard — a shared listing opens for a visitor', function () {
+    /* The fake connector matters as much as the fake session here. Navigating
+       fires whatever loader is hooked to the page, and against the real `sb`
+       that starts a live request which is still in flight when the next test
+       runs — kxLoadFeed sets an in-flight flag on the way in, so a later test
+       that navigates to the feed finds it locked and reads the demo markup that
+       should have been replaced. It failed three groups further down the file,
+       which is exactly the kind of trail that is no fun to follow. */
+    function asVisitor(w, fn) {
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      w.kxSession = null;
+      plan(w, {});
+      try { return fn(); }
+      finally {
+        w.kxSession = had;
+        if (was) w.navigateTo(was, true);
+        restore(w);
+      }
+    }
+    it('lets a signed-out visitor onto a listing', function (w) {
+      asVisitor(w, function () {
+        w.navigateTo('page-rfq-detail', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-rfq-detail');
+        w.navigateTo('page-offer-detail', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-offer-detail');
+      });
+    });
+    it('still sends them to the login form for everything else', function (w) {
+      asVisitor(w, function () {
+        w.navigateTo('page-feed', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+        w.navigateTo('page-create-post', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth',
+          'posting still needs an account');
+      });
+    });
+    it('keeps the documents reachable, as before', function (w) {
+      asVisitor(w, function () {
+        w.navigateTo('page-terms', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-terms');
+      });
+    });
+  });
+
+  describe('renderSidebars — what a visitor is offered instead of the menu', function () {
+    function rail(w) { return (w.document.querySelector('.side-nav') || {}).innerText || ''; }
+    it('offers the way in, not nine doors that all need an account', function (w) {
+      var had = w.kxSession;
+      w.kxSession = null; w.kxAuthChecked = true;
+      w.renderSidebars('page-rfq-detail');
+      expect(w.document.body.classList.contains('kx-guest')).toBe(true);
+      expect(rail(w)).toContain('เข้าสู่ระบบ');
+      expect(rail(w)).notToContain('แดชบอร์ด');
+      w.kxSession = had; w.renderSidebars('page-feed');
+    });
+    it('gives a member the real menu back', function (w) {
+      signIn(w); w.kxAuthChecked = true;
+      w.renderSidebars('page-feed');
+      expect(w.document.body.classList.contains('kx-guest')).toBe(false);
+      expect(rail(w)).toContain('แดชบอร์ด');
+    });
+    /* This function also runs once at parse time, before getSession has
+       answered. Reading kxSession alone there would flash the guest rail past
+       every member on every page load. */
+    it('waits for the answer before calling anyone a visitor', function (w) {
+      var had = w.kxSession, hadChecked = w.kxAuthChecked;
+      w.kxSession = null; w.kxAuthChecked = false;
+      w.renderSidebars('page-feed');
+      expect(w.document.body.classList.contains('kx-guest')).toBe(false,
+        '"not asked yet" is not "no account"');
+      w.kxSession = had; w.kxAuthChecked = hadChecked; w.renderSidebars('page-feed');
+    });
+  });
+
   describe('kxApplySavedMarks — the corner mark stays a mark', function () {
     it('does not write a label over the icon in the corner', function (w) {
       var d = w.document.createElement('div');
