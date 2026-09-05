@@ -7848,6 +7848,14 @@ html, body{
 .oa-lightbox{ display:none; position:fixed; inset:0; background:rgba(10,15,25,.82); z-index:1200; align-items:center; justify-content:center; padding:30px; cursor:zoom-out; }
 .oa-lightbox.open{ display:flex; }
 .oa-lightbox img{ max-width:90vw; max-height:88vh; border-radius:12px; }
+/* The two profile pictures open the viewer, so they say so on hover — a hand,
+   like every other click in the app, and deliberately not a magnifier: the
+   magnifier is kept for inside the viewer, where it really does mean zoom.
+   The attribute test keeps the cursor off the empty state, which is a 1×1
+   transparent gif sitting in the same element; a hand over a blank banner
+   promises an action that is not there. */
+#page-company-profile .hero-logo:has(img){ cursor:pointer; }
+#page-company-profile .cover[src]:not([src^="data:"]){ cursor:pointer; }
 .oa-lightbox .lb-nav{ position:absolute; bottom:26px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:20px; cursor:default; }
 .oa-lightbox .lb-arrow{ width:48px; height:48px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#1c1a18; font-size:28px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
 .oa-lightbox .lb-arrow:hover{ background:#fff; }
@@ -9706,6 +9714,20 @@ html, body{
         <div class="ep-grid">
           <div class="ep-main">
 
+            <!-- ประเภทบัญชี. The same choice as the one in ตั้งค่า, not a copy of
+                 it: both sets of chips call authEntity, which saves and then
+                 repaints every set on the page. It belongs here as well because
+                 it is what decides which fields the rest of this form shows —
+                 finding out in ตั้งค่า that ทุนจดทะเบียน exists is too late. -->
+            <section class="ep-card">
+              <h2>ประเภทบัญชี</h2>
+              <p class="ep-sub">เลือกแล้วบันทึกทันที ฟอร์มด้านล่างจะเปลี่ยนตาม — บุคคลทั่วไปกรอกอาชีพและประสบการณ์ ส่วนบริษัทกรอกปีที่ก่อตั้งและทุนจดทะเบียน</p>
+              <div class="kx-enttabs" role="radiogroup" aria-label="ประเภทบัญชี">
+                <button type="button" class="kx-enttab" data-ent="person" role="radio" aria-checked="false" onclick="authEntity('person')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>บุคคลทั่วไป</button>
+                <button type="button" class="kx-enttab" data-ent="company" role="radio" aria-checked="true" onclick="authEntity('company')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg></span>บริษัท / ร้านค้า</button>
+              </div>
+            </section>
+
             <section class="ep-card">
               <h2 id="epMediaTitle">รูปปกและโลโก้บริษัท</h2>
               <p class="ep-sub">รูปภาพที่ชัดเจนช่วยเพิ่มความน่าเชื่อถือให้กับโปรไฟล์ของคุณ</p>
@@ -11562,8 +11584,8 @@ html, body{
               <h3>ประเภทบัญชี</h3>
               <p class="card-desc">กำหนดว่าฟอร์มโปรไฟล์และเอกสารยืนยันตัวตนจะใช้ชุดไหน — ย้ายมาไว้ที่นี่เพราะเป็นการตั้งค่าบัญชี ไม่ใช่ข้อมูลโปรไฟล์</p>
               <div class="kx-enttabs" role="radiogroup" aria-label="ประเภทบัญชี">
-                <button type="button" class="kx-enttab" id="epEntPerson" role="radio" aria-checked="false" onclick="authEntity('person')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>บุคคลทั่วไป</button>
-                <button type="button" class="kx-enttab" id="epEntCompany" role="radio" aria-checked="true" onclick="authEntity('company')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg></span>บริษัท / ร้านค้า</button>
+                <button type="button" class="kx-enttab" id="epEntPerson" data-ent="person" role="radio" aria-checked="false" onclick="authEntity('person')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>บุคคลทั่วไป</button>
+                <button type="button" class="kx-enttab" id="epEntCompany" data-ent="company" role="radio" aria-checked="true" onclick="authEntity('company')"><span class="kx-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14"></path><path d="M9 21v-6h6v6"></path></svg></span>บริษัท / ร้านค้า</button>
               </div>
             </div>
             <div class="set-card">
@@ -12480,6 +12502,21 @@ html, body{
       lbIdx = Math.max(0, cells.indexOf(cell));
       document.getElementById('oaLightbox').classList.add('open');
       lbShow(lbIdx);
+      return;
+    }
+    /* รูปโปรไฟล์และรูปปก. Both are pictures somebody chose and both were dead to
+       a click. The cover is the worse of the two: the banner is about four and a
+       half times as wide as it is tall and fills with `cover`, so what is on
+       screen is a horizontal slice and there was no way at all to see the rest.
+       The empty state is a 1×1 transparent gif, so a data: src means there is no
+       picture here to open. */
+    var pfImg = e.target.closest('.hero-logo img, #page-company-profile .cover');
+    if(pfImg && pfImg.tagName === 'IMG' && pfImg.src && pfImg.src.indexOf('data:') !== 0){
+      e.preventDefault(); e.stopPropagation();
+      lbImgs = [bigSrc(pfImg)];
+      lbIdx = 0;
+      document.getElementById('oaLightbox').classList.add('open');
+      lbShow(0);
       return;
     }
     var img = e.target.closest('.post-thumb, .rfq-thumb, .offer-thumb');
@@ -17986,10 +18023,12 @@ body.kx-guest #load-more-offers { display: none !important; }
     var at = document.getElementById('epAvatarTitle'); if(at) at.textContent = c.avatar;
     var mt = document.getElementById('epMediaTitle');  if(mt) mt.textContent = c.media;
 
-    // edit profile chips — same choice, second place to change it
-    [['epEntPerson','person'], ['epEntCompany','company']].forEach(function(p){
-      var el = document.getElementById(p[0]);
-      if(el) el.setAttribute('aria-checked', p[1] === type ? 'true' : 'false');
+    /* ประเภทบัญชี chips. The same choice now sits in two places — ตั้งค่า and
+       แก้ไขโปรไฟล์ — so this sweeps by attribute rather than naming ids: a third
+       place to change it should not also mean remembering to add its ids here,
+       which is exactly how one of them ends up showing the wrong answer. */
+    Array.prototype.forEach.call(document.querySelectorAll('.kx-enttab[data-ent]'), function(el){
+      el.setAttribute('aria-checked', el.getAttribute('data-ent') === type ? 'true' : 'false');
     });
 
     // the Verified flow already has its own person/company switch — keep it in step

@@ -539,6 +539,40 @@
     });
   });
 
+  /* ประเภทบัญชี now appears in ตั้งค่า and in แก้ไขโปรไฟล์. It is the same choice
+     in two places, not two settings — both call authEntity, which saves and then
+     repaints every set of chips on the page. */
+  describe('ประเภทบัญชี — one choice, shown in two places', function () {
+    it('is on แก้ไขโปรไฟล์ as well as ตั้งค่า', function (w) {
+      var onEdit = w.document.querySelectorAll('#page-edit-profile .kx-enttab[data-ent]');
+      var onSet  = w.document.querySelectorAll('#page-settings .kx-enttab[data-ent]');
+      expect(onEdit.length).toBe(2);
+      expect(onSet.length).toBe(2);
+      Array.prototype.forEach.call(onEdit, function (b) {
+        expect(b.getAttribute('onclick')).toContain('authEntity(',
+          'the same call, so the same save — not a second setting');
+      });
+    });
+    /* The repaint used to name the two ids it knew about. A second pair would
+       have kept whatever it was last rendered with, so ตั้งค่า and แก้ไขโปรไฟล์
+       could sit there showing different answers to the same question. */
+    it('keeps every set of chips in step', function (w) {
+      var was = w.kxEntity && w.kxEntity();
+      var had = w.kxSession;
+      w.kxSession = null;                       // no account: choose without saving
+      w.authEntity('person');
+      var on = w.document.querySelectorAll('.kx-enttab[data-ent="person"][aria-checked="true"]');
+      var off = w.document.querySelectorAll('.kx-enttab[data-ent="company"][aria-checked="true"]');
+      expect(on.length).toBe(2, 'both places show บุคคลทั่วไป');
+      expect(off.length).toBe(0, 'and neither still shows บริษัท');
+      w.authEntity('company');
+      expect(w.document.querySelectorAll('.kx-enttab[data-ent="company"][aria-checked="true"]').length)
+        .toBe(2);
+      if (was) w.authEntity(was);
+      w.kxSession = had;
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];
@@ -2215,11 +2249,31 @@
       expect(hits).toBe(1,
         'the one left is the lightbox image, where the cursor really does mean zoom');
     });
+    /* The cover opens the viewer now — it is a picture someone chose, and the
+       banner shows a horizontal slice of it. The empty state is a 1×1 gif in
+       that same element, and a hand over a blank banner still promises an action
+       that is not there, so the cursor follows the src rather than the element. */
     it('does not put a hand on a picture that opens nothing', function (w) {
-      // the profile cover is decoration; a hand there would promise an action
       var cover = w.document.querySelector('#page-company-profile .hero-banner .cover');
       if (!cover) return;                       // not rendered without a profile
+      var was = cover.getAttribute('src');
+      cover.setAttribute('src', 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==');
       expect(w.getComputedStyle(cover).cursor).notToContain('pointer');
+      cover.setAttribute('src', 'https://example.test/cover.jpg');
+      expect(w.getComputedStyle(cover).cursor).toContain('pointer',
+        'a real cover does open the viewer, so it says so');
+      if (was != null) cover.setAttribute('src', was);
+    });
+    it('opens the profile pictures in the viewer', function (w) {
+      var logo = w.document.querySelector('#page-company-profile .hero-logo');
+      if (!logo) return;
+      var had = logo.innerHTML;
+      logo.innerHTML = '<img src="https://example.test/avatar.jpg" alt="">';
+      expect(w.getComputedStyle(logo).cursor).toContain('pointer');
+      logo.innerHTML = 'A';
+      expect(w.getComputedStyle(logo).cursor).notToContain('pointer',
+        'an initial is not a picture, and clicking it opens nothing');
+      logo.innerHTML = had;
     });
   });
 
