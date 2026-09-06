@@ -17701,7 +17701,15 @@ body.kx-no-offers .cp-type-step,
 body.kx-no-offers #page-feed .filter-tabs,
 /* and the tab strip on งานของฉัน, whose only other tab was ประกาศขาย */
 body.kx-no-offers #page-rfq-offers .myjob-tabs,
-body.kx-no-offers #page-my-offers .myjob-tabs { display: none !important; }
+body.kx-no-offers #page-my-offers .myjob-tabs,
+/* ใบเสนอราคาที่ขอ is the other half of the same feature: a buyer asks the seller
+   behind a ประกาศขาย for a price. With no ประกาศขาย to ask about, nothing can
+   ever arrive here — so the tab goes, and with it the two buttons in the ask-for-
+   a-quote modals that pointed at it. Its strip goes whole for the same reason as
+   the one above: one tab is not a choice. */
+body.kx-no-offers [onclick*="page-my-requests"],
+body.kx-no-offers #page-my-bids .myjob-tabs,
+body.kx-no-offers #page-my-requests .myjob-tabs { display: none !important; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than

@@ -666,6 +666,14 @@
       expect(call.filters.join(' ')).toContain("eq(kind,rfq)",
         'one helper does this, so a query that forgets is a query that is wrong');
     });
+    /* ใบเสนอราคาที่ขอ is the other half of the same feature — a buyer asking the
+       seller behind a ประกาศขาย for a price. With no ประกาศขาย, nothing can
+       arrive there, and a tab that can only ever be empty is worse than none. */
+    it('drops ใบเสนอราคาที่ขอ, which only ever fills from an Offer', function (w) {
+      w.navigateTo('page-my-bids', true);
+      expect(vis(w, '[onclick*="page-my-requests"]')).toBe(0);
+      expect(vis(w, '#page-my-bids .myjob-tabs')).toBe(0, 'one tab is not a choice');
+    });
     it('says nothing on screen about listings that are not there', function (w) {
       var sub = w.document.getElementById('feedSub');
       expect(sub.textContent).notToContain('เสนอขาย',
