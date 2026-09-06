@@ -8031,11 +8031,11 @@ html, body{
 
       <div class="feed-list"></div>
 
-      <div class="feed-empty" id="feedEmpty" style="display:none;text-align:center;padding:50px 20px;background:var(--card);border:1px solid var(--line);border-radius:14px;">
-        <div style="font-size:32px;margin-bottom:10px;">🔍</div>
-        <div style="font-size:16px;font-weight:600;margin-bottom:6px;">ไม่พบรายการในหมวดนี้</div>
-        <div style="font-size:15px;color:var(--ink-soft);">ลองเปลี่ยนตัวกรอง หรือดูรายการ "ทั้งหมด" แทน</div>
-      </div>
+      <!-- A second #feedEmpty stood here, an older inline-styled copy of the one
+           above. Five places call getElementById('feedEmpty') and every one of
+           them reached the first; three more read .empty-title / .empty-sub /
+           .btn-create out of it, which this copy did not have. It could never
+           appear on screen and never will, so it is gone rather than renamed. -->
 
       <div class="load-more" id="feedLoadMore">โหลดเพิ่มเติม ⌄</div>
     </div>
@@ -10447,7 +10447,12 @@ html, body{
         <div class="select-chip">ล่าสุดก่อน ⌄</div>
       </div>
 
-      <div class="offer-list" id="offerList">
+      <!-- myOfferList, not offerList: page-rfq-detail already owns that id for
+           the list of bids on a listing. Two elements sharing an id is invalid,
+           and getElementById would only ever have found the other one — every
+           reader here happens to be scoped, so nothing was broken, but the next
+           one to reach for it by id would have been. -->
+      <div class="offer-list" id="myOfferList">
 <div class="kx-empty" id="offerEmpty" style="display:none;">
           <div class="kx-empty-ic">📦</div>
           <div class="kx-empty-title">ยังไม่มีประกาศขายในสถานะนี้</div>
@@ -15678,7 +15683,11 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-company-profile .rv-score-stars{ color:#f59e0b; font-size:14px; letter-spacing:1px; line-height:1.3; }
 #page-company-profile .rv-score-sub{ font-size:13px; color:var(--ink-soft); margin-top:2px; line-height:1.3; }
 
-    }
+    /* A stray `}` sat here on its own, closing a block that was never opened.
+       Browsers recover from that — both the rule above it and the ones below
+       parse — so nothing was broken by it. It is gone so that counting braces
+       is a usable check again: a real unbalanced block, the kind that swallows
+       a media query whole, is invisible next to a known-harmless one. */
     #page-company-profile .rv-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
     #page-company-profile .rv-write{ display:inline-flex; align-items:center; gap:7px; background: var(--blue-600); border:1px solid var(--blue-900); color:#fff; border-radius:10px; padding:10px 16px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
     #page-company-profile .rv-write:hover{ background:var(--blue-900); }
@@ -21175,7 +21184,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   function boot(){
     wireSort('#page-rfq-offers .select-chip', 0, '#page-rfq-offers .rfq-list', '.rfq-card', null);
-    wireSort('#page-my-offers .select-chip', 0, '#page-my-offers #offerList', '.offer-row', '.offer-price-col');
+    wireSort('#page-my-offers .select-chip', 0, '#page-my-offers #myOfferList', '.offer-row', '.offer-price-col');
     wireSort('#page-my-bids .select-chip', 0, '#page-my-bids #bidList', '.bid-row', '.price-num');
     wireTags();
     setLoad();

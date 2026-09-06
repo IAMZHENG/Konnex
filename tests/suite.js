@@ -696,6 +696,207 @@
     });
   });
 
+  /* Writes that had no test. Each of these puts a row in the database, and each
+     one is a place where a silent failure costs somebody something real — a
+     bookmark that did not stick, a review nobody can see, a question that was
+     never asked. */
+  describe('kxToggleSave — the bookmark, and what happens when it fails', function () {
+    it('writes the row in your own name, which is what RLS checks', async function (w) {
+      var sb = plan(w, { saved_posts: { insert: { data: null, error: null } } });
+      signIn(w);
+      w.kxSavedIds = {};
+      await w.kxToggleSave(null, 'p1');
+      restore(w);
+      expect(sb._writes[0].table).toBe('saved_posts');
+      expect(sb._writes[0].row.profile_id).toBe(ME);
+      expect(sb._writes[0].row.post_id).toBe('p1');
+      expect(!!w.kxSavedIds.p1).toBe(true);
+      w.kxSavedIds = {};
+    });
+    /* The mark flips before the write, so the button answers the press at once.
+       That is only honest if a refusal puts it back — otherwise the page shows a
+       bookmark that does not exist. */
+    it('puts the mark back when the write is refused', async function (w) {
+      plan(w, { saved_posts: { insert: { data: null, error: ERR.rlsRefused } } });
+      signIn(w);
+      w.kxSavedIds = {};
+      await w.kxToggleSave(null, 'p1');
+      restore(w);
+      expect(!!w.kxSavedIds.p1).toBe(false, 'the optimistic flip is undone');
+      w.kxSavedIds = {};
+    });
+    it('un-saves by deleting, and restores on refusal too', async function (w) {
+      var sb = plan(w, { saved_posts: { delete: { data: null, error: ERR.rlsRefused } } });
+      signIn(w);
+      w.kxSavedIds = { p1: true };
+      await w.kxToggleSave(null, 'p1');
+      restore(w);
+      expect(sb._writes[0].op).toBe('delete');
+      expect(!!w.kxSavedIds.p1).toBe(true, 'still saved, because the delete did not happen');
+      w.kxSavedIds = {};
+    });
+    it('sends a signed-out visitor to the login form instead of writing', async function (w) {
+      var sb = plan(w, {});
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      w.kxSession = null;
+      await w.kxToggleSave(null, 'p1');
+      restore(w);
+      expect(sb._writes.length).toBe(0);
+      expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+      w.kxSession = had; if (was) w.navigateTo(was, true);
+    });
+  });
+
+  describe('kxSubmitReview — a review is written once, in your own name', function () {
+    /* #pfReviewPost is built at runtime by the รีวิว card, not shipped in the
+       markup, so the test stands one up the same shape. */
+    function target(w, postId) {
+      var sel = w.document.getElementById('pfReviewPost');
+      if (!sel) {
+        sel = w.document.createElement('select');
+        sel.id = 'pfReviewPost';
+        w.document.body.appendChild(sel);
+      }
+      if (postId && !sel.querySelector('option[value="' + postId + '"]')) {
+        var o = w.document.createElement('option');
+        o.value = postId; sel.appendChild(o);
+      }
+      sel.value = postId || '';
+      w.kxReviewTarget = OTHER;
+      return sel;
+    }
+    it('carries who wrote it, who it is about, and which listing', async function (w) {
+      var sb = plan(w, { reviews: { insert: { data: null, error: null } } });
+      signIn(w); target(w, 'p1');
+      var ok = await w.kxSubmitReview(5, 'ทำงานดีมาก');
+      restore(w);
+      expect(ok).toBe(true);
+      var row = sb._writes[0].row;
+      expect(row.reviewer_id).toBe(ME);
+      expect(row.reviewee_id).toBe(OTHER);
+      expect(row.post_id).toBe('p1');
+      expect(row.rating).toBe(5);
+    });
+    /* The unique index is what stops a second review of the same job. The code
+       has to read 23505 as "already reviewed" rather than as a failure, or the
+       person is told to try again at something that can never succeed. */
+    it('reads a duplicate as already reviewed, not as a failure to retry', async function (w) {
+      plan(w, { reviews: { insert: { data: null, error: { code: '23505', message: 'duplicate key' } } } });
+      signIn(w); target(w, 'p1');
+      var ok = await w.kxSubmitReview(5, '');
+      restore(w);
+      expect(ok).toBe(false);
+    });
+    it('writes nothing when no listing is chosen', async function (w) {
+      var sb = plan(w, { reviews: { insert: { data: null, error: null } } });
+      signIn(w);
+      target(w, '');
+      var ok = await w.kxSubmitReview(4, 'x');
+      restore(w);
+      expect(ok).toBe(false);
+      expect(sb._writes.length).toBe(0, 'a review has to be about a job');
+    });
+  });
+
+  describe('kxAskQuestion — asking on a listing', function () {
+    function ui(w, text) {
+      var d = w.document.createElement('div');
+      d.innerHTML = '<div data-post-id="p1"><div>' +
+        '<input class="kx-askin" value="' + text + '">' +
+        '<button class="kx-askbtn"></button></div></div>';
+      w.document.body.appendChild(d);
+      return { root: d, btn: d.querySelector('.kx-askbtn') };
+    }
+    it('asks as you, on the listing the button sits in', async function (w) {
+      var sb = plan(w, { post_questions: { insert: { data: null, error: null } },
+                         posts: { _: { data: null, error: null } } });
+      signIn(w);
+      var el = ui(w, 'ส่งได้ภายในกี่วัน');
+      await w.kxAskQuestion(el.btn);
+      restore(w);
+      var row = sb._writes[0].row;
+      expect(row.post_id).toBe('p1');
+      expect(row.asker_id).toBe(ME);
+      expect(row.body).toBe('ส่งได้ภายในกี่วัน');
+      el.root.remove();
+    });
+    it('writes nothing for an empty box', async function (w) {
+      var sb = plan(w, { post_questions: { insert: { data: null, error: null } } });
+      signIn(w);
+      var el = ui(w, '   ');
+      await w.kxAskQuestion(el.btn);
+      restore(w);
+      expect(sb._writes.length).toBe(0);
+      el.root.remove();
+    });
+    it('re-enables the button after a refusal, so it can be tried again', async function (w) {
+      plan(w, { post_questions: { insert: { data: null, error: ERR.rlsRefused } } });
+      signIn(w);
+      var el = ui(w, 'คำถามที่ถูกปฏิเสธ');
+      await w.kxAskQuestion(el.btn);
+      restore(w);
+      expect(el.btn.disabled).toBe(false, 'a dead button is worse than an error');
+      el.root.remove();
+    });
+  });
+
+  describe('kxRfqOnly — the one place the kind filter lives', function () {
+    it('adds the filter while Offers are off', function (w) {
+      var seen = null;
+      var fake = { eq: function (k, v) { seen = k + '=' + v; return this; } };
+      w.kxRfqOnly(fake);
+      expect(seen).toBe('kind=rfq');
+    });
+    it('adds nothing when they are on', function (w) {
+      var was = w.KX_OFFERS_ENABLED;
+      w.KX_OFFERS_ENABLED = true;
+      var seen = null;
+      w.kxRfqOnly({ eq: function (k, v) { seen = k + '=' + v; return this; } });
+      w.KX_OFFERS_ENABLED = was;
+      expect(seen).toBe(null, 'the same helper has to be a no-op when the flag flips back');
+    });
+  });
+
+  /* Two whole-file checks. Both catch the same kind of fault: something the
+     source says plainly that the browser then quietly does not do. */
+  describe('the document is well formed', function () {
+    it('gives no id to two elements at once', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var seen = {}, dup = [], m;
+      var re = /\sid="([^"]+)"/g;
+      while ((m = re.exec(src))) {
+        // ids written inside a JS string build markup that replaces the static
+        // element of the same name, so they are not a second element
+        var before = src.slice(Math.max(0, m.index - 40), m.index);
+        if (/['"`]\s*\+?\s*<div[^>]*$/.test(before) || /'<div/.test(before)) continue;
+        if (seen[m[1]]) dup.push(m[1]); else seen[m[1]] = 1;
+      }
+      expect(dup).toEqual([],
+        'getElementById finds the first and the rest are unreachable');
+    });
+    /* An unbalanced brace does not fail loudly: the parser closes the block
+       early and every rule after it lands in a different scope than written —
+       a media query's contents escaping to all widths, for instance. */
+    it('closes every CSS block it opens', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var blocks = src.match(/<style[^>]*>[\s\S]*?<\/style>/g) || [];
+      var bad = [];
+      blocks.forEach(function (b, i) {
+        // comments and quoted strings can hold braces of their own
+        var css = b.replace(/\/\*[\s\S]*?\*\//g, '')
+                   .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+                   .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+        var d = 0, under = false;
+        for (var j = 0; j < css.length; j++) {
+          if (css[j] === '{') d++;
+          else if (css[j] === '}') { d--; if (d < 0) under = true; }
+        }
+        if (d !== 0 || under) bad.push('style #' + (i + 1) + ' → ' + d);
+      });
+      expect(bad).toEqual([]);
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];
