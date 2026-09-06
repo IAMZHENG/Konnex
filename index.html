@@ -8007,7 +8007,7 @@ html, body{
         <div class="adv-grid">
           <div class="adv-field"><label>คำค้น / คีย์เวิร์ด</label><input type="text" id="advKw" placeholder="เช่น CNC, เลเซอร์, ขนส่ง"></div>
           <div class="adv-field"><label>จังหวัด</label><select id="advProv"><option>ทุกจังหวัด</option><option>กรุงเทพมหานคร</option><option>ชลบุรี</option><option>สมุทรปราการ</option><option>ปทุมธานี</option><option>ระยอง</option></select></div>
-          <div class="adv-field"><label>ประเภท</label><select id="advKind"><option>ทั้งหมด</option><option>ต้องการซื้อ (RFQ)</option><option>ต้องการขาย (Offer)</option></select></div>
+          <div class="adv-field" id="advKindField"><label>ประเภท</label><select id="advKind"><option>ทั้งหมด</option><option>ต้องการซื้อ (RFQ)</option><option>ต้องการขาย (Offer)</option></select></div>
           <div class="adv-field"><label for="advMin">ราคาขั้นต่ำ (บาท)</label><input type="text" id="advMin" inputmode="numeric" placeholder="0"></div>
           <div class="adv-field"><label for="advMax">ราคาสูงสุด (บาท)</label><input type="text" id="advMax" inputmode="numeric" placeholder="ไม่จำกัด"></div>
         </div>
@@ -8060,13 +8060,17 @@ html, body{
       </div>
 
 
-      <div class="r-card">
-        <h3 style="margin:0 0 14px;">สถิติวันนี้</h3>
-        <div class="stat-row"><div class="left-s">📋 งานใหม่วันนี้</div><span class="snum">128</span></div>
-        <div class="stat-row"><div class="left-s">📷 RFQ ใหม่</div><span class="snum">68</span></div>
-        <div class="stat-row"><div class="left-s">📦 ข้อเสนอขายใหม่</div><span class="snum">60</span></div>
-        <div class="stat-row"><div class="left-s">👥 ผู้ใช้งานออนไลน์</div><span class="snum">356</span></div>
-      </div>
+      <!-- A "สถิติวันนี้" card stood here: งานใหม่วันนี้ 128, RFQ ใหม่ 68,
+           ข้อเสนอขายใหม่ 60, ผู้ใช้งานออนไลน์ 356. Nothing in the app ever wrote
+           to any of them — grep .snum — so all four were fiction, on a platform
+           with twelve open listings and six accounts. One of them counted a kind
+           of listing that no longer exists, which is what turned it up.
+
+           Removed rather than wired to real numbers: three of the four are
+           countable (posts today, RFQs today, accounts), but "ผู้ใช้งานออนไลน์"
+           is not something this app can know, and a card that is three-quarters
+           real reads as entirely real. The same call was made for the
+           "ผู้ประกอบการกว่า 12,000 ราย" line on the login page. -->
 
       <div class="r-card">
         <h3 style="margin:0 0 4px;">เคล็ดลับ</h3>
@@ -12266,6 +12270,11 @@ html, body{
          the original sentence back with the feature. */
       var fsub = document.getElementById('feedSub');
       if(fsub) fsub.textContent = 'งานที่ผู้ซื้อกำลังมองหาผู้ขายอยู่ตอนนี้ — เลือกงานที่ทำได้ แล้วเสนอราคา';
+      /* ค้นหาขั้นสูง's ประเภท is hidden, but hidden is not the same as unset: a
+         value left on ต้องการขาย would keep filtering the results of a control
+         nobody can see or reach to change. */
+      var ak = document.getElementById('advKind');
+      if(ak) ak.selectedIndex = 0;
       if(typeof selectPostType === 'function') selectPostType('rfq');
     }
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
@@ -17725,7 +17734,9 @@ body.kx-no-offers #page-my-bids .myjob-tabs,
 body.kx-no-offers #page-my-requests .myjob-tabs,
 /* the ประเภท strip on ใบเสนอราคา: ตอบคำขอ is answering a request on your own
    ประกาศขาย, and with that gone ทั้งหมด and เสนอราคา are the same list */
-body.kx-no-offers #page-my-bids .origin-tabs { display: none !important; }
+body.kx-no-offers #page-my-bids .origin-tabs,
+/* ประเภท in ค้นหาขั้นสูง is the RFQ/Offer switch under another name */
+body.kx-no-offers #advKindField { display: none !important; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than

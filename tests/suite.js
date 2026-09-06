@@ -689,6 +689,13 @@
         'the second query is not made at all, rather than made and discarded');
       expect(vis(w, '#page-my-bids .origin-tabs')).toBe(0, 'and its ประเภท strip goes');
     });
+    /* ค้นหาขั้นสูง's ประเภท is the RFQ/Offer switch wearing a different label.
+       Hidden is not enough on its own: a value left on ต้องการขาย would go on
+       filtering from a control nobody can see or reach to change. */
+    it('drops ประเภท from ค้นหาขั้นสูง, and leaves it unset', function (w) {
+      expect(vis(w, '#advKindField')).toBe(0);
+      expect(w.document.getElementById('advKind').selectedIndex).toBe(0);
+    });
     it('says nothing on screen about listings that are not there', function (w) {
       var sub = w.document.getElementById('feedSub');
       expect(sub.textContent).notToContain('เสนอขาย',
@@ -1792,8 +1799,13 @@
                  'page-my-requests', 'page-dashboard', 'page-messages', 'page-notifications',
                  'page-saved', 'page-history', 'page-company-profile',
                  'page-rfq-detail', 'page-offer-detail'];
-    // thousands separators, view/interest counts, star ratings, and the demo cast
-    var FABRICATED = /\d{1,3},\d{3}|Prime CNC|ไทยพรีซิชั่น|Apex|สแตนเลส 316|บุญมี|\b\d+ วิว\b|\b\d+ ผู้สนใจ\b|★\s*[\d.]+/;
+    /* Thousands separators, view/interest counts, star ratings, and the demo
+       cast — plus, since a "สถิติวันนี้" card sat on the feed for months
+       claiming 128 new jobs and 356 people online with nothing ever writing to
+       it, any bare number standing alone as a statistic. That card slipped past
+       every pattern here because its numbers were small enough not to need a
+       comma. */
+    var FABRICATED = /\d{1,3},\d{3}|Prime CNC|ไทยพรีซิชั่น|Apex|สแตนเลส 316|บุญมี|\b\d+ วิว\b|\b\d+ ผู้สนใจ\b|★\s*[\d.]+|ผู้ใช้งานออนไลน์|สถิติวันนี้/;
 
     it('no page shows invented content before its data arrives', async function (w) {
       signIn(w);
