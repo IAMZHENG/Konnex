@@ -17709,7 +17709,10 @@ body.kx-no-offers #page-my-offers .myjob-tabs,
    the one above: one tab is not a choice. */
 body.kx-no-offers [onclick*="page-my-requests"],
 body.kx-no-offers #page-my-bids .myjob-tabs,
-body.kx-no-offers #page-my-requests .myjob-tabs { display: none !important; }
+body.kx-no-offers #page-my-requests .myjob-tabs,
+/* the ประเภท strip on ใบเสนอราคา: ตอบคำขอ is answering a request on your own
+   ประกาศขาย, and with that gone ทั้งหมด and เสนอราคา are the same list */
+body.kx-no-offers #page-my-bids .origin-tabs { display: none !important; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than
@@ -23484,6 +23487,11 @@ body.kx-guest #load-more-offers { display: none !important; }
        ตอบแล้ว or ยังไม่ได้ตอบ rather than won/lost, and the "buyer" is the
        person who asked. */
     var replies = [];
+    /* Answers to คำขอใบเสนอราคา are answers given from your own ประกาศขาย. With
+       Offers switched off there is nothing left that can produce a new one, and
+       the old ones belong to a feature the app no longer presents — so the
+       second query is not made at all rather than made and thrown away. */
+    if(!window.KX_OFFERS_ENABLED) return renderBidRows(res.data);
     var rq = await sb.from('quote_requests')
       .select('id,quantity,detail,quoted_price,seller_note,status,created_at,' +
               'profiles(id,company_name,avatar_url),' +
@@ -23516,13 +23524,24 @@ body.kx-guest #load-more-offers { display: none !important; }
       };
     });
 
-    var rows = res.data.concat(replies)
-      .sort(function(a, b){ return new Date(b.created_at) - new Date(a.created_at); });
+    return renderBidRows(res.data.concat(replies));
+  };
 
+  /* Split out so the Offers-off path above can return early without repeating
+     any of it. */
+  function renderBidRows(rows){
+    var list = document.getElementById('bidList');
+    if(!list) return;
+    rows = rows.slice().sort(function(a, b){
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+    var sub = window.KX_OFFERS_ENABLED
+      ? 'เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น หรือตอบคำขอจากประกาศขายของคุณ รายการจะแสดงที่นี่'
+      : 'เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น รายการจะแสดงที่นี่';
     list.innerHTML = rows.length
       ? rows.map(bidRowHTML).join('')
       : '<div class="kx-empty"><div class="kx-empty-ic">🧾</div><div class="kx-empty-title">ยังไม่ได้ส่งใบเสนอราคา</div>' +
-        '<div class="kx-empty-sub">เมื่อคุณเสนอราคาให้ประกาศของผู้อื่น หรือตอบคำขอจากประกาศขายของคุณ รายการจะแสดงที่นี่</div>' +
+        '<div class="kx-empty-sub">' + sub + '</div>' +
         '<button class="btn-create" onclick="navigateTo(\'page-feed\')">ไปที่หน้าหลัก</button></div>';
     if(window.kxApplyIcons) window.kxApplyIcons(list);
 
@@ -23531,7 +23550,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var loadMore = document.querySelector('#page-my-bids .load-more');
     if(loadMore) loadMore.style.display = 'none';
     if(typeof applyBidFilters === 'function') applyBidFilters();
-  };
+  }
 
   window.kxLoadMyPosts = async function(kind){
     if(!window.kxSession) return;

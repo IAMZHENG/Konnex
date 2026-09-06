@@ -674,6 +674,21 @@
       expect(vis(w, '[onclick*="page-my-requests"]')).toBe(0);
       expect(vis(w, '#page-my-bids .myjob-tabs')).toBe(0, 'one tab is not a choice');
     });
+    /* ใบเสนอราคา loaded from two tables: bids on other people's RFQs, and
+       answers you gave to requests on your own ประกาศขาย. The second is the
+       Offer side of the same feature. */
+    it('asks only for real bids, not for answers to Offer requests', async function (w) {
+      var sb = plan(w, { quotes: { _: { data: [], error: null } },
+                         quote_requests: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.kxLoadMyBids();
+      restore(w);
+      var asked = sb._calls.map(function (c) { return c.table; });
+      expect(asked).toContain('quotes');
+      expect(asked).notToContain('quote_requests',
+        'the second query is not made at all, rather than made and discarded');
+      expect(vis(w, '#page-my-bids .origin-tabs')).toBe(0, 'and its ประเภท strip goes');
+    });
     it('says nothing on screen about listings that are not there', function (w) {
       var sub = w.document.getElementById('feedSub');
       expect(sub.textContent).notToContain('เสนอขาย',
