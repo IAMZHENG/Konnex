@@ -619,6 +619,60 @@
     });
   });
 
+  /* ประกาศขาย (Offer) is switched off. QubeQuote is a place where a buyer asks
+     and sellers answer; carrying the opposite kind of listing as well makes it
+     one more general marketplace. Off by flag, nothing deleted — the rows, their
+     detail pages and their notifications all still work. */
+  describe('ประกาศขาย ปิดไว้ก่อน', function () {
+    function vis(w, sel) {
+      return Array.prototype.filter.call(w.document.querySelectorAll(sel), function (el) {
+        return el.getClientRects().length > 0;
+      }).length;
+    }
+    it('is off, and says so in one place', function (w) {
+      expect(w.KX_OFFERS_ENABLED).toBe(false);
+      expect(w.document.body.classList.contains('kx-no-offers')).toBe(true);
+    });
+    it('offers no way to post one', function (w) {
+      w.navigateTo('page-create-post', true);
+      expect(vis(w, '#cpTypeOffer')).toBe(0, 'the เสนอสินค้า card');
+      expect(vis(w, '#page-create-post .cp-type-step')).toBe(0,
+        'and the question it belonged to, which now has one answer');
+      var picked = w.document.querySelector('#cpTypeRfq input');
+      expect(picked && picked.checked).toBe(true, 'RFQ is the only kind, so it is chosen');
+    });
+    it('leaves none of the ways in', function (w) {
+      expect(vis(w, '[onclick*="page-my-offers"]')).toBe(0, 'every sidebar and tab link');
+      expect(vis(w, '.filter-tab[data-filter="sell"]')).toBe(0);
+      expect(vis(w, '.sh-tab[data-filter="sell"]')).toBe(0);
+    });
+    /* The buy/sell strips are hidden whole, not one tab each: with a single kind
+       left, ทั้งหมด and ต้องการซื้อ are the same list under two names. */
+    it('drops the strips that only existed to choose between the two', function (w) {
+      w.navigateTo('page-feed', true);
+      expect(vis(w, '#page-feed .filter-tabs')).toBe(0);
+      w.navigateTo('page-rfq-offers', true);
+      expect(vis(w, '#page-rfq-offers .myjob-tabs')).toBe(0);
+    });
+    /* Hiding the lists is not enough on its own — the feed would still ask for
+       every kind and quietly render what the rest of the app is hiding. */
+    it('asks the database for RFQs only', async function (w) {
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.kxLoadFeed();
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.table === 'posts'; })[0];
+      expect(!!call).toBe(true);
+      expect(call.filters.join(' ')).toContain("eq(kind,rfq)",
+        'one helper does this, so a query that forgets is a query that is wrong');
+    });
+    it('says nothing on screen about listings that are not there', function (w) {
+      var sub = w.document.getElementById('feedSub');
+      expect(sub.textContent).notToContain('เสนอขาย',
+        'the feed promised a kind of listing it no longer carries');
+    });
+  });
+
   describe('the stylesheet parses as written', function () {
     function selectors(w) {
       var out = [];

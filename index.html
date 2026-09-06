@@ -7976,7 +7976,7 @@ html, body{
       <div class="feed-header">
         <div>
           <h1>ค้นหางานและบริการ</h1>
-          <p style="font-size:15px;color:var(--ink-soft);margin:4px 0 0;">เรียกดูงานที่ต้องการซื้อ หรือบริการที่มีคนเสนอขายอยู่ในขณะนี้</p>
+          <p id="feedSub" style="font-size:15px;color:var(--ink-soft);margin:4px 0 0;">เรียกดูงานที่ต้องการซื้อ หรือบริการที่มีคนเสนอขายอยู่ในขณะนี้</p>
         </div>
         <button class="btn-create" onclick="newPost()">＋ โพสต์ประกาศ</button>
       </div>
@@ -9911,10 +9911,10 @@ html, body{
     <div>
       <div style="max-width:760px;">
         <h1 id="cpHeading" style="font-size:26px;font-weight:700;margin:2px 0 4px;">โพสต์ประกาศ</h1>
-        <p style="font-size:15px;color:var(--ink-soft);margin:0 0 20px;">โพสต์ความต้องการซื้อ (RFQ) หรือประกาศขาย (Offer) เพื่อรับใบเสนอราคา</p>
+        <p id="cpTypeSub" style="font-size:15px;color:var(--ink-soft);margin:0 0 20px;">โพสต์ความต้องการซื้อ (RFQ) หรือประกาศขาย (Offer) เพื่อรับใบเสนอราคา</p>
 
-        <div style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">1</span><span style="font-size:18px;font-weight:700;color:var(--ink);">คุณต้องการโพสต์งานประเภทใด?</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;">
+        <div class="cp-type-step" style="display:flex;align-items:center;gap:11px;margin:4px 0 14px;"><span style="width:28px;height:28px;border-radius:50%;background: var(--blue-600);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;">1</span><span style="font-size:18px;font-weight:700;color:var(--ink);">คุณต้องการโพสต์งานประเภทใด?</span></div>
+        <div class="cp-type-step" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;">
           <label id="cpTypeRfq" onclick="selectPostType('rfq')" style="position:relative;border:2px solid var(--blue-600);background:var(--blue-50);border-radius:14px;padding:18px;cursor:pointer;display:flex;gap:14px;"><input type="radio" name="cpType" checked="" style="position:absolute;opacity:0;">
             <span style="width:48px;height:48px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--blue-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg></span>
             <span style="flex:1;"><span style="display:block;font-size:16px;font-weight:700;color:var(--blue-700);margin-bottom:4px;">ขอใบเสนอราคา (RFQ)</span><span style="display:block;font-size:14px;color:var(--ink-soft);line-height:1.5;">ต้องการสินค้า บริการ หรือผู้รับเหมามาเสนอราคาให้คุณ</span></span>
@@ -12222,6 +12222,47 @@ html, body{
      the private verify-docs bucket all stay exactly as they are, so turning
      this back on is deleting this guard. */
   window.KX_VERIFY_ENABLED = false;
+
+  /* ===== ประกาศขาย (Offer) ปิดไว้ก่อน =====
+
+     QubeQuote is a place where a buyer asks and sellers answer. Carrying a
+     second, opposite kind of listing — a seller advertising to buyers — makes it
+     one more general marketplace, and the thing it is actually for stops being
+     obvious the moment you open the feed.
+
+     Off the same way ยืนยันตัวตน is off: one flag, nothing deleted. Existing
+     offer rows stay in the database untouched, their detail pages still open for
+     anyone holding a link, and the notifications about them still say what they
+     always said. What goes is every place the app offers to make a new one or
+     lists them among the RFQs. Turning it back on is setting this to true. */
+  window.KX_OFFERS_ENABLED = false;
+
+  /* One place to ask, so a query that forgets is a query that is wrong rather
+     than a query that quietly shows what the rest of the app is hiding. */
+  window.kxRfqOnly = function(q){
+    return window.KX_OFFERS_ENABLED ? q : q.eq('kind', 'rfq');
+  };
+
+  (function(){
+    function apply(){
+      document.body.classList.toggle('kx-no-offers', !window.KX_OFFERS_ENABLED);
+      if(window.KX_OFFERS_ENABLED) return;
+      /* The copy on โพสต์ประกาศ names both kinds and asks which one you want.
+         With one kind left, the question is not a choice — it is a step that
+         only ever has one answer. */
+      var sub = document.getElementById('cpTypeSub');
+      if(sub) sub.textContent = 'โพสต์สิ่งที่คุณต้องการซื้อ แล้วให้ผู้ขายเข้ามาเสนอราคา';
+      /* The feed's own line promised listings that are no longer there. Rewritten
+         here rather than in the markup so that turning the flag back on brings
+         the original sentence back with the feature. */
+      var fsub = document.getElementById('feedSub');
+      if(fsub) fsub.textContent = 'งานที่ผู้ซื้อกำลังมองหาผู้ขายอยู่ตอนนี้ — เลือกงานที่ทำได้ แล้วเสนอราคา';
+      if(typeof selectPostType === 'function') selectPostType('rfq');
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
+    window.kxApplyOffersFlag = apply;
+  })();
 
   function openVerify(){
     if(!window.KX_VERIFY_ENABLED){
@@ -17643,6 +17684,24 @@ body.kxc-open { overflow: hidden; }
 .kxc-btn.primary { background: #0056fd; border-color: #0056fd; color: #fff; }
 .kxc-btn.primary:disabled { background: #b9c6dd; border-color: #b9c6dd; cursor: not-allowed; }
 .set-policy-row { font-size: 14px; line-height: 1.9; color: var(--ink, #1c1a18); }
+
+/* ---- ประกาศขาย (Offer) ปิดไว้ก่อน ----
+   Selectors rather than a data attribute on each element: the links to
+   ประกาศขายของฉัน alone appear in fourteen copies of the sidebar, and marking
+   every one of them by hand is fourteen chances to miss one. The flag that
+   drives this is window.KX_OFFERS_ENABLED; the class is put on <body> by the
+   module beside it. */
+body.kx-no-offers [onclick*="page-my-offers"],
+body.kx-no-offers .filter-tab[data-filter="sell"],
+body.kx-no-offers .sh-tab[data-filter="sell"],
+body.kx-no-offers #cpTypeOffer,
+body.kx-no-offers .cp-type-step,
+/* the buy/sell strip in the feed: with one kind left, ทั้งหมด and ต้องการซื้อ
+   are the same list under two names */
+body.kx-no-offers #page-feed .filter-tabs,
+/* and the tab strip on งานของฉัน, whose only other tab was ประกาศขาย */
+body.kx-no-offers #page-rfq-offers .myjob-tabs,
+body.kx-no-offers #page-my-offers .myjob-tabs { display: none !important; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than
@@ -23680,15 +23739,15 @@ body.kx-guest #load-more-offers { display: none !important; }
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
     var feedBase = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
-    var res = await sb.from('posts')
+    var res = await window.kxRfqOnly(sb.from('posts')
       .select(feedBase + (feedQaMissing ? '' : ', post_questions(id)'))
-      .eq('status', 'open')
+      .eq('status', 'open'))
       .order('created_at', { ascending:false })
       .limit(60);
     if(res.error && /post_questions/i.test(res.error.message || '')){
       feedQaMissing = true;
-      res = await sb.from('posts').select(feedBase)
-        .eq('status', 'open').order('created_at', { ascending:false }).limit(60);
+      res = await window.kxRfqOnly(sb.from('posts').select(feedBase)
+        .eq('status', 'open')).order('created_at', { ascending:false }).limit(60);
     }
     // clear the in-flight flag on the way out, or a single failed load would
     // stop the feed from ever refreshing again
@@ -24489,7 +24548,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var base = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort),' +
                ' post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
     async function run(sel){
-      var q = sb.from('posts').select(sel).eq('owner_id', profileId)
+      var q = window.kxRfqOnly(sb.from('posts').select(sel).eq('owner_id', profileId))
         .order('created_at', { ascending:false }).limit(30);
       if(!isOwner) q = q.eq('status', 'open');
       return await q;
