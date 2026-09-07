@@ -928,6 +928,48 @@
     });
   });
 
+  /* Deleting one listing appeared to delete every listing. Nothing was ever
+     removed but the one row — kxDeletePost reloaded the list by calling
+     kxLoadMyPosts() with no argument, so the query went out as
+     `.eq('kind', undefined)`, matched nothing, and the reload cleared the page
+     and drew the empty state. */
+  describe('kxLoadMyPosts — a missing argument must not empty the page', function () {
+    it('asks for a real kind even when called bare', async function (w) {
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.kxLoadMyPosts();
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.table === 'posts'; })[0];
+      expect(!!call).toBe(true);
+      expect(call.filters.join(' ')).toContain('eq(kind,rfq)');
+      expect(call.filters.join(' ')).notToContain('undefined',
+        'kind=eq.undefined matches no row, and the reload then clears the list');
+    });
+    it('still honours the kind it is given', async function (w) {
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.kxLoadMyPosts('offer');
+      restore(w);
+      expect(sb._calls.filter(function (c) { return c.table === 'posts'; })[0]
+        .filters.join(' ')).toContain('eq(kind,offer)');
+    });
+    it('reloads the same list the deleted listing was on', async function (w) {
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      var real = w.confirm; w.confirm = function () { return true; };
+      await w.kxDeletePost('rfq', 'p1', 'งานทดสอบ', 0);
+      w.confirm = real; restore(w);
+      /* The feed reloads alongside it and carries its own kind filter, so what
+         this holds is the thing that broke: no reload after a delete may go out
+         with an undefined filter, because that is the one that comes back empty
+         and takes the whole list off the page. */
+      var all = sb._calls.filter(function (c) { return c.table === 'posts'; })
+        .map(function (c) { return c.filters.join(' '); }).join(' | ');
+      expect(all).notToContain('undefined');
+      expect(all).toContain('eq(kind,rfq)', 'the my-listings reload still happens');
+    });
+  });
+
   describe('การ์ดประกาศของฉัน', function () {
     /* 🔒 ปิดราคา marked sealed bidding, which every RFQ is and no control can
        change. A label true of every row says nothing about any row, and reads

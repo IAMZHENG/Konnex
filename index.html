@@ -13985,8 +13985,13 @@ window.kxDeletePost = async function(kind, id, title, offers){
   }
   kxToast('ลบประกาศแล้ว');
   // the lists that could be showing it, and the feed it was in
-  if(window.kxLoadMyPosts) window.kxLoadMyPosts();
-  if(window.kxLoadMyOffers) window.kxLoadMyOffers();
+  /* The kind, passed through. Called bare, kxLoadMyPosts sent
+     `.eq('kind', undefined)` to PostgREST, which matches nothing — so deleting
+     one listing cleared the card it had just removed *and every other card on
+     the page*, and the list came back empty as though the whole lot had gone.
+     Nothing was ever deleted but the one row; the screen simply stopped showing
+     the rest until the next reload. */
+  if(window.kxLoadMyPosts) window.kxLoadMyPosts(kind === 'offer' ? 'offer' : 'rfq');
   if(window.kxLoadFeed) window.kxLoadFeed();
   // and if the detail page for it is open, there is nothing left to look at
   var active = (document.querySelector('.app-page.active') || {}).id;
@@ -23622,6 +23627,13 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   window.kxLoadMyPosts = async function(kind){
     if(!window.kxSession) return;
+    /* Never let a missing argument become a filter. `.eq('kind', undefined)`
+       reaches PostgREST as kind=eq.undefined, matches no row, and this function
+       then clears every card on the page and renders the empty state — which
+       looks exactly like the listings having been deleted. One caller forgot the
+       argument and that is what it did. There are two kinds; anything that is
+       not 'offer' is 'rfq'. */
+    kind = (kind === 'offer') ? 'offer' : 'rfq';
     var pageSel = kind === 'offer' ? '#page-my-offers' : '#page-rfq-offers';
     var listSel = kind === 'offer' ? '.offer-list' : '.rfq-list';
     var list = document.querySelector(pageSel + ' ' + listSel);
