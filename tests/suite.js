@@ -864,6 +864,50 @@
     });
   });
 
+  describe('แก้ไขโปรไฟล์ — only the name is required', function () {
+    /* All five of ชื่อ, เกี่ยวกับ, เบอร์โทรศัพท์, อีเมล and ที่อยู่ were required
+       together, so the form could not be saved until every one was filled. That
+       is not a stricter version of asking for a name — it means someone fixing a
+       single line has to invent four others first, and until they do, the
+       half-finished profile they already have stays exactly as it is. */
+    it('marks only the name with a star', function (w) {
+      var starred = Array.prototype.map.call(
+        w.document.querySelectorAll('#page-edit-profile .au-req'),
+        function (s) { var l = s.closest('label'); return l ? l.textContent.trim() : '?'; });
+      expect(starred.length).toBe(1, 'was five: ชื่อ, เกี่ยวกับ, เบอร์โทรศัพท์, อีเมล, ที่อยู่');
+      expect(starred[0]).toContain('ชื่อ');
+    });
+    it('keeps the star off เกี่ยวกับ when the wording is rewritten per entity', function (w) {
+      w.kxApplyEntity && w.kxApplyEntity('person');
+      var al = w.document.getElementById('epAboutLabel');
+      expect(al.querySelector('.au-req')).toBeFalsy(
+        'that label is rebuilt in JS, so the star can come back there alone');
+      w.kxApplyEntity && w.kxApplyEntity('company');
+      expect(al.querySelector('.au-req')).toBeFalsy();
+    });
+  });
+
+  describe('การ์ดประกาศของฉัน', function () {
+    /* 🔒 ปิดราคา marked sealed bidding, which every RFQ is and no control can
+       change. A label true of every row says nothing about any row, and reads
+       as a setting you might be able to turn off. */
+    it('carries no ปิดราคา badge', async function (w) {
+      signIn(w);
+      plan(w, { posts: { select: { data: [{
+        id: 'p1', kind: 'rfq', title: 'งานทดสอบ', description: 'x', status: 'open',
+        owner_id: ME, province: 'ชลบุรี', category_id: 'mfg',
+        created_at: '2026-08-24T00:00:00Z', deadline: '2026-09-24T00:00:00Z',
+        price_low: 1, price_high: 2, post_images: [], post_attachments: [], quotes: []
+      }], error: null } } });
+      await w.kxLoadMyPosts('rfq');
+      restore(w);
+      var card = w.document.querySelector('#page-rfq-offers .rfq-card');
+      expect(!!card).toBe(true);
+      expect(card.textContent).notToContain('ปิดราคา');
+      expect(card.querySelector('.lock-badge')).toBeFalsy();
+    });
+  });
+
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
   describe('the document is well formed', function () {
@@ -3458,12 +3502,17 @@
         'the table was still offering a row for data nothing collects');
     });
 
-    /* A warning in a policy is read after the decision, and usually never. */
-    it('warns about public attachments where the file is chosen', function (w) {
-      var warn = w.document.querySelector('#page-create-post .cp-file-warn');
-      expect(!!warn).toBe(true, 'no warning at the upload control');
-      expect(warn.textContent).toContain('เปิดสาธารณะ');
-      expect(warn.textContent).toContain('ความลับทางการค้า');
+    /* A caution used to sit at the file picker saying attachments are public.
+       The owner asked for it to go. The fact behind it did not change —
+       post_attachments reads with the anon key — so what this now holds is that
+       the policy still says it, since the policy became the only place it is
+       said. */
+    it('keeps the public-attachment fact in the policy at least', function (w) {
+      expect(w.document.querySelector('#page-create-post .cp-file-warn')).toBeFalsy(
+        'removed deliberately, not by accident');
+      var priv = w.document.getElementById('page-privacy').textContent;
+      expect(priv).toContain('ไฟล์แนบ',
+        'the one remaining place a person can learn this');
     });
 
     /* The document card was class `doc`, and a Word attachment's icon is class

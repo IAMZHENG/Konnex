@@ -9772,7 +9772,7 @@ html, body{
                 <div class="ep-count"><span id="pfTaglineCount">0</span>/120</div>
               </div>
               <div class="ep-field">
-                <label for="pfAbout" id="epAboutLabel">เกี่ยวกับบริษัท <span class="au-req">*</span></label>
+                <label for="pfAbout" id="epAboutLabel">เกี่ยวกับบริษัท</label>
                 <textarea id="pfAbout" maxlength="1000" rows="4" placeholder="เล่าถึงประสบการณ์ จุดแข็ง และงานที่รับ"></textarea>
                 <div class="ep-count"><span id="pfAboutCount">0</span>/1000</div>
               </div>
@@ -9826,15 +9826,15 @@ html, body{
               <h2>ข้อมูลติดต่อ</h2>
               <p class="ep-sub">ช่องทางให้ผู้อื่นติดต่อคุณ</p>
               <div class="ep-row2">
-                <div class="ep-field"><label for="pfPhone">เบอร์โทรศัพท์ <span class="au-req">*</span></label><input type="tel" id="pfPhone" placeholder="038-123-456"></div>
-                <div class="ep-field"><label for="pfEmail">อีเมลติดต่อ <span class="au-req">*</span></label><input type="email" id="pfEmail" placeholder="sales@company.co.th"></div>
+                <div class="ep-field"><label for="pfPhone">เบอร์โทรศัพท์</label><input type="tel" id="pfPhone" placeholder="038-123-456"></div>
+                <div class="ep-field"><label for="pfEmail">อีเมลติดต่อ</label><input type="email" id="pfEmail" placeholder="sales@company.co.th"></div>
               </div>
               <div class="ep-row2">
                 <div class="ep-field"><label for="pfWebsite">เว็บไซต์</label><input type="text" id="pfWebsite" placeholder="www.company.co.th"></div>
                 <div class="ep-field"><label for="pfHours">เวลาทำการ</label><input type="text" id="pfHours" placeholder="จันทร์ - เสาร์ 08:00 - 17:00"></div>
               </div>
               <div class="ep-row2">
-                <div class="ep-field"><label for="pfAddress">ที่อยู่ <span class="au-req">*</span></label><input type="text" id="pfAddress" placeholder="ชลบุรี, ประเทศไทย"></div>
+                <div class="ep-field"><label for="pfAddress">ที่อยู่</label><input type="text" id="pfAddress" placeholder="ชลบุรี, ประเทศไทย"></div>
                 <div class="ep-field"><label for="pfProvince">จังหวัด</label><select id="pfProvince"></select></div>
               </div>
             </section>
@@ -9953,11 +9953,10 @@ html, body{
                read after the decision and usually never. This one sits where
                the file is chosen, which is the only moment it can change what
                someone does. -->
-          <div class="cp-file-warn">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
-            <span>ไฟล์แนบในประกาศ <b>เปิดสาธารณะ</b> ผู้ที่ทราบลิงก์เปิดดูได้แม้ไม่ได้เข้าสู่ระบบ
-              อย่าแนบเอกสารที่มีข้อมูลส่วนบุคคลของผู้อื่นหรือความลับทางการค้า</span>
-          </div>
+          <!-- A caution about attachments being public stood here. Removed at the
+               owner's request. The fact it stated is still true — post_attachments
+               reads with the anon key, so anyone holding a listing's link can open
+               its files — and นโยบายความเป็นส่วนตัว still says so. -->
           <div class="cp-sec" id="cpImgSec" hidden>
             <div class="cp-sec-head">รูปภาพ <span class="cp-n" id="cpImgN">0</span></div>
             <div class="cp-imgs" id="cpImgs"></div>
@@ -17657,19 +17656,9 @@ img[src$="qubequote-mark.svg"] { object-fit: contain; }
    so nothing else that leans on [hidden] is affected. */
 [data-verify-entry][hidden] { display: none !important; }
 
-/* ===== คำเตือนตรงจุดที่เลือกไฟล์ ===== */
-.cp-file-warn {
-    display: flex; gap: 9px; align-items: flex-start;
-    background: #fff6e8; border: 1px solid #f2d9ae; border-radius: 10px;
-    padding: 10px 13px; margin-top: 9px;
-    font-size: 13.5px; line-height: 1.7; color: #7a4b06;
-    }
-.cp-file-warn svg {
-    flex: none; width: 17px; height: 17px; margin-top: 3px;
-    fill: none; stroke: #d97706; stroke-width: 2;
-    stroke-linecap: round; stroke-linejoin: round;
-    }
-.cp-file-warn b { color: #7a4b06; }
+/* The .cp-file-warn rules went with the element they styled. Rules kept after
+   their only element is gone are the ones that make a stylesheet impossible to
+   read a year later. */
 
 /* ===== โมดัลยอมรับข้อกำหนดก่อนสมัคร ===== */
 .kxc-ov {
@@ -19356,7 +19345,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var nl = $('epNameLabel');
     if(nl) nl.innerHTML = (person ? 'ชื่อ - นามสกุล' : 'ชื่อบริษัท') + ' <span class="au-req">*</span>';
     var al = $('epAboutLabel');
-    if(al) al.innerHTML = (person ? 'เกี่ยวกับตัวคุณ / ความเชี่ยวชาญ' : 'เกี่ยวกับบริษัท') + ' <span class="au-req">*</span>';
+    if(al) al.textContent = (person ? 'เกี่ยวกับตัวคุณ / ความเชี่ยวชาญ' : 'เกี่ยวกับบริษัท');
     var n = $('epName');
     if(n) n.placeholder = person ? 'เช่น สมชาย ใจดี' : 'เช่น บจก. ไทยพรีซิชั่น';
   }
@@ -19557,9 +19546,14 @@ body.kx-guest #load-more-offers { display: none !important; }
     collect();
     data.certs = filledCerts();
     renderCerts();
-    if(!data.name || !data.about || !data.phone || !data.email || !data.address){
-      if(typeof toast === 'function') toast('กรอกข้อมูลที่มี * ให้ครบก่อนบันทึก');
-      else alert('กรอกข้อมูลที่มี * ให้ครบก่อนบันทึก');
+    /* Only the name. เกี่ยวกับ, เบอร์โทรศัพท์, อีเมล and ที่อยู่ used to be
+       required too, which meant a profile could not be saved at all until all
+       five were filled — so someone who wanted to correct one line had to invent
+       four others first, and the half-finished profile they already had stayed
+       as it was. A name is the one field the rest of the app reads. */
+    if(!data.name){
+      if(typeof toast === 'function') toast('กรอกชื่อก่อนบันทึก');
+      else alert('กรอกชื่อก่อนบันทึก');
       return;
     }
     persist();
@@ -23338,7 +23332,11 @@ body.kx-guest #load-more-offers { display: none !important; }
     var docs = post.post_attachments || [];
     var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
-    var lockLabel = '🔒 ปิดราคา';
+    /* A 🔒 ปิดราคา badge was drawn here. It marked sealed bidding — bidders
+       cannot see each other's prices — but every RFQ on QubeQuote is sealed and
+       there is no longer a control to make one that is not, so the badge marked
+       nothing. A label that is true of every row tells you nothing about any
+       row, and reads as a setting you might be able to change. */
     /* Same call rfqBucket makes, so a card's own label can never disagree with
        the tab it gets filed under — a post whose deadline has quietly passed
        reads ปิดรับแล้ว here even if nobody has touched its status in the
@@ -23350,7 +23348,7 @@ body.kx-guest #load-more-offers { display: none !important; }
         ' onclick="kxOpenPost(\'' + post.id + '\',\'rfq\')">' +
       cardThumbHTML(images, 'rfq-thumb') +
       '<div class="rfq-body">' +
-        '<div class="rfq-title">' + esc(post.title) + '</div><div class="rfq-id"><span class="lock-badge">' + lockLabel + '</span></div>' +
+        '<div class="rfq-title">' + esc(post.title) + '</div>' +
         (docs.length ? '<div class="files-sum">' + docs.length + ' ไฟล์แนบ</div>' : '') +
         '<div class="rfq-meta"><span>📍 ' + esc(post.province || 'ไม่ระบุ') + '</span><span class="sep">|</span><span>🕗 ' + fmtDateBE(post.created_at) + '</span></div>' +
       '</div>' +
