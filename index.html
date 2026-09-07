@@ -11965,7 +11965,7 @@ html, body{
           <div class="au-or"><span>หรือเข้าสู่ระบบด้วย</span></div>
           <div class="au-social">
             <button type="button" class="au-sbtn" onclick="authSocial('Google')"><span class="au-gg">G</span>Google</button>
-            <button type="button" class="au-sbtn" onclick="authSocial('Facebook')"><span class="au-fb">f</span>Facebook</button>
+            <button type="button" class="au-sbtn au-fb-btn" onclick="authSocial('Facebook')"><span class="au-fb">f</span>Facebook</button>
           </div>
           <div class="au-switch">ยังไม่มีบัญชี? <a onclick="authTab('register')">สมัครสมาชิกฟรี</a></div>
         </div>
@@ -12248,6 +12248,36 @@ html, body{
      always said. What goes is every place the app offers to make a new one or
      lists them among the RFQs. Turning it back on is setting this to true. */
   window.KX_OFFERS_ENABLED = false;
+
+  /* ===== ปุ่มเข้าสู่ระบบด้วย Facebook ปิดไว้ก่อน =====
+
+     Nothing on our side is wrong: the provider is configured, the redirect URIs
+     are right, and signing in works — verified end to end with the account that
+     administers the Meta app. The block is that the Meta app is not published,
+     and Facebook refuses anyone without a role on an unpublished app with
+
+         แอพไม่ทำงาน — แอพนี้เข้าถึงไม่ได้ในขณะนี้
+
+     which every real user would see, and which reads as QubeQuote being broken
+     rather than as a setting on Facebook's side. A button that fails for
+     everyone who is not us is worse than no button.
+
+     Left ON: the owner's call, and the right one while the Meta app is still
+     being pushed through. This is a lever to reach for if launch day arrives
+     with the app still unpublished — set it to false and the button goes,
+     Google and email carry the sign-in, and nobody meets Facebook's error.
+     Nothing else changes either way: the provider stays on in Supabase, and
+     anyone who has already signed in with Facebook keeps their account. */
+  window.KX_FACEBOOK_ENABLED = true;
+
+  (function(){
+    function apply(){
+      document.body.classList.toggle('kx-no-fb', !window.KX_FACEBOOK_ENABLED);
+    }
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+    else apply();
+    window.kxApplyFacebookFlag = apply;
+  })();
 
   /* One place to ask, so a query that forgets is a query that is wrong rather
      than a query that quietly shows what the rest of the app is hiding. */
@@ -17736,6 +17766,12 @@ body.kx-no-offers #page-my-requests .myjob-tabs,
 body.kx-no-offers #page-my-bids .origin-tabs,
 /* ประเภท in ค้นหาขั้นสูง is the RFQ/Offer switch under another name */
 body.kx-no-offers #advKindField { display: none !important; }
+
+/* ---- Facebook ปิดไว้ก่อน ----
+   With one button left, the row that held two stops being a row: Google goes
+   full width rather than sitting in half of one. */
+body.kx-no-fb .au-fb-btn { display: none !important; }
+body.kx-no-fb .au-social { grid-template-columns: 1fr; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than
