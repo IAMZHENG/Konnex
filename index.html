@@ -17548,7 +17548,17 @@ body.kx-auth .kx-burger{ display:none !important; }
   #page-my-offers .offer-row,
   #page-my-bids .bid-row,
   #page-my-requests .bid-row{
-    display:grid !important;
+    /* `display:grid` without !important, and that matters more than it looks.
+       Every filter on these four pages hides a row by writing display:none
+       straight onto the element — switchTab, applyBidFilters, switchOfferTab
+       and two more. An !important declaration outranks an inline style, so
+       below 1024px the rows never hid: tapping เปิดรับ recounted the tab and
+       left all of them on screen.
+       The rule still wins where it is meant to. The base `display:flex` it
+       replaces has the same specificity and sits earlier in the sheet, so
+       source order decides — which is what should have been carrying it here
+       all along. */
+    display:grid;
     grid-template-columns:1fr 1fr;
     gap:10px 12px;
     align-items:center;

@@ -887,6 +887,47 @@
     });
   });
 
+  /* Every list on these four pages filters by writing display:none onto the row
+     itself. An !important display rule anywhere outranks an inline style, so one
+     of those in a media query does not shift a layout — it disables the filter,
+     and only at that width. Below 1024px, tapping เปิดรับ on งานของฉัน recounted
+     the tab and left every row on screen. */
+  describe('ตัวกรองรายการต้องชนะกฎ CSS ได้', function () {
+    var ROWS = ['#page-rfq-offers .rfq-card', '#page-my-offers .offer-row',
+                '#page-my-bids .bid-row', '#page-my-requests .bid-row'];
+    it('never forces display on a row a filter has to hide', function (w) {
+      var offenders = [];
+      for (var i = 0; i < w.document.styleSheets.length; i++) {
+        var rules; try { rules = w.document.styleSheets[i].cssRules; } catch (e) { continue; }
+        (function walk(rs, media) {
+          for (var j = 0; j < rs.length; j++) {
+            var r = rs[j];
+            if (r.cssRules && r.media) { walk(r.cssRules, r.conditionText || r.media.mediaText); continue; }
+            if (!r.selectorText || !r.style) continue;
+            if (r.style.getPropertyPriority('display') !== 'important') continue;
+            if (r.style.display === 'none') continue;          // hiding is the filter's own job
+            ROWS.forEach(function (sel) {
+              if (r.selectorText.indexOf(sel) > -1) {
+                offenders.push(r.selectorText.slice(0, 40) + ' @' + (media || 'all'));
+              }
+            });
+          }
+        })(rules);
+      }
+      expect(offenders).toEqual([],
+        'an !important display outranks the inline one the filter writes');
+    });
+    it('still filters at phone width', function (w) {
+      var card = w.document.querySelector('#page-rfq-offers .rfq-card');
+      if (!card) return;                       // nothing loaded in this run
+      var was = card.style.display;
+      card.style.display = 'none';
+      expect(w.getComputedStyle(card).display).toBe('none',
+        'writing display:none onto the row has to be enough');
+      card.style.display = was;
+    });
+  });
+
   describe('การ์ดประกาศของฉัน', function () {
     /* 🔒 ปิดราคา marked sealed bidding, which every RFQ is and no control can
        change. A label true of every row says nothing about any row, and reads
