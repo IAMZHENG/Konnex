@@ -726,27 +726,33 @@
       return seen;
     }
 
-    it('shows every button whose flag is on', function (w) {
+    /* Deliberately says nothing about which way the switches are set. Whether
+       LINE or Facebook is on is a decision that changes with what the providers
+       are doing this week — it has been flipped twice in one day. What must
+       never change is that the screen agrees with the switch. */
+    it('shows exactly the buttons whose flag is on', function (w) {
       w.navigateTo('page-auth', true);
-      expect(w.KX_LINE_ENABLED).toBe(true);
-      expect(w.document.body.classList.contains('kx-no-line')).toBe(false);
-      expect(shown(w, '.au-line-btn')).toBe(true, 'LINE');
-      expect(shown(w, '.au-social .au-sbtn')).toBe(true, 'Google');
-      expect(shown(w, '.au-fb-btn')).toBe(w.KX_FACEBOOK_ENABLED === true,
-        'Facebook follows its own flag');
+      expect(shown(w, '.au-social .au-sbtn')).toBe(true, 'Google is always there');
+      expect(shown(w, '.au-line-btn')).toBe(w.KX_LINE_ENABLED === true, 'LINE');
+      expect(w.document.body.classList.contains('kx-no-line'))
+        .toBe(w.KX_LINE_ENABLED !== true, 'and the class the CSS reads matches');
+      expect(shown(w, '.au-fb-btn')).toBe(w.KX_FACEBOOK_ENABLED === true, 'Facebook');
     });
 
-    /* The flag is the whole switch, and it has to work in the direction that
-       matters under pressure: if LINE ever refuses, one line takes the button
-       down. If the CSS and the flag drift apart, flipping it looks like it did
-       nothing and the broken button stays on screen. */
-    it('goes away again the moment the flag is turned off', function (w) {
+    /* The switch has to work in both directions, and the one that matters under
+       pressure is off: when a provider starts refusing, one line has to take
+       the button down. If the CSS and the flag drift apart, flipping it looks
+       like it did nothing and the broken button stays on screen. */
+    it('follows the flag both ways', function (w) {
       var was = w.KX_LINE_ENABLED;
       try {
         w.navigateTo('page-auth', true);
+        w.KX_LINE_ENABLED = true;
+        w.kxApplySocialFlags();
+        expect(shown(w, '.au-line-btn')).toBe(true, 'on');
         w.KX_LINE_ENABLED = false;
         w.kxApplySocialFlags();
-        expect(shown(w, '.au-line-btn')).toBe(false);
+        expect(shown(w, '.au-line-btn')).toBe(false, 'off');
         expect(shown(w, '.au-social .au-sbtn')).toBe(true,
           'and the rest of the row is still there');
       } finally {

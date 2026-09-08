@@ -12302,18 +12302,26 @@ html, body{
 
   /* ===== เข้าสู่ระบบด้วย LINE =====
 
-     On since 2026-09-08, after a real sign-in came back through it end to end.
-     LINE is the one that matters most here: nearly every phone in Thailand has
-     it, it costs nothing, and unlike SMS one-time codes there is no per-message
-     bill and no sender-ID paperwork.
+     Off again on 2026-09-08, a few hours after going on. Every press failed:
 
-     The switch stays because it is the fastest way to take the button down if
-     LINE ever refuses — one line, no markup to unpick.
+       Failed to verify ID token: oidc: malformed jwt:
+       unexpected signature algorithm "HS256"; expected ["ES256"]
+
+     LINE contradicts its own discovery document. That document advertises
+     id_token_signing_alg_values_supported: ["ES256"], and LINE's own manual says
+     ES256 is what native and LIFF apps get — **web login is signed HS256**, with
+     the channel secret as the key. Supabase trusts the discovery document, is
+     handed an HS256 token, and refuses it. Nothing typed into the dashboard
+     changes that, so Custom **OIDC** cannot work with LINE web login at all.
+
+     The way through is the same provider in **OAuth2** mode, which skips the ID
+     token and reads https://api.line.me/oauth2/v2.1/userinfo instead — but that
+     endpoint returns sub, name and picture and never an email, so it needs a
+     decision about accounts with no email on file rather than a config change.
 
      KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
-     was created under, prefixed with `custom:`. Supabase has no LINE provider
-     of its own; it is a Custom OIDC provider pointed at https://access.line.me. */
-  window.KX_LINE_ENABLED = true;
+     was created under, prefixed with `custom:`. */
+  window.KX_LINE_ENABLED = false;
   window.KX_LINE_PROVIDER = 'custom:line';
 
   (function(){
