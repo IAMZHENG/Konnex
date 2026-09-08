@@ -1290,6 +1290,76 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* What Google prints, and what LINE and Facebook draw when someone shares a
+     link. There was no description tag at all, so Google wrote its own out of
+     page text and picked the อัปเกรดเป็นพรีเมียม card — a signed-out visitor
+     cannot even see that card, and it was the first thing a searcher read. The
+     whole app is one document, so every hidden page's words are there for a
+     crawler to choose from; only these tags settle what the site says it is. */
+  describe('สิ่งที่คนเห็นก่อนเข้าเว็บ — meta tags', function () {
+    var head = null;
+    async function meta(w, sel) {
+      if (!head) head = await (await fetch('../index.html')).text();
+      var m = new RegExp('<meta[^>]*' + sel + '[^>]*>', 'i').exec(head);
+      if (!m) return null;
+      var c = /content="([^"]*)"/i.exec(m[0]);
+      return c ? c[1] : null;
+    }
+
+    it('says what the site is, so nothing else has to guess', async function (w) {
+      var d = await meta(w, 'name="description"');
+      expect(!!d).toBe(true, 'the tag exists at all — it did not, and that was the bug');
+      expect(d.length > 60).toBe(true, 'long enough to be a real sentence');
+      expect(d.length < 200).toBe(true, 'short enough that search does not cut it off');
+    });
+
+    /* The specific words that were showing. Not a style rule — a page that
+       advertises a paid upgrade to people who have not seen the product yet is
+       selling before it has explained. */
+    it('does not open with a pitch for something nobody has looked at yet', async function (w) {
+      var d = await meta(w, 'name="description"');
+      expect(d).notToContain('พรีเมียม');
+      expect(d).notToContain('อัปเกรด');
+      expect(d).notToContain('แพ็กเกจ');
+    });
+
+    it('shares under the same name it shows in the tab', async function (w) {
+      if (!head) head = await (await fetch('../index.html')).text();
+      var title = /<title>([^<]*)<\/title>/i.exec(head);
+      expect(!!title).toBe(true);
+      expect(await meta(w, 'property="og:title"')).toBe(title[1],
+        'a share card that disagrees with the page reads as somebody else’s link');
+      expect(!!(await meta(w, 'property="og:description"'))).toBe(true);
+    });
+
+    /* Scrapers do not resolve relative paths and will not fetch an SVG, so an
+       og:image that is either produces a card with a grey box where the mark
+       should be — and nobody sees it, because the person who shared the link
+       has already moved on. */
+    it('points at an image a scraper can actually fetch', async function (w) {
+      var img = await meta(w, 'property="og:image"');
+      expect(!!img).toBe(true);
+      expect(img.slice(0, 8)).toBe('https://', 'absolute, not a path');
+      expect(/\.(png|jpg|jpeg)$/i.test(img)).toBe(true, 'raster, not svg');
+    });
+
+    it('names one canonical address, over https', async function (w) {
+      if (!head) head = await (await fetch('../index.html')).text();
+      var m = /<link[^>]*rel="canonical"[^>]*>/i.exec(head);
+      expect(!!m).toBe(true);
+      var href = /href="([^"]*)"/i.exec(m[0])[1];
+      expect(href.slice(0, 8)).toBe('https://', 'the indexed address was http://');
+      expect(await meta(w, 'property="og:url"')).toBe(href, 'and og:url agrees with it');
+    });
+
+    /* Six places carried the old line — the tab, the PWA name, both document
+       headers in the app, and the two standalone pages built from them. */
+    it('carries no trace of the slogan that was replaced', async function (w) {
+      if (!head) head = await (await fetch('../index.html')).text();
+      expect(head).notToContain('ค้นหาราคาตลาดที่เหมาะสม');
+    });
+  });
+
   describe('the document is well formed', function () {
     it('gives no id to two elements at once', async function (w) {
       var src = await (await fetch('../index.html')).text();

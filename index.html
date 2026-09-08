@@ -2,9 +2,39 @@
 <html lang="th"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
-<title>QubeQuote — ค้นหาราคาตลาดที่เหมาะสม</title>
+<title>QubeQuote — ให้ผู้ขายเสนอราคามาหาคุณ</title>
 
+<!-- ===== ผลการค้นหาและการ์ดตอนแชร์ลิงก์ =====
+     There was no description here at all, so Google wrote one itself out of
+     whatever text it found in the page — and what it found was the อัปเกรดเป็น
+     พรีเมียม card in a sidebar no signed-out visitor can even see. The first
+     thing a searcher read about QubeQuote was a pitch for a paid upgrade.
 
+     Whole-file SPA, so every page's text is in the document whether or not it
+     is on screen; a crawler has no way to tell which page is showing. Saying
+     what the site is, here, is the only thing that settles it.
+
+     canonical because the indexed address is http://qubequote.com — one host,
+     over https, rather than that and the workers.dev origin competing. -->
+<meta name="description" content="โพสต์สิ่งที่ต้องการซื้อ ให้ผู้ขายหลายรายเสนอราคาเข้ามา แล้วเปรียบเทียบราคาและเงื่อนไขในที่เดียว สำหรับผู้ซื้อ ผู้ขาย ผู้รับเหมา และผู้ให้บริการ">
+<link rel="canonical" href="https://qubequote.com/">
+
+<!-- The share button offers LINE, Facebook and email, and every one of them
+     reads these rather than the page. Without them a shared QubeQuote link
+     arrives as a bare grey card with a URL on it. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="QubeQuote">
+<meta property="og:locale" content="th_TH">
+<meta property="og:url" content="https://qubequote.com/">
+<meta property="og:title" content="QubeQuote — ให้ผู้ขายเสนอราคามาหาคุณ">
+<meta property="og:description" content="โพสต์สิ่งที่ต้องการซื้อ ให้ผู้ขายหลายรายเสนอราคาเข้ามา แล้วเปรียบเทียบราคาและเงื่อนไขในที่เดียว">
+<!-- the 512px mark: square, so a summary card, not a large banner. A 1200x630
+     image would fill the wide card properly and does not exist yet. -->
+<meta property="og:image" content="https://qubequote.com/assets/img/qubequote-icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="QubeQuote">
+<meta name="twitter:card" content="summary">
 
 <!-- Web app / PWA meta -->
 <meta name="theme-color" content="#0056fd">
@@ -12917,7 +12947,7 @@ html, body{
           <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
           <div>
             <div class="doc-name">QubeQuote</div>
-            <div class="doc-tag">แพลตฟอร์มค้นหาราคาตลาดที่เหมาะสม</div>
+            <div class="doc-tag">แพลตฟอร์มเปรียบเทียบใบเสนอราคา</div>
           </div>
         </div>
         <div class="doc-ver">ฉบับที่ 1.1<br><span>มีผลบังคับใช้ 8 กันยายน 2569</span></div>
@@ -13051,7 +13081,7 @@ html, body{
           <img src="assets/img/qubequote-mark.svg" alt="QubeQuote">
           <div>
             <div class="doc-name">QubeQuote</div>
-            <div class="doc-tag">แพลตฟอร์มค้นหาราคาตลาดที่เหมาะสม</div>
+            <div class="doc-tag">แพลตฟอร์มเปรียบเทียบใบเสนอราคา</div>
           </div>
         </div>
         <div class="doc-ver">ฉบับที่ 1.0<br><span>มีผลบังคับใช้ 1 กันยายน 2569</span></div>
@@ -14206,7 +14236,7 @@ document.addEventListener('keydown', function(e){
   try{
     var icon = "assets/img/qubequote-icon-512.png";
     var manifest = {
-      name: "QubeQuote — ค้นหาราคาตลาดที่เหมาะสม",
+      name: "QubeQuote — ให้ผู้ขายเสนอราคามาหาคุณ",
       short_name: "QubeQuote",
       start_url: window.location.pathname + window.location.search,
       scope: window.location.pathname,
