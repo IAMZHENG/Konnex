@@ -12324,6 +12324,15 @@ html, body{
      also has "allow users without email" switched on and asks LINE only for
      `openid,profile` — there is no point requesting a permission we cannot read.
 
+     That was not enough. In OAuth2 mode, with the JWKS URI empty, the callback
+     still answers with the identical error — Supabase verifies an ID token
+     whenever the provider returns one, and it still holds the ["ES256"] it
+     learned from the discovery document when this provider was first created
+     under auto-discovery. LINE returns an ID token because `openid` is in the
+     scopes, and https://api.line.me/oauth2/v2.1/userinfo *requires* `openid`,
+     so the scope cannot simply be dropped while that endpoint is the one being
+     read. The button stays off until a real sign-in completes, not before.
+
      A LINE account therefore has no email address, and that costs nothing here:
      the only two things this app does with the sign-in email are change-email
      and change-password, both of which ask for the current password first, and
@@ -12332,7 +12341,7 @@ html, body{
 
      KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
      was created under, prefixed with `custom:`. */
-  window.KX_LINE_ENABLED = true;
+  window.KX_LINE_ENABLED = false;
   window.KX_LINE_PROVIDER = 'custom:line';
 
   (function(){
