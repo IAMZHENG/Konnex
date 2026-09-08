@@ -12302,7 +12302,10 @@ html, body{
 
   /* ===== เข้าสู่ระบบด้วย LINE =====
 
-     Off again on 2026-09-08, a few hours after going on. Every press failed:
+     On, off, and on again over one day. The middle state is kept written down
+     because it is what the current configuration exists to avoid.
+
+     Off for a few hours on 2026-09-08, when every press failed with:
 
        Failed to verify ID token: oidc: malformed jwt:
        unexpected signature algorithm "HS256"; expected ["ES256"]
@@ -12314,14 +12317,22 @@ html, body{
      handed an HS256 token, and refuses it. Nothing typed into the dashboard
      changes that, so Custom **OIDC** cannot work with LINE web login at all.
 
-     The way through is the same provider in **OAuth2** mode, which skips the ID
-     token and reads https://api.line.me/oauth2/v2.1/userinfo instead — but that
-     endpoint returns sub, name and picture and never an email, so it needs a
-     decision about accounts with no email on file rather than a config change.
+     The way through, and what is configured now: the same provider in **OAuth2**
+     mode (manual endpoints, JWKS URI deliberately left empty), which skips the
+     ID token and reads https://api.line.me/oauth2/v2.1/userinfo instead. That
+     endpoint returns sub, name and picture and never an email, so the provider
+     also has "allow users without email" switched on and asks LINE only for
+     `openid,profile` — there is no point requesting a permission we cannot read.
+
+     A LINE account therefore has no email address, and that costs nothing here:
+     the only two things this app does with the sign-in email are change-email
+     and change-password, both of which ask for the current password first, and
+     a LINE account has no password to begin with. The app sends no mail of its
+     own. profiles.email is nullable, so the row writes fine.
 
      KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
      was created under, prefixed with `custom:`. */
-  window.KX_LINE_ENABLED = false;
+  window.KX_LINE_ENABLED = true;
   window.KX_LINE_PROVIDER = 'custom:line';
 
   (function(){
