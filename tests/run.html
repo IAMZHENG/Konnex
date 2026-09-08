@@ -101,9 +101,33 @@
       w.__realSb = w.sb;
       if (w.kxChatPollStop) w.kxChatPollStop();
 
+      /* An exception thrown while suite.js is being evaluated stops the rest of
+         the file registering, and onload still fires — so the run goes ahead
+         with whatever made it in and reports "ครบทุกข้อ" over a fraction of the
+         suite. A green run that quietly skipped most of itself is worse than a
+         red one. Catch it and refuse to report a pass. */
+      var loadError = null;
+      window.addEventListener('error', function (e) {
+        if (!loadError) loadError = (e.message || String(e.error || 'ไม่ทราบสาเหตุ'));
+      });
+
       var s = document.createElement('script');
       s.src = 'suite.js';
+      s.onerror = function () {
+        totals.innerHTML = '<span class="pill bad">โหลด suite.js ไม่ได้</span>';
+        document.title = '✕ โหลดเทสต์ไม่ได้';
+      };
       s.onload = async function () {
+        if (loadError) {
+          totals.innerHTML = '<span class="pill bad">suite.js พังระหว่างโหลด</span>';
+          out.innerHTML = '<sec><div class="t bad">ลงทะเบียนเทสต์ไม่ครบ — ' +
+            'เทสต์ที่อยู่หลังจุดที่พังจะไม่ถูกรันเลย<pre>' +
+            String(loadError).replace(/[<&]/g, function (c) {
+              return c === '<' ? '&lt;' : '&amp;'; }) + '</pre></div></sec>';
+          document.title = '✕ เทสต์โหลดไม่ครบ';
+          window.__kxTestResult = { passed: 0, failed: 1, loadError: loadError };
+          return;
+        }
         /* ?only=<ข้อความ> รันเฉพาะกลุ่มที่ชื่อมีข้อความนั้น — the full run walks
            every page in the app, and each one waits out its own network calls,
            so a whole pass is minutes long. When you are iterating on one group

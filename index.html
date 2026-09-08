@@ -49,6 +49,27 @@
      this the recovery link signs you in, boot() sees a session and forwards you
      to the feed, and you never reach the set-a-new-password form. */
   window.kxRecoveryInUrl = (window.location.hash || '').indexOf('type=recovery') >= 0;
+
+  /* An OAuth sign-in that fails comes back to this page as
+     ?error=…&error_description=… (or the same pair in the hash), and supabase-js
+     wipes them the moment it has looked at them — same disappearing act as the
+     recovery flag above, so this has to be read here and now.
+
+     Without it the round trip ends on the login form with nothing said, which
+     looks exactly like changing your mind halfway. The reason is right there in
+     the URL; it was simply never read. */
+  window.kxOAuthError = (function(){
+    function pick(s){
+      if(!s || s.length < 2) return null;
+      var p = new URLSearchParams(s.charAt(0) === '?' || s.charAt(0) === '#' ? s.slice(1) : s);
+      if(!p.get('error') && !p.get('error_description')) return null;
+      return {
+        code: p.get('error_code') || p.get('error') || '',
+        desc: (p.get('error_description') || '').replace(/\+/g, ' ')
+      };
+    }
+    return pick(window.location.search) || pick(window.location.hash);
+  })();
 </script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21116,6 +21137,10 @@ body.kx-guest #load-more-offers { display: none !important; }
          detail page has no loader hooked to navigateTo, so arriving on it is not
          the same as it having anything on it. Everything else still goes to the
          login page. */
+      /* Came back from a provider that refused. Checked before anything else in
+         this branch: with no session every other path here ends on the login
+         form, which is exactly where a silent failure hides. */
+      if(window.kxOAuthError && window.kxShowOAuthError){ kxShowOAuthError(); return; }
       var guestPost = window.kxPostFromHash && window.kxPostFromHash();
       if(guestPost) kxOpenPost(guestPost.id, guestPost.kind);
       /* Asked of KX_OPEN_PAGES rather than compared against page-auth alone.
@@ -21198,6 +21223,40 @@ body.kx-guest #load-more-offers { display: none !important; }
         : 'เข้าสู่ระบบด้วย ' + who + ' ไม่สำเร็จ: ' + (m || 'กรุณาลองใหม่'));
     }
     // on success the browser leaves for the provider; nothing after this runs
+  };
+
+  /* Says out loud what came back from a failed OAuth round trip.
+
+     The raw text is English, written for whoever built the integration, so the
+     cases worth naming are named — and the original is still printed after them,
+     because a message that only says "something went wrong" is the reason this
+     took a day to notice in the first place. */
+  window.kxOAuthErrorText = function(err){
+    if(!err) return '';
+    var d = String(err.desc || '') + ' ' + String(err.code || '');
+    if(/email/i.test(d) && /provider|missing|not (be )?(found|provided)|getting/i.test(d))
+      return 'ผู้ให้บริการไม่ได้ส่งอีเมลกลับมา จึงสร้างบัญชีให้ไม่ได้ — ' +
+             'กรุณาตรวจว่าบัญชีนั้นผูกอีเมลไว้แล้ว และกดอนุญาตให้แชร์อีเมลตอนเข้าสู่ระบบ';
+    if(/already|exists|registered|identity.*linked/i.test(d))
+      return 'อีเมลนี้เคยสมัครไว้ด้วยวิธีอื่นแล้ว — กรุณาเข้าสู่ระบบด้วยวิธีเดิม ' +
+             'หรือใช้อีเมลกับรหัสผ่าน';
+    if(/access_denied|cancel/i.test(d))
+      return 'การเข้าสู่ระบบถูกยกเลิก';
+    return 'เข้าสู่ระบบไม่สำเร็จ: ' + (err.desc || err.code || 'ไม่ทราบสาเหตุ');
+  };
+
+  window.kxShowOAuthError = function(){
+    var err = window.kxOAuthError;
+    if(!err) return false;
+    var msg = window.kxOAuthErrorText(err);
+    // the console keeps the untranslated pair — that is what a bug report needs
+    console.error('OAuth returned an error', err);
+    navigateTo('page-auth');
+    if(typeof authTab === 'function') authTab('login');
+    var box = document.getElementById('auLoginErr');
+    if(box){ box.textContent = msg; box.hidden = false; }
+    kxToast(msg);
+    return true;
   };
 
   /* ---- ลืมรหัสผ่าน ----

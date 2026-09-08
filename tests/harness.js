@@ -15,7 +15,13 @@
   // ---------------------------------------------------------------- runner ---
   var suites = [], current = null;
 
+  /* Flat on purpose — but a nested describe() used to be worse than
+     unsupported. The inner one set `current` back to null on its way out, so
+     every it() after it in the outer group threw "it() outside describe()",
+     which stopped suite.js loading where it stood. The run that followed was
+     short, entirely green, and 280 tests lighter. Refuse it out loud instead. */
   function describe(name, fn) {
+    if (current) throw new Error('describe() ซ้อนใน describe() — ตัวรันไม่รองรับ: ' + name);
     current = { name: name, tests: [], before: null };
     suites.push(current);
     fn();

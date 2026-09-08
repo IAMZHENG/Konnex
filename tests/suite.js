@@ -802,6 +802,70 @@
     });
   });
 
+  /* A refused round trip comes back to the login page carrying its reason in
+     the URL. The app used to drop it on the floor and show the form again,
+     which is indistinguishable from having changed your mind — the failure that
+     made the Facebook button look broken for days. */
+  describe('เมื่อผู้ให้บริการปฏิเสธการเข้าสู่ระบบ', function () {
+      it('turns the provider’s English into something the user can act on', function (w) {
+        expect(w.kxOAuthErrorText({ code: 'server_error',
+          desc: 'Error getting user email from external provider' }))
+          .toContain('ไม่ได้ส่งอีเมลกลับมา');
+        expect(w.kxOAuthErrorText({ code: '', desc: 'User already registered' }))
+          .toContain('เคยสมัครไว้ด้วยวิธีอื่น');
+        expect(w.kxOAuthErrorText({ code: 'access_denied', desc: '' }))
+          .toContain('ยกเลิก');
+      });
+      /* Anything unrecognised still has to reach the screen. A catch-all that
+         says "something went wrong" is the same silence in a different font. */
+      it('still repeats a reason it does not recognise', function (w) {
+        var out = w.kxOAuthErrorText({ code: 'x', desc: 'Something quite specific' });
+        expect(out).toContain('Something quite specific');
+      });
+      it('says nothing at all when there was no error', function (w) {
+        expect(w.kxOAuthErrorText(null)).toBe('');
+      });
+      /* Shown on the login form, not only as a toast: a toast is gone in a few
+         seconds and this is the one screen the person is looking at. */
+      it('puts the reason on the login form and stays there', function (w) {
+        var was = w.kxOAuthError, said = null, realToast = w.kxToast;
+        w.kxToast = function (m) { said = m; };
+        try {
+          w.kxOAuthError = { code: 'server_error',
+                             desc: 'Error getting user email from external provider' };
+          expect(w.kxShowOAuthError()).toBe(true);
+          expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+          var box = w.document.getElementById('auLoginErr');
+          expect(box.hidden).toBe(false);
+          expect(box.textContent).toContain('ไม่ได้ส่งอีเมลกลับมา');
+          expect(String(said)).toContain('ไม่ได้ส่งอีเมลกลับมา');
+        } finally {
+          w.kxOAuthError = was;
+          w.kxToast = realToast;
+          var b = w.document.getElementById('auLoginErr');
+          if (b) { b.hidden = true; b.textContent = ''; }
+        }
+      });
+      it('does nothing when the round trip went fine', function (w) {
+        var was = w.kxOAuthError;
+        try {
+          w.kxOAuthError = null;
+          expect(w.kxShowOAuthError()).toBe(false);
+        } finally { w.kxOAuthError = was; }
+      });
+      /* The pair is read straight out of the URL at the top of the document,
+         because supabase-js strips it before boot() ever runs. */
+      it('reads the reason before supabase-js can wipe it', async function (w) {
+        var src = await (await fetch('../index.html')).text();
+        var at = src.indexOf('window.kxOAuthError = ');
+        expect(at > -1).toBe(true, 'the capture exists');
+        expect(at < src.indexOf('DOMContentLoaded')).toBe(true,
+          'and runs at the top of the document, not on an event');
+        expect(src.slice(at, at + 700)).toContain('location.search');
+        expect(src.slice(at, at + 700)).toContain('location.hash');
+      });
+  });
+
   /* Writes that had no test. Each of these puts a row in the database, and each
      one is a place where a silent failure costs somebody something real — a
      bookmark that did not stick, a review nobody can see, a question that was
