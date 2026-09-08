@@ -726,31 +726,29 @@
       return seen;
     }
 
-    it('LINE ships switched off, and the page says so in one place', function (w) {
+    it('shows every button whose flag is on', function (w) {
       w.navigateTo('page-auth', true);
-      expect(w.KX_LINE_ENABLED).toBe(false);
-      expect(w.document.body.classList.contains('kx-no-line')).toBe(true);
-      expect(shown(w, '.au-line-btn')).toBe(false,
-        'a button that answers every press with an error is worse than no button');
-    });
-
-    it('leaves the ones that do work on screen', function (w) {
-      w.navigateTo('page-auth', true);
+      expect(w.KX_LINE_ENABLED).toBe(true);
+      expect(w.document.body.classList.contains('kx-no-line')).toBe(false);
+      expect(shown(w, '.au-line-btn')).toBe(true, 'LINE');
       expect(shown(w, '.au-social .au-sbtn')).toBe(true, 'Google');
       expect(shown(w, '.au-fb-btn')).toBe(w.KX_FACEBOOK_ENABLED === true,
         'Facebook follows its own flag');
     });
 
-    /* The flag is the whole switch: flip it, and the button is there. If this
-       fails the CSS and the flag have drifted apart and turning LINE on later
-       will look like it did nothing. */
-    it('appears the moment the flag is turned on', function (w) {
+    /* The flag is the whole switch, and it has to work in the direction that
+       matters under pressure: if LINE ever refuses, one line takes the button
+       down. If the CSS and the flag drift apart, flipping it looks like it did
+       nothing and the broken button stays on screen. */
+    it('goes away again the moment the flag is turned off', function (w) {
       var was = w.KX_LINE_ENABLED;
       try {
         w.navigateTo('page-auth', true);
-        w.KX_LINE_ENABLED = true;
+        w.KX_LINE_ENABLED = false;
         w.kxApplySocialFlags();
-        expect(shown(w, '.au-line-btn')).toBe(true);
+        expect(shown(w, '.au-line-btn')).toBe(false);
+        expect(shown(w, '.au-social .au-sbtn')).toBe(true,
+          'and the rest of the row is still there');
       } finally {
         w.KX_LINE_ENABLED = was;
         w.kxApplySocialFlags();

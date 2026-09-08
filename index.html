@@ -12281,19 +12281,18 @@ html, body{
 
   /* ===== เข้าสู่ระบบด้วย LINE =====
 
-     Off until the provider actually exists in Supabase. The button is written
-     and styled and wired; what it needs is a LINE Login channel and a Custom
-     OIDC provider in the Supabase dashboard. Shipping it visible before that
-     means every press answers "ยังไม่ได้เปิดใช้งาน", which is the same trap the
-     Facebook button is in.
-
+     On since 2026-09-08, after a real sign-in came back through it end to end.
      LINE is the one that matters most here: nearly every phone in Thailand has
      it, it costs nothing, and unlike SMS one-time codes there is no per-message
      bill and no sender-ID paperwork.
 
+     The switch stays because it is the fastest way to take the button down if
+     LINE ever refuses — one line, no markup to unpick.
+
      KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
-     was created under, prefixed with `custom:`. */
-  window.KX_LINE_ENABLED = false;
+     was created under, prefixed with `custom:`. Supabase has no LINE provider
+     of its own; it is a Custom OIDC provider pointed at https://access.line.me. */
+  window.KX_LINE_ENABLED = true;
   window.KX_LINE_PROVIDER = 'custom:line';
 
   (function(){
