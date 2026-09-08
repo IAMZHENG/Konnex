@@ -10,13 +10,20 @@
   'use strict';
   var describe = KX.describe, it = KX.it, expect = KX.expect, ERR = KX.ERR;
 
-  var ME    = '00000000-0000-0000-0000-0000000000me';
-  var OTHER = '00000000-0000-0000-0000-000000000oth';
-  var THIRD = '00000000-0000-0000-0000-00000000thrd';
+  /* Real uuids, not readable stand-ins. These used to end `…0000000000me` and
+     `…000000000oth`, which read nicely and are not hex — Postgres answers a
+     uuid column handed either of those with 22P02, before RLS is ever
+     consulted. A fixture the live database would refuse cannot stand in for a
+     session id, so they end in hex now and differ only in the last two digits. */
+  var ME    = '00000000-0000-0000-0000-0000000000e1';
+  var OTHER = '00000000-0000-0000-0000-0000000000e2';
+  var THIRD = '00000000-0000-0000-0000-0000000000e3';
 
   function signIn(w, id) { w.kxSession = { fake: true, user: { id: id || ME } }; }
   function plan(w, p) { var sb = KX.makeSb(p); w.sb = sb; return sb; }
-  function restore(w) { w.sb = w.__realSb; }
+  /* Back to an inert fake, never to the real client. Restoring the real one is
+     what let the suite write to the live project between planned sections. */
+  function restore(w) { w.sb = KX.makeSb({}); }
 
   // =========================================================== pure helpers ===
   describe('kxTableMissing — which errors mean "migration not run"', function () {
@@ -941,6 +948,106 @@
       expect(sb._writes.length).toBe(0);
       expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
       w.kxSession = had; if (was) w.navigateTo(was, true);
+    });
+  });
+
+  /* ประวัติการเข้าชม. This ran on every post anyone opened and was answering
+     `POST /rest/v1/view_history 400` in the project's logs, with 22P02 —
+     "invalid input syntax for type uuid" — underneath it. Postgres checks the
+     column type before RLS, so a uuid column handed anything else refuses the
+     row outright, and nothing on screen ever said so. */
+  describe('kxNoteView — บันทึกประวัติการเข้าชม', function () {
+    var UUID_A = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+    var UUID_B = 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb';
+
+    it('knows a uuid from a string that merely looks like an id', function (w) {
+      expect(w.kxIsUuid(UUID_A)).toBe(true);
+      expect(w.kxIsUuid(UUID_A.toUpperCase())).toBe(true, 'case does not matter');
+      [undefined, null, '', 'undefined', 'null', '1', 'p1', UUID_A + 'x',
+       UUID_A.replace(/-/g, '')].forEach(function (bad) {
+        expect(w.kxIsUuid(bad)).toBe(false, JSON.stringify(bad) + ' is not a uuid');
+      });
+    });
+
+    it('writes the row under your own id, which is what RLS checks', async function (w) {
+      var sb = plan(w, { view_history: { upsert: { data: null, error: null } } });
+      signIn(w);
+      w.kxSession = { user: { id: ME } };
+      await w.kxNoteView(UUID_B, UUID_A);
+      restore(w);
+      expect(sb._writes.length).toBe(1);
+      expect(sb._writes[0].table).toBe('view_history');
+      expect(sb._writes[0].row.profile_id).toBe(ME);
+      expect(sb._writes[0].row.post_id).toBe(UUID_B);
+    });
+
+    /* The point of the fix: a request that cannot succeed is not sent. Before
+       this, each of these produced a 400 and a Postgres error, once per view. */
+    it('sends nothing at all when an id is not a uuid', async function (w) {
+      var cases = [
+        { name: 'post_id is the string "undefined"', me: ME,   post: 'undefined' },
+        { name: 'post_id is a bare number',          me: ME,   post: '1' },
+        { name: 'the session id is empty',           me: '',   post: UUID_B },
+        { name: 'the session id is missing',         me: null, post: UUID_B }
+      ];
+      for (var i = 0; i < cases.length; i++) {
+        var c = cases[i];
+        var sb = plan(w, { view_history: { upsert: { data: null, error: null } } });
+        signIn(w);
+        w.kxSession = { user: { id: c.me } };
+        var said = null, realErr = w.console.error;
+        w.console.error = function (m, d) { said = { m: m, d: d }; };
+        try { await w.kxNoteView(c.post, UUID_A); } finally { w.console.error = realErr; }
+        restore(w);
+        expect(sb._writes.length).toBe(0, c.name + ' — must not reach the database');
+        // silently skipping is how this hid for weeks; it has to say which id
+        expect(!!said).toBe(true, c.name + ' — and must say so');
+      }
+    });
+
+    /* An empty post id never reached the uuid check — the older `!postId` guard
+       already caught it. Kept as its own case so that guard is not quietly
+       removed later on the grounds that the uuid check covers everything. */
+    it('was already refusing an empty post id, and still is', async function (w) {
+      var sb = plan(w, { view_history: { upsert: { data: null, error: null } } });
+      signIn(w);
+      await w.kxNoteView('', UUID_A);
+      restore(w);
+      expect(sb._writes.length).toBe(0);
+    });
+
+    /* Which of the two was wrong matters: a bad post id costs one history row,
+       a bad session id means every other write is broken too. */
+    it('names the id that was wrong, not just that one was', async function (w) {
+      plan(w, { view_history: { upsert: { data: null, error: null } } });
+      signIn(w);
+      w.kxSession = { user: { id: ME } };
+      var got = null, realErr = w.console.error;
+      w.console.error = function (m, d) { got = d; };
+      try { await w.kxNoteView('undefined', UUID_A); } finally { w.console.error = realErr; }
+      restore(w);
+      expect(got && got.badPostId).toBe(true);
+      expect(got && got.badProfileId).toBe(false);
+      expect(got && got.post_id).toBe('undefined', 'and quotes the offending value');
+    });
+
+    it('still skips your own listings without calling it a failure', async function (w) {
+      var sb = plan(w, { view_history: { upsert: { data: null, error: null } } });
+      signIn(w);
+      w.kxSession = { user: { id: ME } };
+      await w.kxNoteView(UUID_B, ME);
+      restore(w);
+      expect(sb._writes.length).toBe(0, 'your own post is not a เข้าชม');
+    });
+
+    it('does nothing at all for a visitor with no session', async function (w) {
+      var sb = plan(w, { view_history: { upsert: { data: null, error: null } } });
+      var had = w.kxSession;
+      w.kxSession = null;
+      await w.kxNoteView(UUID_B, UUID_A);
+      restore(w);
+      w.kxSession = had;
+      expect(sb._writes.length).toBe(0);
     });
   });
 
@@ -4519,6 +4626,29 @@
       var url = await w.kxSignedUrl('verify-docs', 'someone-else/id.jpg');
       w.sb = realSb;
       expect(url).toBe(null, 'a refused document shows a placeholder, never a broken link');
+    });
+  });
+
+  /* Last, so it speaks for everything above it.
+
+     The runner page says no real data is touched. That was untrue for most of
+     this suite's life: only the tests that call plan() installed a fake,
+     restore() handed the **real** client back afterwards, and every other test
+     — including the audit that opens all eighteen pages — talked to the live
+     Supabase project. It showed up as `POST /rest/v1/view_history 400` with
+     22P02 underneath, once per listing a test opened, in the production logs of
+     a running product. */
+  describe('the suite never touches the real database', function () {
+    it('leaves the live client unused for the whole run', function (w) {
+      expect(w.__realSbTouched | 0).toBe(0,
+        'something called the real Supabase client during the run — a test that ' +
+        'reads or writes production is not a unit test, and its writes land in ' +
+        'the project logs');
+    });
+    it('and is not merely holding the real client under another name', function (w) {
+      expect(w.sb === w.__realSb).toBe(false);
+      expect(typeof w.sb.from).toBe('function', 'but is still a working stand-in');
+      expect(Array.isArray(w.sb._writes)).toBe(true, 'the fake, which records writes');
     });
   });
 

@@ -20718,12 +20718,35 @@ body.kx-guest #load-more-offers { display: none !important; }
      The primary key is (profile_id, post_id), so re-opening a post moves it
      back to the top rather than adding a second row — upsert, not insert. */
 
+  /* Postgres checks column types before it evaluates RLS, so a uuid column
+     handed anything else answers 22P02 — "invalid input syntax for type uuid" —
+     and PostgREST turns that into a 400 nobody sees. That is what
+     `POST /rest/v1/view_history 400` in the project's logs was: a row that could
+     never be written, retried on every post anyone opened.
+
+     Checked here rather than left to the database, because the request that
+     cannot succeed is better not sent, and because the log line names which of
+     the two ids was wrong — the server's message quotes the value but not the
+     column, and one of these two possibilities is far more serious than the
+     other. A bad post_id costs a history entry; a bad session id means the
+     signed-in user has no usable id, which every other write shares. */
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  window.kxIsUuid = function(v){ return UUID_RE.test(String(v == null ? '' : v)); };
+
   window.kxNoteView = async function(postId, ownerId){
     if(!window.kxSession || !postId) return;
     // your own listings would otherwise fill the list; you know where they are
     if(ownerId && ownerId === window.kxSession.user.id) return;
+    var me = window.kxSession.user && window.kxSession.user.id;
+    if(!window.kxIsUuid(me) || !window.kxIsUuid(postId)){
+      console.error('kxNoteView: ไม่ได้บันทึกประวัติ เพราะ id ไม่ใช่ uuid', {
+        profile_id: me,   badProfileId: !window.kxIsUuid(me),
+        post_id: postId,  badPostId:    !window.kxIsUuid(postId)
+      });
+      return;
+    }
     var res = await sb.from('view_history').upsert({
-      profile_id: window.kxSession.user.id,
+      profile_id: me,
       post_id: postId,
       viewed_at: new Date().toISOString()
     }, { onConflict: 'profile_id,post_id' });

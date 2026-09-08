@@ -96,9 +96,25 @@
     var w = frame.contentWindow;
     // the app boots asynchronously (session check, first paint) — give it a beat
     setTimeout(async function () {
-      // keep the real client so a test can put it back, then stop the app from
-      // reaching the network on its own while the suite runs
+      /* Put a fake in front of the real client for the whole run.
+         This page has always claimed no real data is touched. It was not true:
+         only the ~90 tests that call plan() installed a fake, restore() put the
+         **real** client back afterwards, and everything else — every page the
+         handler audit opens, every loader navigateTo fires — ran against the
+         live project. `POST /rest/v1/view_history 400` in the production logs
+         was this: a test signing in as a fixture id and opening a listing.
+         The real client stays reachable as __realSb, deliberately unused. */
       w.__realSb = w.sb;
+      w.sb = KX.makeSb({});
+      /* Tripwire. The claim above is only worth making if something checks it,
+         and the old failure was silent by nature — a write nobody saw, landing
+         in a database nobody was looking at. Counting on the client object
+         itself catches a direct reference too, not only `sb` at call time. */
+      w.__realSbTouched = 0;
+      ['from', 'rpc'].forEach(function (k) {
+        var orig = w.__realSb[k].bind(w.__realSb);
+        w.__realSb[k] = function () { w.__realSbTouched++; return orig.apply(null, arguments); };
+      });
       if (w.kxChatPollStop) w.kxChatPollStop();
 
       /* An exception thrown while suite.js is being evaluated stops the rest of

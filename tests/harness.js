@@ -122,11 +122,41 @@
         var r = plan._rpc && plan._rpc[name];
         return Promise.resolve(typeof r === 'function' ? r(args) : (r || { data: null, error: null }));
       },
+      /* Every auth method the app calls, not only the ones a test happens to
+         stub. This object is the default the suite runs against, so a gap here
+         is not a missing feature — it is a call that escapes to the real
+         Supabase project, which is how `POST /rest/v1/view_history 400` came to
+         be in the live logs. Each records the call so a test can assert on it. */
       auth: {
         getSession: function () { return Promise.resolve({ data: { session: plan._session || null } }); },
         getUser:    function () { return Promise.resolve({ data: { user: (plan._session || {}).user || null } }); },
         onAuthStateChange: function () { return { data: { subscription: { unsubscribe: function () {} } } }; },
-        signOut:    function () { return Promise.resolve({ error: null }); }
+        signOut:    function () { calls.push({ auth: 'signOut' }); return Promise.resolve({ error: null }); },
+        signUp: function (a) {
+          calls.push({ auth: 'signUp', args: a });
+          return Promise.resolve(plan._auth && plan._auth.signUp
+            ? plan._auth.signUp : { data: { user: (plan._session || {}).user || null }, error: null });
+        },
+        signInWithPassword: function (a) {
+          calls.push({ auth: 'signInWithPassword', args: a });
+          return Promise.resolve(plan._auth && plan._auth.signInWithPassword
+            ? plan._auth.signInWithPassword : { data: { user: null, session: null }, error: null });
+        },
+        signInWithOAuth: function (a) {
+          calls.push({ auth: 'signInWithOAuth', args: a });
+          return Promise.resolve(plan._auth && plan._auth.signInWithOAuth
+            ? plan._auth.signInWithOAuth : { data: {}, error: null });
+        },
+        updateUser: function (a) {
+          calls.push({ auth: 'updateUser', args: a });
+          return Promise.resolve(plan._auth && plan._auth.updateUser
+            ? plan._auth.updateUser : { data: { user: null }, error: null });
+        },
+        resetPasswordForEmail: function (a) {
+          calls.push({ auth: 'resetPasswordForEmail', args: a });
+          return Promise.resolve(plan._auth && plan._auth.resetPasswordForEmail
+            ? plan._auth.resetPasswordForEmail : { data: {}, error: null });
+        }
       },
       storage: { from: function () { return {
         upload: function () { return Promise.resolve({ data: { path: 'fake/path.jpg' }, error: null }); },
