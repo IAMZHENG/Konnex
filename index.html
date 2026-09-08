@@ -6353,11 +6353,19 @@ input[type="number"]:focus, textarea:focus, select:focus{
 .au-or{ position:relative; text-align:center; margin:18px 0; }
 .au-or::before{ content:""; position:absolute; left:0; top:50%; width:100%; height:1px; background:var(--line); }
 .au-or span{ position:relative; background:#fff; padding:0 12px; font-size:14px; color:var(--ink-faint); }
-.au-social{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.au-sbtn{ display:flex; align-items:center; justify-content:center; gap:9px; border:1.5px solid var(--line); background:#fff; border-radius:10px; padding:11px; font-size:15px; font-weight:600; color:var(--ink); cursor:pointer; font-family:inherit; transition:background .15s ease; }
+/* Flex, not a fixed two-column grid: how many providers are switched on changes
+   (Google always, Facebook and LINE by flag), and a grid with a hard column
+   count leaves a hole where a hidden button used to be. flex-wrap lets the row
+   hold whatever is actually there — one full width, two side by side, three
+   wrapping when the card is too narrow for them. */
+.au-social{ display:flex; flex-wrap:wrap; gap:12px; }
+.au-sbtn{ flex:1 1 120px; display:flex; align-items:center; justify-content:center; gap:9px; border:1.5px solid var(--line); background:#fff; border-radius:10px; padding:11px; font-size:15px; font-weight:600; color:var(--ink); cursor:pointer; font-family:inherit; transition:background .15s ease; }
 .au-sbtn:hover{ background:var(--bg); }
 .au-gg{ width:20px; height:20px; border-radius:50%; background:conic-gradient(#ea4335,#fbbc05,#34a853,#4285f4,#ea4335); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
 .au-fb{ width:20px; height:20px; border-radius:5px; background:#1877f2; color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; }
+/* #06C755 is LINE's own green — their login guidelines ask for the mark on it */
+.au-line{ width:20px; height:20px; border-radius:5px; background:#06C755; color:#fff; display:flex; align-items:center; justify-content:center; }
+.au-line svg{ width:14px; height:14px; display:block; }
 .au-switch{ text-align:center; font-size:15px; color:var(--ink-soft); margin-top:20px; }
 .au-switch a{ color:var(--blue-700); font-weight:600; cursor:pointer; }
 .au-role{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
@@ -11966,6 +11974,7 @@ html, body{
           <div class="au-social">
             <button type="button" class="au-sbtn" onclick="authSocial('Google')"><span class="au-gg">G</span>Google</button>
             <button type="button" class="au-sbtn au-fb-btn" onclick="authSocial('Facebook')"><span class="au-fb">f</span>Facebook</button>
+            <button type="button" class="au-sbtn au-line-btn" onclick="authSocial('LINE')"><span class="au-line" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.64 2 10.11c0 4 3.55 7.36 8.35 8 .32.07.77.21.88.49.1.25.07.63.03.88l-.14.85c-.04.25-.2 1 .88.54 1.08-.45 5.8-3.42 7.92-5.85C21.34 13.42 22 11.86 22 10.11 22 5.64 17.52 2 12 2ZM8.1 12.67h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 1.06 0v3.41H8.1a.53.53 0 0 1 0 1.06Zm2.07-.53a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 1.06 0v3.94Zm4.75 0a.53.53 0 0 1-.95.32l-2.02-2.75v2.43a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 .95-.32l2.02 2.75V8.2a.53.53 0 0 1 1.06 0v3.94Zm3.19-2.5a.53.53 0 0 1 0 1.06h-1.47v.91h1.47a.53.53 0 0 1 0 1.06h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 .53-.53h2a.53.53 0 0 1 0 1.06h-1.47v.91h1.47Z"/></svg></span>LINE</button>
           </div>
           <div class="au-switch">ยังไม่มีบัญชี? <a onclick="authTab('register')">สมัครสมาชิกฟรี</a></div>
         </div>
@@ -12270,13 +12279,32 @@ html, body{
      anyone who has already signed in with Facebook keeps their account. */
   window.KX_FACEBOOK_ENABLED = true;
 
+  /* ===== เข้าสู่ระบบด้วย LINE =====
+
+     Off until the provider actually exists in Supabase. The button is written
+     and styled and wired; what it needs is a LINE Login channel and a Custom
+     OIDC provider in the Supabase dashboard. Shipping it visible before that
+     means every press answers "ยังไม่ได้เปิดใช้งาน", which is the same trap the
+     Facebook button is in.
+
+     LINE is the one that matters most here: nearly every phone in Thailand has
+     it, it costs nothing, and unlike SMS one-time codes there is no per-message
+     bill and no sender-ID paperwork.
+
+     KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
+     was created under, prefixed with `custom:`. */
+  window.KX_LINE_ENABLED = false;
+  window.KX_LINE_PROVIDER = 'custom:line';
+
   (function(){
     function apply(){
       document.body.classList.toggle('kx-no-fb', !window.KX_FACEBOOK_ENABLED);
+      document.body.classList.toggle('kx-no-line', !window.KX_LINE_ENABLED);
     }
     if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
     else apply();
     window.kxApplyFacebookFlag = apply;
+    window.kxApplySocialFlags = apply;
   })();
 
   /* One place to ask, so a query that forgets is a query that is wrong rather
@@ -17772,11 +17800,12 @@ body.kx-no-offers #page-my-bids .origin-tabs,
 /* ประเภท in ค้นหาขั้นสูง is the RFQ/Offer switch under another name */
 body.kx-no-offers #advKindField { display: none !important; }
 
-/* ---- Facebook ปิดไว้ก่อน ----
-   With one button left, the row that held two stops being a row: Google goes
-   full width rather than sitting in half of one. */
+/* ---- ปุ่มเข้าสู่ระบบที่ยังไม่เปิด ----
+   Hidden rather than removed so the switch is one line either way. .au-social
+   is a wrapping flex row, so whatever is left simply fills the space — there is
+   no column count to keep in step with these. */
 body.kx-no-fb .au-fb-btn { display: none !important; }
-body.kx-no-fb .au-social { grid-template-columns: 1fr; }
+body.kx-no-line .au-line-btn { display: none !important; }
 
 /* ---- ผู้เยี่ยมชมที่ยังไม่ได้เข้าสู่ระบบ ---- */
 /* Controls that need an account. Left in the markup and hidden here rather than
@@ -21138,6 +21167,15 @@ body.kx-guest #load-more-offers { display: none !important; }
      thing that tells you where to go and fix it. */
   window.authSocial = async function(who){
     var provider = String(who).toLowerCase();
+    /* Supabase has no LINE provider of its own — LINE is added as a Custom OIDC
+       provider, and its id is whatever it was named in the dashboard with a
+       `custom:` prefix. Everything else passes straight through, which is how
+       google and facebook keep working unchanged.
+
+       If the name in the Supabase dashboard is not `line`, change the constant
+       rather than this line: one wrong character here and the button reports
+       "ยังไม่ได้เปิดใช้งาน" for a provider that is switched on. */
+    if(provider === 'line') provider = window.KX_LINE_PROVIDER || 'custom:line';
     var res = await sb.auth.signInWithOAuth({
       provider: provider,
       options: { redirectTo: window.location.origin + window.location.pathname }

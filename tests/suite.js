@@ -703,6 +703,107 @@
     });
   });
 
+  /* เข้าสู่ระบบด้วย Google / Facebook / LINE.
+     Each button is one press away from leaving the site, so the thing worth
+     testing is what it asks Supabase for — a provider id that is off by one
+     character does not fail loudly, it comes back "ยังไม่ได้เปิดใช้งาน" and
+     looks exactly like a provider nobody switched on yet. */
+  describe('ปุ่มเข้าสู่ระบบด้วยบัญชีอื่น', function () {
+    function shown(w, sel) {
+      var el = w.document.querySelector(sel);
+      return !!(el && el.getClientRects().length > 0);
+    }
+    /* Records the argument instead of navigating. Without this the real call
+       would try to leave the page in the middle of the suite. */
+    function watchOAuth(w) {
+      var seen = [];
+      var real = w.sb.auth.signInWithOAuth;
+      w.sb.auth.signInWithOAuth = async function (opts) {
+        seen.push(opts);
+        return { data: {}, error: null };
+      };
+      seen.restore = function () { w.sb.auth.signInWithOAuth = real; };
+      return seen;
+    }
+
+    it('LINE ships switched off, and the page says so in one place', function (w) {
+      w.navigateTo('page-auth', true);
+      expect(w.KX_LINE_ENABLED).toBe(false);
+      expect(w.document.body.classList.contains('kx-no-line')).toBe(true);
+      expect(shown(w, '.au-line-btn')).toBe(false,
+        'a button that answers every press with an error is worse than no button');
+    });
+
+    it('leaves the ones that do work on screen', function (w) {
+      w.navigateTo('page-auth', true);
+      expect(shown(w, '.au-social .au-sbtn')).toBe(true, 'Google');
+      expect(shown(w, '.au-fb-btn')).toBe(w.KX_FACEBOOK_ENABLED === true,
+        'Facebook follows its own flag');
+    });
+
+    /* The flag is the whole switch: flip it, and the button is there. If this
+       fails the CSS and the flag have drifted apart and turning LINE on later
+       will look like it did nothing. */
+    it('appears the moment the flag is turned on', function (w) {
+      var was = w.KX_LINE_ENABLED;
+      try {
+        w.navigateTo('page-auth', true);
+        w.KX_LINE_ENABLED = true;
+        w.kxApplySocialFlags();
+        expect(shown(w, '.au-line-btn')).toBe(true);
+      } finally {
+        w.KX_LINE_ENABLED = was;
+        w.kxApplySocialFlags();
+      }
+    });
+
+    /* Supabase has no LINE of its own — it is a Custom OIDC provider, and its
+       id is the dashboard name behind a `custom:` prefix. Sending plain 'line'
+       reaches a provider that does not exist. */
+    it('asks for the custom provider id, not the bare name', async function (w) {
+      var seen = watchOAuth(w);
+      try {
+        await w.authSocial('LINE');
+        expect(seen.length).toBe(1);
+        expect(seen[0].provider).toBe(w.KX_LINE_PROVIDER);
+        expect(seen[0].provider === 'line').toBe(false,
+          'plain "line" reaches a provider Supabase does not have');
+      } finally { seen.restore(); }
+    });
+
+    it('and the constant is a custom provider id, not a plain one', function (w) {
+      expect(String(w.KX_LINE_PROVIDER).slice(0, 7)).toBe('custom:');
+    });
+
+    /* Adding LINE must not have changed what the two working buttons send. */
+    it('leaves Google and Facebook exactly as they were', async function (w) {
+      var seen = watchOAuth(w);
+      try {
+        await w.authSocial('Google');
+        await w.authSocial('Facebook');
+        expect(seen[0].provider).toBe('google');
+        expect(seen[1].provider).toBe('facebook');
+      } finally { seen.restore(); }
+    });
+
+    it('sends everyone back to this site, not to a bare origin', async function (w) {
+      var seen = watchOAuth(w);
+      try {
+        await w.authSocial('Google');
+        expect(seen[0].options.redirectTo)
+          .toBe(w.location.origin + w.location.pathname);
+      } finally { seen.restore(); }
+    });
+
+    /* A fixed column count leaves a hole where a hidden button used to be, and
+       how many buttons are on screen changes with two flags. */
+    it('lays the row out by what is actually there', function (w) {
+      var cs = w.getComputedStyle(w.document.querySelector('.au-social'));
+      expect(cs.display).toBe('flex');
+      expect(cs.flexWrap).toBe('wrap');
+    });
+  });
+
   /* Writes that had no test. Each of these puts a row in the database, and each
      one is a place where a silent failure costs somebody something real — a
      bookmark that did not stick, a review nobody can see, a question that was
