@@ -12342,8 +12342,12 @@ html, body{
      So LINE does not go through sb.auth.signInWithOAuth at all. It goes to an
      Edge Function (supabase/functions/line-login) which does the exchange
      server-side and lets LINE verify its own token. The custom provider in the
-     dashboard is not used and can be deleted. */
-  window.KX_LINE_ENABLED = false;
+     dashboard is not used and can be deleted.
+
+     Working end to end since 2026-09-08. Because the function gets the email
+     from LINE, pressing this signs you into the account you already have rather
+     than opening a second one beside it. */
+  window.KX_LINE_ENABLED = true;
   window.KX_LINE_FN = window.KX_SUPABASE_URL + '/functions/v1/line-login';
 
   (function(){
