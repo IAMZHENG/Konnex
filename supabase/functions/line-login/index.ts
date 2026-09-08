@@ -138,6 +138,16 @@ function env(name: string): string {
   return v;
 }
 
+/* Built from SUPABASE_URL, never from the incoming request.
+   TLS is terminated before the request reaches this code, so `new URL(req.url)`
+   reports scheme http — and a redirect_uri of http://…/callback is rejected by
+   LINE for not matching the https one registered in the console, and would be
+   sent a second time at the token exchange where it must match again. The
+   platform's own SUPABASE_URL is https and is not going to drift. */
+function callbackUrl(): string {
+  return new URL('/functions/v1/line-login/callback', env('SUPABASE_URL')).toString();
+}
+
 // ------------------------------------------------------------------ start ---
 
 async function start(req: Request, url: URL): Promise<Response> {
@@ -149,7 +159,7 @@ async function start(req: Request, url: URL): Promise<Response> {
   const go = new URL(LINE_AUTHORIZE);
   go.searchParams.set('response_type', 'code');
   go.searchParams.set('client_id', env('LINE_CHANNEL_ID'));
-  go.searchParams.set('redirect_uri', new URL('/functions/v1/line-login/callback', url.origin).toString());
+  go.searchParams.set('redirect_uri', callbackUrl());
   go.searchParams.set('state', state);
   go.searchParams.set('nonce', nonce);
   // email is what lets this land on the account the person already has
@@ -184,7 +194,7 @@ async function callback(req: Request, url: URL): Promise<Response> {
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: new URL('/functions/v1/line-login/callback', url.origin).toString(),
+      redirect_uri: callbackUrl(),
       client_id: env('LINE_CHANNEL_ID'),
       client_secret: env('LINE_CHANNEL_SECRET')
     })
