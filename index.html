@@ -12865,7 +12865,7 @@ html, body{
             <div class="doc-tag">แพลตฟอร์มค้นหาราคาตลาดที่เหมาะสม</div>
           </div>
         </div>
-        <div class="doc-ver">ฉบับที่ 1.0<br><span>มีผลบังคับใช้ 1 กันยายน 2569</span></div>
+        <div class="doc-ver">ฉบับที่ 1.1<br><span>มีผลบังคับใช้ 8 กันยายน 2569</span></div>
       </header>
 
       <h1>ข้อกำหนดการใช้งาน</h1>
@@ -12874,7 +12874,7 @@ html, body{
 
       <h2>1. ขอบเขตของบริการ</h2>
       <p>QubeQuote เป็นพื้นที่ตัวกลาง (marketplace) ที่เชื่อมผู้ซื้อ ผู้ขาย ผู้รับเหมา และผู้ให้บริการ
-        เพื่อประกาศความต้องการซื้อ (RFQ) ประกาศขายสินค้าและบริการ (Offer) ส่งใบเสนอราคา
+        เพื่อประกาศความต้องการซื้อ (RFQ) รับใบเสนอราคาจากผู้ขายหลายราย
         และเปรียบเทียบข้อเสนอในที่เดียว</p>
 
       <div class="doc-note">
@@ -13530,7 +13530,18 @@ html, body{
    label out of this object at boot, so the version shown on the page and the
    version written into the record cannot drift apart — which is the only
    property that makes the record worth keeping. */
-window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยายน 2569' };
+/* Each document carries its own version and its own effective date, because
+   they do not change together. Bumping one used to move the date printed on
+   both, which would have dated a policy nobody had touched.
+
+   terms 1.1 (8 กันยายน 2569): ข้อ 1 promised ประกาศขายสินค้าและบริการ (Offer),
+   which the app no longer has. The version had to move with the wording — the
+   acceptance table is keyed on (profile, document, version), so editing 1.0 in
+   place would leave every existing record pointing at text that is gone. */
+window.KX_DOC = {
+  terms:   '1.1', termsEffective:   '8 กันยายน 2569',
+  privacy: '1.0', privacyEffective: '1 กันยายน 2569'
+};
 
 (function(){
   var ov, body, accept, hint, onAccept = null, lastFocus = null;
@@ -13676,10 +13687,10 @@ window.KX_DOC = { terms: '1.0', privacy: '1.0', effective: '1 กันยาย
     // one version number, shown wherever the documents show one
     var v = window.KX_DOC;
     document.querySelectorAll('#page-terms .doc-ver').forEach(function(n){
-      n.innerHTML = 'ฉบับที่ ' + v.terms + '<br><span>มีผลบังคับใช้ ' + v.effective + '</span>';
+      n.innerHTML = 'ฉบับที่ ' + v.terms + '<br><span>มีผลบังคับใช้ ' + v.termsEffective + '</span>';
     });
     document.querySelectorAll('#page-privacy .doc-ver').forEach(function(n){
-      n.innerHTML = 'ฉบับที่ ' + v.privacy + '<br><span>มีผลบังคับใช้ ' + v.effective + '</span>';
+      n.innerHTML = 'ฉบับที่ ' + v.privacy + '<br><span>มีผลบังคับใช้ ' + v.privacyEffective + '</span>';
     });
   });
 

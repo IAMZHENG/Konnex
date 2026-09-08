@@ -3651,6 +3651,52 @@
         .toContain(w.KX_DOC.privacy);
     });
 
+    /* The check above passes no matter what the markup says, because the label
+       is painted over from KX_DOC on load. The markup still matters:
+       tools/build-docs-pdf.js lifts it verbatim into terms.html, privacy.html
+       and the three PDFs, and no script runs in any of those. So the number
+       typed into the page is the number on the documents people download, and
+       it has to be the one that was recorded. */
+    it('and the version typed into the markup agrees, for the PDFs', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      function markupVersion(pageId) {
+        var at = src.indexOf('<div id="' + pageId + '" class="app-page">');
+        var m = /<div class="doc-ver">ฉบับที่ ([^<]+)<br><span>มีผลบังคับใช้ ([^<]+)</
+                .exec(src.slice(at, at + 4000));
+        return m ? { ver: m[1].trim(), eff: m[2].trim() } : null;
+      }
+      var t = markupVersion('page-terms'), p = markupVersion('page-privacy');
+      expect(!!t).toBe(true, 'the header the PDF builder reads');
+      expect(t.ver).toBe(w.KX_DOC.terms);
+      expect(t.eff).toBe(w.KX_DOC.termsEffective);
+      expect(!!p).toBe(true);
+      expect(p.ver).toBe(w.KX_DOC.privacy);
+      expect(p.eff).toBe(w.KX_DOC.privacyEffective);
+    });
+
+    /* Each document has its own date because they change on their own. One
+       shared date meant bumping either one re-dated both, so a policy nobody
+       had touched would claim to have taken effect that day. */
+    it('dates each document on its own', function (w) {
+      expect(w.KX_DOC.termsEffective).toBeTruthy();
+      expect(w.KX_DOC.privacyEffective).toBeTruthy();
+      expect(w.document.querySelector('#page-terms .doc-ver').textContent)
+        .toContain(w.KX_DOC.termsEffective);
+      expect(w.document.querySelector('#page-privacy .doc-ver').textContent)
+        .toContain(w.KX_DOC.privacyEffective);
+    });
+
+    /* ประกาศขาย is switched off across the app. A document people have to
+       accept must not still promise it — and the PDFs are built from this
+       markup, so the promise would outlive the feature on paper. */
+    it('promises no service the app does not have', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var at = src.indexOf('<div id="page-terms" class="app-page">');
+      var doc = src.slice(at, src.indexOf('</article>', at));
+      expect(doc).notToContain('(Offer)');
+      expect(doc).notToContain('ประกาศขาย');
+    });
+
     /* Phase one collects only what the quoting loop needs. The one thing cut
        for it is identity verification: a Thai ID card carries the holder's
        religion, so a photograph of one is sensitive data under มาตรา 26 — a
