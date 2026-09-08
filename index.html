@@ -13679,6 +13679,11 @@ window.KX_DOC = {
        button signs out, and the backdrop and Escape stop dismissing. */
     var cancel = ov.querySelector('.kxc-btn:not(.primary)');
     if(cancel) cancel.textContent = required ? 'ออกจากระบบ' : 'ยกเลิก';
+    /* The accept button said "ยอมรับและสมัครสมาชิก" in both modes. In required
+       mode the person has had an account for weeks and is being asked about a
+       document, not offered a signup — a button that misnames what it is about
+       to do is how a screen comes to feel like it is talking to someone else. */
+    if(accept) accept.textContent = required ? 'ยอมรับและใช้งานต่อ' : 'ยอมรับและสมัครสมาชิก';
     var sub = el('kxcSub');
     if(sub) sub.textContent = required
       ? 'บัญชีนี้ยังไม่ได้ยอมรับข้อกำหนด โปรดอ่านและกดยอมรับเพื่อใช้งานต่อ'

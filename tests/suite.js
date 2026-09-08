@@ -1290,6 +1290,62 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The same modal is shown for two different reasons, and its buttons have to
+     say which. Signing up, it is part of the form. As a gate, it is being shown
+     to somebody who has had an account for weeks because a document changed —
+     and it was still offering them "ยอมรับและสมัครสมาชิก". */
+  describe('หน้ายอมรับข้อกำหนด — พูดให้ตรงกับสถานการณ์', function () {
+    function labels(w) {
+      var ov = w.document.getElementById('kxConsent');
+      return {
+        accept: w.document.getElementById('kxcAccept').textContent,
+        cancel: ov.querySelector('.kxc-btn:not(.primary)').textContent,
+        sub:    w.document.getElementById('kxcSub').textContent
+      };
+    }
+    /* Accepting is the only exit that does not sign out, so it is how these
+       tests put the modal away — and then the body is emptied. Opening it
+       copies both documents into #kxcBody and closing leaves them there, which
+       puts words like ประมูล into the page outside #page-terms, where a later
+       test checks the app does not use them. */
+    function acceptAndClose(w) {
+      var body = w.document.getElementById('kxcBody');
+      body.scrollTop = body.scrollHeight;
+      body.dispatchEvent(new w.Event('scroll'));
+      w.kxConsentAccept();
+      w.kxPolicyAccepted = null;
+      body.innerHTML = '';
+    }
+
+    it('offers to sign you up only when that is what is happening', function (w) {
+      w.kxConsentOpen(function () {});
+      var l = labels(w);
+      expect(l.accept).toBe('ยอมรับและสมัครสมาชิก');
+      expect(l.cancel).toBe('ยกเลิก');
+      acceptAndClose(w);
+    });
+
+    it('talks to an existing account as one, when shown as a gate', function (w) {
+      w.kxConsentOpen(function () {}, { required: true });
+      var l = labels(w);
+      expect(l.accept).toBe('ยอมรับและใช้งานต่อ',
+        'this person is not signing up — they already have an account');
+      expect(l.cancel).toBe('ออกจากระบบ', 'the only way out that is not accepting');
+      expect(l.sub).toContain('ยังไม่ได้ยอมรับ');
+      acceptAndClose(w);
+    });
+
+    /* Opened as a gate and then, later in the same page, as part of a signup:
+       the labels have to change back, not keep the first thing they were set to. */
+    it('changes back, rather than keeping whichever it opened as first', function (w) {
+      w.kxConsentOpen(function () {}, { required: true });
+      acceptAndClose(w);
+      w.kxConsentOpen(function () {});
+      expect(labels(w).accept).toBe('ยอมรับและสมัครสมาชิก');
+      acceptAndClose(w);
+    });
+  });
+
   /* What Google prints, and what LINE and Facebook draw when someone shares a
      link. There was no description tag at all, so Google wrote its own out of
      page text and picked the อัปเกรดเป็นพรีเมียม card — a signed-out visitor
