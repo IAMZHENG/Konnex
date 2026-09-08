@@ -11995,7 +11995,7 @@ html, body{
           <div class="au-social">
             <button type="button" class="au-sbtn" onclick="authSocial('Google')"><span class="au-gg">G</span>Google</button>
             <button type="button" class="au-sbtn au-fb-btn" onclick="authSocial('Facebook')"><span class="au-fb">f</span>Facebook</button>
-            <button type="button" class="au-sbtn au-line-btn" onclick="authSocial('LINE')"><span class="au-line" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.64 2 10.11c0 4 3.55 7.36 8.35 8 .32.07.77.21.88.49.1.25.07.63.03.88l-.14.85c-.04.25-.2 1 .88.54 1.08-.45 5.8-3.42 7.92-5.85C21.34 13.42 22 11.86 22 10.11 22 5.64 17.52 2 12 2ZM8.1 12.67h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 1.06 0v3.41H8.1a.53.53 0 0 1 0 1.06Zm2.07-.53a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 1.06 0v3.94Zm4.75 0a.53.53 0 0 1-.95.32l-2.02-2.75v2.43a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 .95-.32l2.02 2.75V8.2a.53.53 0 0 1 1.06 0v3.94Zm3.19-2.5a.53.53 0 0 1 0 1.06h-1.47v.91h1.47a.53.53 0 0 1 0 1.06h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 .53-.53h2a.53.53 0 0 1 0 1.06h-1.47v.91h1.47Z"/></svg></span>LINE</button>
+            <button type="button" class="au-sbtn au-line-btn" onclick="authLine()"><span class="au-line" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 5.64 2 10.11c0 4 3.55 7.36 8.35 8 .32.07.77.21.88.49.1.25.07.63.03.88l-.14.85c-.04.25-.2 1 .88.54 1.08-.45 5.8-3.42 7.92-5.85C21.34 13.42 22 11.86 22 10.11 22 5.64 17.52 2 12 2ZM8.1 12.67h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 1.06 0v3.41H8.1a.53.53 0 0 1 0 1.06Zm2.07-.53a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 1.06 0v3.94Zm4.75 0a.53.53 0 0 1-.95.32l-2.02-2.75v2.43a.53.53 0 0 1-1.06 0V8.2a.53.53 0 0 1 .95-.32l2.02 2.75V8.2a.53.53 0 0 1 1.06 0v3.94Zm3.19-2.5a.53.53 0 0 1 0 1.06h-1.47v.91h1.47a.53.53 0 0 1 0 1.06h-2a.53.53 0 0 1-.53-.53V8.2a.53.53 0 0 1 .53-.53h2a.53.53 0 0 1 0 1.06h-1.47v.91h1.47Z"/></svg></span>LINE</button>
           </div>
           <div class="au-switch">ยังไม่มีบัญชี? <a onclick="authTab('register')">สมัครสมาชิกฟรี</a></div>
         </div>
@@ -12339,10 +12339,12 @@ html, body{
      a LINE account has no password to begin with. The app sends no mail of its
      own. profiles.email is nullable, so the row writes fine.
 
-     KX_LINE_PROVIDER is the id Supabase gives the custom provider — the name it
-     was created under, prefixed with `custom:`. */
+     So LINE does not go through sb.auth.signInWithOAuth at all. It goes to an
+     Edge Function (supabase/functions/line-login) which does the exchange
+     server-side and lets LINE verify its own token. The custom provider in the
+     dashboard is not used and can be deleted. */
   window.KX_LINE_ENABLED = false;
-  window.KX_LINE_PROVIDER = 'custom:line';
+  window.KX_LINE_FN = window.KX_SUPABASE_URL + '/functions/v1/line-login';
 
   (function(){
     function apply(){
@@ -21228,17 +21230,22 @@ body.kx-guest #load-more-offers { display: none !important; }
      call comes back with "provider is not enabled", which is said plainly
      rather than reported as a generic failure — the difference is the one
      thing that tells you where to go and fix it. */
+  /* เข้าสู่ระบบด้วย LINE — a whole separate door.
+     Not signInWithOAuth: Supabase cannot verify LINE's HS256 ID token, so the
+     exchange happens in an Edge Function that lets LINE verify it instead (the
+     long note beside KX_LINE_ENABLED has the why). A plain navigation, because
+     the function answers with a redirect to LINE.
+
+     Split in two so the address can be checked without leaving the page: a test
+     that has to stub window.location ends up testing its own stub. */
+  window.kxLineStartUrl = function(){
+    var back = window.location.origin + window.location.pathname;
+    return window.KX_LINE_FN + '?redirect=' + encodeURIComponent(back);
+  };
+  window.authLine = function(){ window.location.href = window.kxLineStartUrl(); };
+
   window.authSocial = async function(who){
     var provider = String(who).toLowerCase();
-    /* Supabase has no LINE provider of its own — LINE is added as a Custom OIDC
-       provider, and its id is whatever it was named in the dashboard with a
-       `custom:` prefix. Everything else passes straight through, which is how
-       google and facebook keep working unchanged.
-
-       If the name in the Supabase dashboard is not `line`, change the constant
-       rather than this line: one wrong character here and the button reports
-       "ยังไม่ได้เปิดใช้งาน" for a provider that is switched on. */
-    if(provider === 'line') provider = window.KX_LINE_PROVIDER || 'custom:line';
     var res = await sb.auth.signInWithOAuth({
       provider: provider,
       options: { redirectTo: window.location.origin + window.location.pathname }

@@ -761,22 +761,43 @@
       }
     });
 
-    /* Supabase has no LINE of its own — it is a Custom OIDC provider, and its
-       id is the dashboard name behind a `custom:` prefix. Sending plain 'line'
-       reaches a provider that does not exist. */
-    it('asks for the custom provider id, not the bare name', async function (w) {
-      var seen = watchOAuth(w);
-      try {
-        await w.authSocial('LINE');
-        expect(seen.length).toBe(1);
-        expect(seen[0].provider).toBe(w.KX_LINE_PROVIDER);
-        expect(seen[0].provider === 'line').toBe(false,
-          'plain "line" reaches a provider Supabase does not have');
-      } finally { seen.restore(); }
+    /* LINE does not go through Supabase's provider at all — Supabase cannot
+       verify LINE's HS256 ID token, and both endpoints that might have avoided
+       it are closed (one needs the openid scope that produces the token, the
+       other calls the id `userId` and Supabase cannot find a subject). The
+       button goes to an Edge Function that lets LINE verify its own token. */
+    it('sends LINE to the Edge Function, not to signInWithOAuth', function (w) {
+      var url = w.kxLineStartUrl();
+      expect(url).toContain('/functions/v1/line-login');
+      /* The return address rides in the query string, and the function refuses
+         any origin not on its own list — so it has to arrive whole and encoded,
+         not chopped at the first & or : */
+      var back = w.location.origin + w.location.pathname;
+      expect(url).toContain('redirect=' + encodeURIComponent(back));
+      expect(new (w.URL)(url).searchParams.get('redirect')).toBe(back,
+        'and survives being parsed back out');
     });
 
-    it('and the constant is a custom provider id, not a plain one', function (w) {
-      expect(String(w.KX_LINE_PROVIDER).slice(0, 7)).toBe('custom:');
+    it('makes no OAuth call for LINE any more', function (w) {
+      var seen = watchOAuth(w);
+      try { w.kxLineStartUrl(); } finally { seen.restore(); }
+      expect(seen.length).toBe(0);
+    });
+
+    /* The button has to point at the new door. An onclick left on authSocial
+       would fail the way it did all afternoon — at Supabase, over a token
+       Supabase was never going to accept. */
+    it('and the button on the page calls it', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var m = /class="au-sbtn au-line-btn" onclick="([^"]+)"/.exec(src);
+      expect(!!m).toBe(true, 'the LINE button');
+      expect(m[1]).toBe('authLine()');
+      expect(typeof w.authLine).toBe('function');
+    });
+
+    it('points the Edge Function at this project', function (w) {
+      expect(String(w.KX_LINE_FN).indexOf(w.KX_SUPABASE_URL)).toBe(0);
+      expect(String(w.KX_LINE_FN)).toContain('/functions/v1/line-login');
     });
 
     /* Adding LINE must not have changed what the two working buttons send. */
