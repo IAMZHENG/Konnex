@@ -2619,6 +2619,13 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-weight: 600;
     color: var(--ink-soft);
     line-height: 1.8;
+    /* Keep the line breaks the person typed. HTML collapses newlines into
+       single spaces, so a spec written a line per item — working area, laser
+       power, voltage — arrived as one unbroken paragraph, which is the hardest
+       possible way to read a list of numbers.
+       pre-line rather than pre-wrap: newlines are kept, but a stray double
+       space does not open a gap, and long lines still wrap to the column. */
+    white-space: pre-line;
     margin: 18px 0 20px
     }
 #page-rfq-detail .action-row {
@@ -7356,6 +7363,7 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-weight: 600;
     color: var(--ink-soft);
     line-height: 1.8;
+    white-space: pre-line;      /* see the note on #page-rfq-detail .desc-text */
     margin-bottom: 20px
     }
 #page-offer-detail .offer-action-row {

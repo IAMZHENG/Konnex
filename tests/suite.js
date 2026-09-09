@@ -1386,6 +1386,44 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* A description is typed into a textarea, a line per item — working area,
+     laser power, voltage. HTML collapses newlines into single spaces, so it
+     came out as one unbroken paragraph: the hardest possible way to read a
+     list of numbers, and no hint on the page that the lines had ever existed. */
+  describe('รายละเอียดงานคงบรรทัดที่พิมพ์ไว้', function () {
+    [['page-rfq-detail', '.desc-text'], ['page-offer-detail', '.offer-desc']]
+      .forEach(function (pair) {
+        var page = pair[0], sel = pair[1];
+        it('keeps the typed lines on ' + page, function (w) {
+          w.navigateTo(page, true);
+          var el = w.document.querySelector('#' + page + ' ' + sel);
+          expect(!!el).toBe(true, sel + ' exists');
+          expect(w.getComputedStyle(el).whiteSpace).toBe('pre-line');
+
+          /* Measured, not just declared: a later rule could set white-space
+             back, and the computed value above would still read pre-line if
+             the override lived on a different element in the chain. */
+          var was = el.textContent;
+          el.textContent = 'บรรทัดหนึ่ง';
+          var one = el.getBoundingClientRect().height;
+          el.textContent = 'บรรทัดหนึ่ง\nบรรทัดสอง\nบรรทัดสาม';
+          var three = el.getBoundingClientRect().height;
+          el.textContent = was;
+          expect(one > 0).toBe(true, 'the page is drawn, so the heights mean something');
+          expect(three > one * 2).toBe(true,
+            'three typed lines take three lines, not one wrapped paragraph');
+        });
+      });
+
+    /* The feed card is a one-line teaser on purpose — -webkit-line-clamp:1 —
+       so it must NOT start expanding to the full typed shape. */
+    it('leaves the feed card as the one-line teaser it is', function (w) {
+      var el = w.document.querySelector('#page-feed .post-desc');
+      if (!el) return;
+      expect(w.getComputedStyle(el).webkitLineClamp).toBe('1');
+    });
+  });
+
   /* แชร์ used to be on feed cards only. The detail page is the address that
      gets shared, the page a shared link lands on, and the page an owner opens
      when they want to send their RFQ to a supplier — it was the one place the
