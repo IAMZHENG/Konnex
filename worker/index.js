@@ -42,6 +42,53 @@ function oneLine(s, max) {
   return t.length <= max ? t : t.slice(0, max - 1).trimEnd() + '…';
 }
 
+/* Facebook and LINE draw the big card only for an image they know is at least
+   600x315. Nothing in the tags said how big the photo was, so they had to guess
+   and drew the small square thumbnail instead — an 800x800 product photo, more
+   than large enough, rendered as a postage stamp beside the text.
+
+   So measure it and say. Read out of the file header rather than trusted from
+   anywhere: the first 64KB is enough for PNG always and for JPEG in practice,
+   and a Range request keeps this off the critical path for a 1MB photograph. */
+function pngSize(b) {
+  if (b.length > 24 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) {
+    const v = new DataView(b.buffer, b.byteOffset);
+    return { w: v.getUint32(16), h: v.getUint32(20) };
+  }
+  return null;
+}
+function jpegSize(b) {
+  if (b[0] !== 0xff || b[1] !== 0xd8) return null;
+  const v = new DataView(b.buffer, b.byteOffset);
+  let i = 2;
+  while (i < b.length - 9) {
+    if (b[i] !== 0xff) { i++; continue; }
+    const m = b[i + 1];
+    // a start-of-frame marker carries the dimensions; the rest are skipped by
+    // their own declared length
+    if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8 && m !== 0xcc) {
+      return { h: v.getUint16(i + 5), w: v.getUint16(i + 7) };
+    }
+    const len = v.getUint16(i + 2);
+    if (len < 2) return null;          // malformed: stop rather than loop
+    i += 2 + len;
+  }
+  return null;
+}
+async function imageSize(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { range: 'bytes=0-65535' },
+      cf: { cacheTtl: 3600, cacheEverything: true }
+    });
+    if (!res.ok) return null;
+    const b = new Uint8Array(await res.arrayBuffer());
+    return pngSize(b) || jpegSize(b);
+  } catch (e) {
+    return null;                       // a card without dimensions still works
+  }
+}
+
 function pickImage(post) {
   const imgs = (post.post_images || []).slice().sort(function (a, b) {
     return (a.sort == null ? 0 : a.sort) - (b.sort == null ? 0 : b.sort);
@@ -83,8 +130,30 @@ async function sharePage(id, env) {
   const title = oneLine(post.title, 90) || 'ประกาศบน QubeQuote';
   const desc = oneLine(post.description, 180) ||
     'ดูรายละเอียดและเสนอราคาได้ที่ QubeQuote';
-  const img = pickImage(post) || FALLBACK_IMG;
   const canonical = SITE + '/p/' + id;
+
+  /* Which picture, and how big we promise it is.
+
+     A photo under 600x315 gets the small card no matter what we say, and a
+     listing's own thumbnail shown at postage-stamp size is worse than the
+     brand card shown properly — so below that threshold this falls back to the
+     1200x630 card, which is at least large and legible. */
+  const photo = pickImage(post);
+  let img = FALLBACK_IMG, imgW = 1200, imgH = 630, imgAlt = 'QubeQuote';
+  if (photo) {
+    const size = await imageSize(photo);
+    if (size && size.w >= 600 && size.h >= 315) {
+      img = photo; imgW = size.w; imgH = size.h; imgAlt = title;
+    } else if (!size) {
+      // unmeasurable, but it is still this listing's own photograph: use it and
+      // let the scraper size it, which is what happened before any of this
+      img = photo; imgW = 0; imgH = 0; imgAlt = title;
+    }
+  }
+  const sizeTags = imgW && imgH
+    ? '\n<meta property="og:image:width" content="' + imgW + '">' +
+      '\n<meta property="og:image:height" content="' + imgH + '">'
+    : '';
 
   const html = `<!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8">
@@ -99,8 +168,8 @@ async function sharePage(id, env) {
 <meta property="og:url" content="${esc(canonical)}">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
-<meta property="og:image" content="${esc(img)}">
-<meta property="og:image:alt" content="${esc(title)}">
+<meta property="og:image" content="${esc(img)}">${sizeTags}
+<meta property="og:image:alt" content="${esc(imgAlt)}">
 <meta name="twitter:card" content="summary_large_image">
 <style>
   body{ margin:0; min-height:100vh; display:flex; align-items:center;
