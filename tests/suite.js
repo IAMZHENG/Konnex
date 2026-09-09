@@ -1290,6 +1290,78 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* Renumbering a legal document by hand is where a second "5." comes from, and
+     nothing on screen looks wrong when it happens — the heading still reads as a
+     heading. These documents are also printed to PDF and handed to Meta and
+     LINE, so a broken sequence outlives the page it was made on. */
+  describe('เอกสารสองฉบับ — โครงสร้างและการอ้างอิงข้อ', function () {
+    function heads(w, id) {
+      return Array.prototype.map.call(
+        w.document.querySelectorAll('#' + id + ' .legal-doc h2'),
+        function (h) { return (h.textContent || '').trim(); });
+    }
+    function numbers(list) {
+      return list.map(function (t) {
+        var m = /^(\d+)\./.exec(t);
+        return m ? Number(m[1]) : null;
+      });
+    }
+
+    ['page-terms', 'page-privacy'].forEach(function (id) {
+      it('numbers ' + id + ' straight through, with no repeat and no gap', function (w) {
+        var ns = numbers(heads(w, id));
+        expect(ns.length > 5).toBe(true, 'the document has sections at all');
+        expect(ns.indexOf(null)).toBe(-1, 'every heading is numbered');
+        ns.forEach(function (n, i) {
+          expect(n).toBe(i + 1, 'heading ' + (i + 1) + ' is numbered ' + n);
+        });
+      });
+
+      /* "ตามช่องทางท้ายเอกสาร" was true until ข้อมูลติดต่อ stopped being last.
+         A pointer at a section that has moved is worse than no pointer. */
+      it('points ' + id + ' at sections that exist', function (w) {
+        var text = w.document.getElementById(id).textContent || '';
+        var top = numbers(heads(w, id)).length;
+        var m, re = /ข้อ\s*(\d+)/g, seen = 0;
+        while ((m = re.exec(text))) {
+          seen++;
+          expect(Number(m[1]) <= top).toBe(true,
+            'อ้างถึง "ข้อ ' + m[1] + '" but the document ends at ' + top);
+        }
+        expect(seen >= 0).toBe(true);
+      });
+    });
+
+    it('puts ข้อมูลติดต่อ at 5, not at the end', function (w) {
+      var hs = heads(w, 'page-privacy');
+      expect(hs[4]).toContain('ข้อมูลติดต่อ');
+      expect(hs[hs.length - 1]).notToContain('ข้อมูลติดต่อ');
+    });
+
+    /* The two protections ข้อ 8 was missing. Written down as tests because they
+       are the kind of clause that gets tidied away by someone shortening a
+       document, and their absence is invisible until it matters. */
+    it('keeps the two clauses that carry the most weight in ข้อ 8', function (w) {
+      var terms = w.document.getElementById('page-terms').textContent || '';
+      expect(terms).toContain('เราไม่ได้ตรวจสอบผู้ใช้',
+        'the platform verifies nobody, and says so');
+      expect(terms).toContain('ชดใช้ค่าเสียหาย',
+        'a user answers for claims their own content brings against us');
+      expect(terms).toContain('เท่าที่กฎหมายอนุญาต',
+        'so a clause that goes too far is trimmed rather than struck whole');
+    });
+
+    /* It promised 15 days' notice before a significant change. The app has no
+       way to give that — it bumps the version and asks on the next sign-in — and
+       the 1.1 bump did not give it either. */
+    it('promises a notice period the code can actually keep', function (w) {
+      var terms = w.document.getElementById('page-terms').textContent || '';
+      expect(terms).notToContain('ล่วงหน้าไม่น้อยกว่า 15 วัน');
+      expect(terms).toContain('กดยอมรับก่อนใช้งานต่อ',
+        'what actually happens: the new version is shown and has to be accepted');
+    });
+  });
+
   /* The same modal is shown for two different reasons, and its buttons have to
      say which. Signing up, it is part of the form. As a gate, it is being shown
      to somebody who has had an account for weeks because a document changed —
