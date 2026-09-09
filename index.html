@@ -17547,7 +17547,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-head .pp-name,
 #page-company-profile .kx-wall .pc-head .pp-name{ font-size:16px; font-weight:600; }
 #page-feed .pc-sub,
-#page-company-profile .kx-wall .pc-sub{ font-size:14px; font-weight:400; }
+#page-company-profile .kx-wall .pc-sub{ font-size:14px; font-weight:500; }
 #page-feed .pc-kind,
 #page-company-profile .kx-wall .pc-kind{ font-size:14px; font-weight:700; }
 
@@ -17879,10 +17879,28 @@ body.kx-auth .kx-burger{ display:none !important; }
    rather than chosen, so the two cannot drift by eye. */
 #page-rfq-detail .post-owner-name,
 #page-offer-detail .post-owner-name { font-size: 16px; font-weight: 600; }
+/* ===== the meta line reads at 500 wherever it appears =====
+   จังหวัด, the deadline and the budget are the facts a seller reads before
+   deciding whether to quote at all, and at 400 they sat lighter than the title
+   above them and the description below.
+
+   One block for every page rather than a weight per rule: the same row appears
+   on the feed card, both detail pages, งานของฉัน, ใบเสนอราคา and the profile
+   wall, and setting it in seven places is how six of them end up agreeing and
+   one does not. None of those rules declares a weight of its own, so this plain
+   class list is enough to win — with one exception, the profile wall's .pc-sub,
+   which sets 400 behind a page id and is changed with it below. */
 #page-rfq-detail .meta-row,
 #page-rfq-detail .meta-row span,
 #page-offer-detail .offer-meta-row,
-#page-offer-detail .offer-meta-row span { font-size: 14px; font-weight: 400; }
+#page-offer-detail .offer-meta-row span { font-size: 14px; font-weight: 500; }
+.post-meta, .post-meta span,
+.rfq-meta,  .rfq-meta span,
+.meta-row,  .meta-row span,
+.bid-meta,  .bid-meta span,
+.offer-stats, .offer-stats span,
+.offer-meta-row, .offer-meta-row span,
+.pc-sub { font-weight: 500; }
 #page-rfq-detail .header-info h1,
 #page-offer-detail .offer-header-card h1 { font-size: 16px; font-weight: 500; line-height: 1.5; }
 #page-rfq-detail .desc-text,

@@ -1386,6 +1386,51 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The line under the poster's name — จังหวัด, the deadline, the budget — is
+     the same row on the feed card, both detail pages, งานของฉัน, ใบเสนอราคา and
+     the profile wall. It read at 400 everywhere, lighter than the title above it
+     and the description below, so the three facts a seller decides on were the
+     faintest thing in the card. */
+  describe('แถวข้อมูลย่อหนา 500 ทุกหน้า', function () {
+    /* Built rather than found: most of these rows only exist once real listings
+       have rendered, and a test that skips whatever is not on screen would pass
+       on a page that has none of them. A synthetic element proves the rule
+       applies by class, which is what "ทุกหน้า" means here. */
+    function weightOf(w, html, sel) {
+      var d = w.document.createElement('div');
+      d.innerHTML = html;
+      w.document.body.appendChild(d);
+      var v = w.getComputedStyle(d.querySelector(sel)).fontWeight;
+      d.remove();
+      return v;
+    }
+    [
+      ['.post-meta span',      '<div class="post-meta"><span>x</span></div>'],
+      ['.rfq-meta span',       '<div class="rfq-meta"><span>x</span></div>'],
+      ['.meta-row span',       '<div class="meta-row"><span>x</span></div>'],
+      ['.bid-meta span',       '<div class="bid-meta"><span>x</span></div>'],
+      ['.offer-stats span',    '<div class="offer-stats"><span>x</span></div>'],
+      ['.offer-meta-row span', '<div class="offer-meta-row"><span>x</span></div>'],
+      ['.pc-sub',              '<span class="pc-sub">x</span>']
+    ].forEach(function (pair) {
+      it(pair[0] + ' reads at 500', function (w) {
+        expect(weightOf(w, pair[1], pair[0].split(' ')[0] + (pair[0].indexOf(' ') > -1 ? ' span' : '')))
+          .toBe('500');
+      });
+    });
+
+    /* The two detail pages carry their own id-scoped rule, which outranks the
+       class list — it has to say 500 too, or those two pages drift back. */
+    it('and the id-scoped rule on the detail pages agrees', function (w) {
+      w.navigateTo('page-rfq-detail', true);
+      expect(w.getComputedStyle(w.document.querySelector('#page-rfq-detail .meta-row')).fontWeight)
+        .toBe('500');
+      w.navigateTo('page-offer-detail', true);
+      expect(w.getComputedStyle(w.document.querySelector('#page-offer-detail .offer-meta-row')).fontWeight)
+        .toBe('500');
+    });
+  });
+
   /* A description is typed into a textarea, a line per item — working area,
      laser power, voltage. HTML collapses newlines into single spaces, so it
      came out as one unbroken paragraph: the hardest possible way to read a
