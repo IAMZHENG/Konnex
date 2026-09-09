@@ -211,6 +211,70 @@
     });
   });
 
+  /* Where each button in the share sheet sends you, and what it sends.
+
+     Email is the fragile one. Outlook for Windows decodes mailto parameters
+     with the system ANSI codepage rather than UTF-8, so a Thai title reaches it
+     as an à¸-style run — and there is no charset parameter for mailto to ask
+     with, so nothing the page sends can prevent it. What the page can do is put
+     the link first, where ASCII survives anything, and leave the whole message
+     on the clipboard so a mangled subject is one paste from being right. */
+  describe('ปุ่มส่งต่อในกล่องแชร์', function () {
+    function armed(w, title) {
+      var d = w.document.createElement('div');
+      d.innerHTML = '<div class="post-card"><div class="pc-text"><div class="post-title">' +
+                    (title || 'ชื่อประกาศ') + '</div></div>' +
+                    '<div class="pc-actions"><span class="pc-share"></span></div></div>';
+      w.document.body.appendChild(d);
+      w.kxShareOpen(d.querySelector('.pc-share'), 'abc', 'rfq');
+      d.remove();
+      return function () { w.kxShareClose(); };
+    }
+
+    it('puts the link before the title in an email', function (w) {
+      var done = armed(w, "งานกลึง 'ด่วน'");
+      var body = decodeURIComponent(/body=([^&]*)/.exec(w.kxShareMailtoUrl())[1]);
+      done();
+      expect(body.indexOf('https://qubequote.com/p/abc')).toBe(0,
+        'the ASCII half survives any mail client, so it goes first');
+      expect(body).toContain("งานกลึง 'ด่วน'");
+    });
+
+    /* What we send is correct and has to stay correct — Outlook mangling it
+       afterwards is not a reason to start sending something looser. */
+    it('percent-encodes the Thai subject so it round-trips exactly', function (w) {
+      var title = 'เครื่องตัดเลเซอร์ LASER';
+      var done = armed(w, title);
+      var subject = /subject=([^&]*)/.exec(w.kxShareMailtoUrl())[1];
+      done();
+      expect(subject).notToContain(' ', 'nothing raw in a query string');
+      expect(decodeURIComponent(subject)).toBe(title);
+    });
+
+    it('leaves the message on the clipboard to paste over a mangled one', function (w) {
+      var done = armed(w, 'เครื่องตัดเลเซอร์');
+      var text = w.kxShareText();
+      done();
+      expect(text).toContain('เครื่องตัดเลเซอร์');
+      expect(text).toContain('https://qubequote.com/p/abc');
+    });
+
+    it('sends LINE and Facebook to their own sharers', function (w) {
+      var opened = [], real = w.open;
+      w.open = function (u) { opened.push(u); return null; };
+      var done = armed(w, 'ก');
+      try { w.kxShareTo('line'); } finally { w.open = real; done(); }
+      expect(opened[0]).toContain('line.me');
+      expect(opened[0]).toContain(encodeURIComponent('https://qubequote.com/p/abc'));
+
+      opened = []; real = w.open;
+      w.open = function (u) { opened.push(u); return null; };
+      done = armed(w, 'ก');
+      try { w.kxShareTo('facebook'); } finally { w.open = real; done(); }
+      expect(opened[0]).toContain('facebook.com');
+    });
+  });
+
   /* Sharing is only worth a button if the link opens for the person it was sent
      to. The two detail pages are therefore open without a session — safe from
      the client only because the database already draws the line: with the anon

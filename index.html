@@ -13355,12 +13355,37 @@ html, body{
     if(o) o.hidden = true;
   };
 
+  /* What gets copied, and what the mail client is handed. Both are built here
+     rather than inline so they can be checked without setting location.href,
+     which in a test either navigates the page or tests the stub instead. */
+  window.kxShareText = function(){ return shareTitle + '\n' + shareUrl; };
+  window.kxShareMailtoUrl = function(){
+    return 'mailto:?subject=' + encodeURIComponent(shareTitle) +
+           '&body=' + encodeURIComponent(shareUrl + '\n\n' + shareTitle);
+  };
+
   window.kxShareTo = function(net){
     if(!shareUrl) return;
     var u = encodeURIComponent(shareUrl), t = encodeURIComponent(shareTitle);
     if(net === 'email'){
-      location.href = 'mailto:?subject=' + t +
-        '&body=' + encodeURIComponent(shareTitle + '\n\n' + shareUrl);
+      /* Thai in a mailto: arrives mangled in Outlook for Windows. Not our
+         encoding — encodeURIComponent produces correct percent-encoded UTF-8
+         and round-trips exactly — but Outlook decodes mailto parameters with
+         the system ANSI codepage, so on a machine whose Windows is not Thai
+         every Thai character becomes the à¸-style run in its subject line.
+         Nothing the page sends can change that, and there is no charset
+         parameter for mailto to ask with.
+
+         Two things make it not matter. The link goes first, so the part that is
+         pure ASCII and carries everything is intact at the top whatever the mail
+         client does to the rest. And the whole message is put on the clipboard
+         on the way out, so a mangled subject is one paste away from being
+         right, rather than something to retype. */
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(window.kxShareText()).catch(function(){});
+      }
+      location.href = window.kxShareMailtoUrl();
+      kxToast('เปิดอีเมลแล้ว · คัดลอกข้อความไว้ให้ด้วย เผื่อภาษาไทยเพี้ยนให้วางทับได้เลย');
     } else {
       var go = net === 'line'
         ? 'https://social-plugins.line.me/lineit/share?url=' + u
