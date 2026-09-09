@@ -12958,7 +12958,7 @@ html, body{
             <div class="doc-tag">แพลตฟอร์มเปรียบเทียบใบเสนอราคา</div>
           </div>
         </div>
-        <div class="doc-ver">ฉบับที่ 1.2<br><span>มีผลบังคับใช้ 9 กันยายน 2569</span></div>
+        <div class="doc-ver">ฉบับที่ 1.3<br><span>มีผลบังคับใช้ 9 กันยายน 2569</span></div>
       </header>
 
       <h1>ข้อกำหนดการใช้งาน</h1>
@@ -13013,10 +13013,6 @@ html, body{
         <b>ใครเห็นอะไร:</b> ผู้ใช้ที่เข้าสู่ระบบแล้วจะเห็น<b>ว่ามีใครเสนอราคาเข้ามาบ้าง จำนวนข้อเสนอ
         และราคาเฉลี่ย</b> ของประกาศนั้น &nbsp;·&nbsp; <b>ราคาของแต่ละรายและไฟล์ใบเสนอราคาที่แนบมา
         เห็นได้เฉพาะเจ้าของประกาศ</b> และผู้เสนอรายนั้นเห็นราคาของตัวเองเท่านั้น
-        <br><br>
-        โปรดทราบว่าเมื่อประกาศหนึ่งมีข้อเสนอเพียงสองราย ผู้เสนอที่รู้ราคาของตัวเองสามารถคำนวณ
-        ราคาของอีกรายจากค่าเฉลี่ยได้ นี่เป็นผลที่ตามมาจากการแสดงค่าเฉลี่ยอย่างตรงไปตรงมา
-        และเราแจ้งไว้ตรงนี้เพื่อให้ท่านตัดสินใจได้ก่อนส่งราคา
       </div>
 
       <p>4.3 <b>QubeQuote ไม่เลือกผู้ชนะและไม่บันทึกผลการตัดสินใจ</b> ระบบไม่มีปุ่มเลือกผู้ชนะ
@@ -13104,7 +13100,7 @@ html, body{
             <div class="doc-tag">แพลตฟอร์มเปรียบเทียบใบเสนอราคา</div>
           </div>
         </div>
-        <div class="doc-ver">ฉบับที่ 1.1<br><span>มีผลบังคับใช้ 9 กันยายน 2569</span></div>
+        <div class="doc-ver">ฉบับที่ 1.2<br><span>มีผลบังคับใช้ 9 กันยายน 2569</span></div>
       </header>
 
       <h1>นโยบายความเป็นส่วนตัว</h1>
@@ -13163,8 +13159,8 @@ html, body{
       <p>สองช่องทางนี้แยกกันตามเรื่องที่ติดต่อ เพื่อให้คำขอตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล
         ไม่ปะปนกับคำถามการใช้งานทั่วไป</p>
       <div class="doc-contact">
-        <div><b>ผู้ควบคุมข้อมูลส่วนบุคคล:</b> QubeQuote</div>
-        <div><b>ดำเนินการโดย:</b> ผู้ให้บริการแพลตฟอร์ม QubeQuote</div>
+        <div><b>ผู้ควบคุมข้อมูลส่วนบุคคล:</b> อวยชัย เลาย่าง</div>
+        <div><b>ในฐานะ:</b> ผู้ให้บริการแพลตฟอร์ม QubeQuote</div>
         <div><b>เรื่องข้อมูลส่วนบุคคลและการใช้สิทธิ:</b>
           <a href="mailto:privacy@qubequote.com">privacy@qubequote.com</a></div>
         <div><b>ปัญหาการใช้งานทั่วไป:</b>
@@ -13654,10 +13650,21 @@ html, body{
    before a significant change, which the version above did not give and the
    code has no way to give: it bumps the version and asks for acceptance on the
    next sign-in. A clause nobody follows is worth less than a weaker one that is
-   true. In the privacy policy ข้อมูลติดต่อ moved from last to ข้อ 5. */
+   true. In the privacy policy ข้อมูลติดต่อ moved from last to ข้อ 5.
+
+   terms 1.3 / privacy 1.2 (9 กันยายน 2569, same day): the note under ข้อ 4.2
+   about a two-quote average giving away the other price came out at the owner's
+   request, and the privacy policy now names the controller as a person rather
+   than as a trade name that is not a legal entity.
+
+   Bumped again rather than edited in place, an hour after the last bump. Naming
+   the controller is a material change to a privacy notice, and the table is
+   keyed on (profile, document, version) — a record saying someone accepted 1.2
+   has to mean the 1.2 they were shown. The cost is one more prompt; the cost of
+   the alternative is a consent record that quietly describes the wrong text. */
 window.KX_DOC = {
-  terms:   '1.2', termsEffective:   '9 กันยายน 2569',
-  privacy: '1.1', privacyEffective: '9 กันยายน 2569'
+  terms:   '1.3', termsEffective:   '9 กันยายน 2569',
+  privacy: '1.2', privacyEffective: '9 กันยายน 2569'
 };
 
 (function(){
@@ -18143,14 +18150,16 @@ body.kx-guest #load-more-offers { display: none !important; }
     text-align: left; vertical-align: top; line-height: 1.7;
     }
 .doc-table th { background: #f6f8fc; font-weight: 700; }
+/* A quiet card, not a solid blue block. It used to be filled #0846c7 with white
+   text, which made the one part of the document carrying a real person's name
+   the loudest thing on the page — and it printed as a solid slab of ink. */
 .doc-contact {
-    background: #0846c7; color: #fff; border-radius: 10px;
+    background: var(--bg, #f6f8fc); color: var(--ink, #1c1a18);
+    border: 1px solid var(--line, #e6e7f0); border-radius: 10px;
     padding: 16px 20px; line-height: 2; font-size: 14.5px;
     }
-.doc-contact b { color: #cddcff; }
-/* the card is solid blue, so an unstyled link would render in the UA's own
-   dark blue and disappear into the background */
-.doc-contact a { color: #fff; text-decoration: underline; }
+.doc-contact b { color: var(--ink, #1c1a18); }
+.doc-contact a { color: var(--blue-700, #0846c7); text-decoration: underline; }
 .doc-foot { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line, #e6e7f0); }
 .doc-foot .au-link { cursor: pointer; font-weight: 600; }
 .doc-fine { margin-top: 14px; font-size: 12.5px; color: var(--ink-soft, #565b6e); line-height: 1.7; }

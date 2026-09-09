@@ -3943,8 +3943,17 @@
       // who sees a price, and who only sees the average
       expect(terms).toContain('ราคาเฉลี่ย');
       expect(terms).toContain('เห็นได้เฉพาะเจ้าของประกาศ');
-      // the two-offer case the average gives away — documented, not hidden
-      expect(terms).toContain('สองราย');
+      /* A paragraph under ข้อ 4.2 used to spell out the two-offer case: with
+         only two quotes on a listing, a bidder who knows their own price can
+         work out the other from the average. Removed from the document on
+         2026-09-09 at the owner's request, so its assertion goes with it.
+
+         Worth being clear about what changed and what did not. The behaviour is
+         untouched — the average still shows from one quote upward, so with one
+         it *is* that bidder's price and with two it is one subtraction away.
+         What went is the sentence that said so before you priced. Everything
+         else in this test still stands; if the disclosure comes back, put the
+         assertion back with it. */
       // post images and attachments sit in public storage
       expect(priv).toContain('ผู้ที่ทราบลิงก์ของไฟล์สามารถเปิดดูได้แม้ไม่ได้เข้าสู่ระบบ');
       /* There used to be a line here about identity documents being kept in the
