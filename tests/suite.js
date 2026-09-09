@@ -179,13 +179,27 @@
       d.remove();
       return out;
     }
-    it('builds the listing permalink, not a link to the feed', function (w) {
+    /* /p/<id>, a real path, and not the hash route the app itself uses.
+       A fragment is never sent to a server: shared as `#page-rfq-detail/<id>`,
+       Facebook and LINE fetched `/` and drew the same site-wide card for every
+       listing anyone shared. worker/index.js answers /p/<id> with that
+       listing's own title and photograph and forwards a browser into the app. */
+    it('builds a link a crawler can actually read', function (w) {
       var r = card(w, 'abc', 'rfq');
-      expect(r.url).toContain('#page-rfq-detail/abc');
+      expect(r.url).toContain('/p/abc');
+      expect(r.url.indexOf('#')).toBe(-1,
+        'nothing after a # reaches the server that has to answer for this link');
       expect(r.open).toBe(true);
     });
-    it('sends an offer to the offer page', function (w) {
-      expect(card(w, 'abc', 'offer').url).toContain('#page-offer-detail/abc');
+    /* One path for both kinds — the Worker reads posts.kind and forwards to the
+       right page, so the link does not have to carry it. */
+    it('uses the same address for an offer', function (w) {
+      expect(card(w, 'abc', 'offer').url).toContain('/p/abc');
+    });
+    /* Shared from konnex.xeeb0262.workers.dev the card used to carry that
+       address, which is the Worker's name, not the brand's. */
+    it('carries the site’s own domain, not whichever host you are on', function (w) {
+      expect(card(w, 'abc', 'rfq').url.indexOf('https://qubequote.com/')).toBe(0);
     });
     it('takes the name from the card it was clicked on', function (w) {
       expect(card(w, 'abc', 'rfq', 'ดิจิตอลไมโครสโคป').name).toBe('ดิจิตอลไมโครสโคป');
@@ -1357,7 +1371,7 @@
       var ov = w.document.getElementById('kxShare');
       expect(ov.hidden).toBe(false, 'the sheet opened');
       expect(w.document.getElementById('kxshUrl').value)
-        .toContain('#page-rfq-detail/' + POST.id);
+        .toBe('https://qubequote.com/p/' + POST.id);
       w.kxShareClose();
     });
 

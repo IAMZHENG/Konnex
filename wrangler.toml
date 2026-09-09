@@ -1,5 +1,10 @@
-# QubeQuote has no server-side code — Supabase is called directly from the browser —
-# so this deploys as a Worker that serves static assets only, no Worker script needed.
+# QubeQuote is still a browser-only app — Supabase is called directly from the page.
+# The one thing that cannot be done in the browser is the card a shared listing
+# shows in Facebook or LINE: the app routes on the URL fragment, and a fragment
+# never reaches a server, so every crawler asked for `/` and got the same
+# site-wide card for every listing. worker/index.js answers `/p/<id>` with that
+# listing's own title, photo and description, and hands everything else to the
+# static assets untouched.
 #
 # The public address is https://qubequote.com, attached to this Worker as a custom
 # domain in the Cloudflare dashboard (Workers & Pages → this worker → Domains &
@@ -13,6 +18,10 @@
 # keeps working alongside the custom domain; both reach this same Worker.
 name = "konnex"
 compatibility_date = "2026-01-01"
+main = "worker/index.js"
 
 [assets]
 directory = "./"
+# the binding the Worker falls through to; without it env.ASSETS is undefined
+# and every request that is not /p/<id> answers with an error
+binding = "ASSETS"

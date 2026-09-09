@@ -13300,6 +13300,10 @@ html, body{
    even with no session. They are asked to sign in at the first thing they try to
    do with it, not at the door. */
 (function(){
+  /* The address shared links are built on. One constant, because a link that
+     goes out to other people should carry the brand's domain whichever host the
+     person sharing happens to be browsing. */
+  var KX_SHARE_ORIGIN = window.KX_SHARE_ORIGIN || 'https://qubequote.com';
   var shareUrl = '', shareTitle = '';
   var ov = null;
 
@@ -13308,8 +13312,17 @@ html, body{
     if(!postId || postId === 'undefined'){
       kxToast('ตัวอย่างประกาศ — แชร์ได้เฉพาะประกาศจริง'); return;
     }
-    var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
-    shareUrl = location.origin + location.pathname + '#' + page + '/' + postId;
+    /* /p/<id>, not the hash route.
+       A URL fragment never reaches a server, so a shared `#page-rfq-detail/<id>`
+       had Facebook and LINE fetch `/` and draw the same site-wide card for every
+       listing anybody shared. worker/index.js answers /p/<id> with that
+       listing's own title and photograph, then sends a real browser on into the
+       app — so the link opens exactly where it used to.
+
+       Always on the site's own domain rather than location.origin: shared from
+       konnex.xeeb0262.workers.dev the card carried that address, which is the
+       Worker's name and not the brand's. */
+    shareUrl = KX_SHARE_ORIGIN + '/p/' + postId;
     /* On a feed card the title is read off the card rather than passed in: it
        would otherwise travel through an inline onclick, where an apostrophe in
        someone's listing ends the argument early and breaks the handler.

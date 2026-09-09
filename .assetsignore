@@ -8,3 +8,7 @@ README.md
 database/
 .claude/
 tests/
+# the Worker's own source — it runs, it is not served
+worker/
+# build scripts for the PDFs and the share card; they run here, never in a browser
+tools/
