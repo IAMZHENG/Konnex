@@ -2446,10 +2446,22 @@ input[type="number"]:focus, textarea:focus, select:focus{
    this button did not fit, and the button was the one that gave — squeezed to
    35px, where border-radius:999px turns it into a circle with its own label
    spilling out of it. That ring was the button, not a shadow. */
+/* The pair sits together on the right. margin-left:auto lives on the wrapper
+   rather than on either button, so removing or hiding one does not leave the
+   other stranded in the middle of the row. */
+#page-rfq-detail .detail-acts,
+#page-offer-detail .detail-acts {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    }
+#page-rfq-detail .detail-share,
+#page-offer-detail .detail-share,
 #page-rfq-detail .detail-save,
 #page-offer-detail .detail-save {
     flex-shrink: 0;
-    margin-left: auto;
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -2464,6 +2476,8 @@ input[type="number"]:focus, textarea:focus, select:focus{
     white-space: nowrap;
     transition: border-color .15s ease, color .15s ease;
     }
+#page-rfq-detail .detail-share:hover,
+#page-offer-detail .detail-share:hover,
 #page-rfq-detail .detail-save:hover,
 #page-offer-detail .detail-save:hover { border-color: var(--blue-600); color: var(--blue-700); }
 #page-rfq-detail .detail-save[data-saved="1"],
@@ -8605,7 +8619,10 @@ html, body{
         <span class="head-tag closed" id="rfqStatusTag"></span>
         <!-- same class and data attribute the feed cards use, so
              kxApplySavedMarks paints its state here too -->
-        <span class="bookmark-ic detail-save" id="rfqSaveBtn"></span>
+        <span class="detail-acts">
+          <span class="detail-share" id="rfqShareBtn">🔗 แชร์</span>
+          <span class="bookmark-ic detail-save" id="rfqSaveBtn"></span>
+        </span>
       </div>
       <div class="header-top">
         <div class="header-info">
@@ -11112,7 +11129,10 @@ html, body{
           <div class="offer-tags-row">
             <span class="offer-cat-tag">📦 ข้อเสนอขาย</span>
             <span class="offer-status-tag">🟢 กำลังแสดง</span>
-            <span class="bookmark-ic detail-save" id="offerSaveBtn"></span>
+            <span class="detail-acts">
+              <span class="detail-share" id="offerShareBtn">🔗 แชร์</span>
+              <span class="bookmark-ic detail-save" id="offerSaveBtn"></span>
+            </span>
           </div>
           <!-- who posted it comes first, then where and when, then the title -->
           <div class="post-owner" id="offerOwner" style="display:none">
@@ -13283,19 +13303,25 @@ html, body{
   var shareUrl = '', shareTitle = '';
   var ov = null;
 
-  window.kxShareOpen = function(el, postId, kind){
+  window.kxShareOpen = function(el, postId, kind, title){
     // the six demo cards in the feed markup carry no id, exactly as with saving
     if(!postId || postId === 'undefined'){
       kxToast('ตัวอย่างประกาศ — แชร์ได้เฉพาะประกาศจริง'); return;
     }
     var page = kind === 'offer' ? 'page-offer-detail' : 'page-rfq-detail';
     shareUrl = location.origin + location.pathname + '#' + page + '/' + postId;
-    /* Read off the card rather than passed in: a title goes through an inline
-       onclick otherwise, where an apostrophe in someone's listing would end the
-       argument early and break the handler. */
+    /* On a feed card the title is read off the card rather than passed in: it
+       would otherwise travel through an inline onclick, where an apostrophe in
+       someone's listing ends the argument early and breaks the handler.
+
+       The detail page has no .post-card to read, so it passes the title instead
+       — safely, because it binds its handler in JS and nothing is spliced into
+       markup. Without this the share sheet named every listing opened from its
+       own page "ประกาศบน QubeQuote". */
     var card = el && el.closest ? el.closest('.post-card') : null;
     var t = card && card.querySelector('.post-title');
-    shareTitle = (t && t.textContent.trim()) || 'ประกาศบน QubeQuote';
+    shareTitle = (title && String(title).trim()) ||
+                 (t && t.textContent.trim()) || 'ประกาศบน QubeQuote';
 
     ov = document.getElementById('kxShare');
     if(!ov) return;
@@ -22676,6 +22702,23 @@ body.kx-guest #load-more-offers { display: none !important; }
     if(window.kxApplySavedMarks) window.kxApplySavedMarks(el.parentElement || document);
   }
 
+  /* แชร์ on the detail page. The share button used to exist only on feed cards,
+     which is the wrong way round: the address that gets shared *is* this page,
+     it is where someone arriving from a shared link lands, and it is the page an
+     owner opens when they want to send their RFQ to a supplier.
+
+     The title is handed over rather than read from the DOM — there is no
+     .post-card here to read it off, and binding in JS means an apostrophe in it
+     is just a character. */
+  function paintShareButton(elId, post){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    el.onclick = function(e){
+      e.stopPropagation();
+      kxShareOpen(el, post.id, post.kind === 'offer' ? 'offer' : 'rfq', post.title);
+    };
+  }
+
   function paintPostOwner(elId, post){
     var el = document.getElementById(elId);
     if(!el) return;
@@ -22849,6 +22892,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     }
     paintPostOwner('rfqOwner', post);
     paintSaveButton('rfqSaveBtn', post);
+    paintShareButton('rfqShareBtn', post);
     window.kxCurrentDetailPostId    = post.id;
     window.kxCurrentDetailOwnerId   = post.owner_id;
     window.kxCurrentDetailOwnerName = (post.profiles && post.profiles.company_name) || 'เจ้าของประกาศ';
@@ -22893,6 +22937,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
     paintPostOwner('offerOwner', post);
     paintSaveButton('offerSaveBtn', post);
+    paintShareButton('offerShareBtn', post);
     var sellerName = root.querySelector('.seller-name'); if(sellerName) sellerName.textContent = ownerName;
     var sellerAv = root.querySelector('.seller-av');
     if(sellerAv){ sellerAv.style.overflow = 'hidden'; sellerAv.innerHTML = avatarInner(owner, ownerName); }

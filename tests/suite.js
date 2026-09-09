@@ -1308,6 +1308,71 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* แชร์ used to be on feed cards only. The detail page is the address that
+     gets shared, the page a shared link lands on, and the page an owner opens
+     when they want to send their RFQ to a supplier — it was the one place the
+     button was missing. */
+  describe('ปุ่มแชร์บนหน้ารายละเอียด', function () {
+    var POST = {
+      id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa',
+      kind: 'rfq',
+      title: "งานกลึง 'ด่วน' — ชิ้นส่วน"      // an apostrophe, on purpose
+    };
+    /* Drawn through kxLoadPostDetail, the way opening a listing really does it.
+       The renderers are not on window, and a test that binds the handler itself
+       would pass while the button on the page stayed dead — which is what the
+       first version of this test did. Clearing onclick first means a button the
+       real path never wires up cannot quietly inherit one. */
+    async function drawDetail(w, btnId, post) {
+      w.document.getElementById(btnId).onclick = null;
+      var sb = plan(w, { posts: { _: { data: post, error: null } } });
+      signIn(w);
+      await w.kxLoadPostDetail(post.id, post.kind);
+      restore(w);
+      return w.document.getElementById(btnId);
+    }
+
+    it('is on both detail pages, next to บันทึก', function (w) {
+      ['rfqShareBtn', 'offerShareBtn'].forEach(function (id) {
+        var el = w.document.getElementById(id);
+        expect(!!el).toBe(true, id + ' exists');
+        expect((el.textContent || '')).toContain('แชร์');
+        expect(!!el.closest('.detail-acts')).toBe(true,
+          'inside the wrapper that holds the pair');
+      });
+    });
+
+    /* margin-left:auto is on the wrapper, not on either button. With it on the
+       button, hiding one left the other stranded mid-row. */
+    it('keeps the pair together at the right edge', function (w) {
+      var acts = w.document.querySelector('#page-rfq-detail .detail-acts');
+      expect(w.getComputedStyle(acts).marginLeft).toBe('auto');
+      var save = w.document.getElementById('rfqSaveBtn');
+      expect(w.getComputedStyle(save).marginLeft).notToContain('auto');
+    });
+
+    it('opens the share sheet on the listing it is looking at', async function (w) {
+      var btn = await drawDetail(w, 'rfqShareBtn', POST);
+      btn.click();
+      var ov = w.document.getElementById('kxShare');
+      expect(ov.hidden).toBe(false, 'the sheet opened');
+      expect(w.document.getElementById('kxshUrl').value)
+        .toContain('#page-rfq-detail/' + POST.id);
+      w.kxShareClose();
+    });
+
+    /* Reading the title off .post-card is right on a feed card and impossible
+       here — there is no card. It used to fall through to the generic name. */
+    it('names the listing, not "ประกาศบน QubeQuote"', async function (w) {
+      var btn = await drawDetail(w, 'rfqShareBtn', POST);
+      btn.click();
+      var shown = w.document.getElementById('kxshName').textContent;
+      expect(shown).toBe(POST.title, 'apostrophe and all');
+      expect(shown).notToContain('ประกาศบน QubeQuote');
+      w.kxShareClose();
+    });
+  });
+
   /* Renumbering a legal document by hand is where a second "5." comes from, and
      nothing on screen looks wrong when it happens — the heading still reads as a
      heading. These documents are also printed to PDF and handed to Meta and
