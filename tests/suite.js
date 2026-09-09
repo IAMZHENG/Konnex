@@ -1503,6 +1503,23 @@
       expect(/\.(png|jpg|jpeg)$/i.test(img)).toBe(true, 'raster, not svg');
     });
 
+    /* The declared size decides which card gets drawn, so it has to be the size
+       the file really is — a square announced as 1200x630 is stretched, and a
+       1200x630 announced as square gets the small card it was made to avoid. */
+    it('declares the size the image really is, and asks for the wide card',
+       async function (w) {
+      expect(await meta(w, 'property="og:image:width"')).toBe('1200');
+      expect(await meta(w, 'property="og:image:height"')).toBe('630');
+      expect(await meta(w, 'name="twitter:card"')).toBe('summary_large_image');
+      var img = await meta(w, 'property="og:image"');
+      var res = await fetch('../' + img.replace(/^https?:\/\/[^/]+\//, ''));
+      expect(res.ok).toBe(true, 'the file named by og:image exists in the repo');
+      var buf = new DataView(await res.arrayBuffer());
+      // PNG puts width and height as big-endian 32-bit at byte 16 and 20
+      expect(buf.getUint32(16)).toBe(1200);
+      expect(buf.getUint32(20)).toBe(630);
+    });
+
     it('names one canonical address, over https', async function (w) {
       if (!head) head = await (await fetch('../index.html')).text();
       var m = /<link[^>]*rel="canonical"[^>]*>/i.exec(head);
