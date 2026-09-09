@@ -11721,7 +11721,7 @@ html, body{
               <h3>การแจ้งเตือนในแอป</h3>
               <p class="card-desc">เลือกกิจกรรมที่คุณต้องการรับการแจ้งเตือน</p>
               <div class="toggle-row"><div><div class="tr-title">ข้อเสนอราคาใหม่</div><div class="tr-sub">เมื่อมีผู้เสนอราคาในงาน RFQ ของคุณ</div></div><div class="switch on" data-pref="notif_quote" onclick="kxTogglePref(this)"></div></div>
-              <div class="toggle-row"><div><div class="tr-title">คำขอใบเสนอราคา</div><div class="tr-sub">เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ</div></div><div class="switch on" data-pref="notif_request" onclick="kxTogglePref(this)"></div></div>
+              <div class="toggle-row" id="notifRequestRow"><div><div class="tr-title">คำขอใบเสนอราคา</div><div class="tr-sub">เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ</div></div><div class="switch on" data-pref="notif_request" onclick="kxTogglePref(this)"></div></div>
               <div class="toggle-row"><div><div class="tr-title">ข้อความใหม่</div><div class="tr-sub">เมื่อมีข้อความเข้ามาในกล่องข้อความ</div></div><div class="switch on" data-pref="notif_message" onclick="kxTogglePref(this)"></div></div>
               <div class="toggle-row"><div><div class="tr-title">อัปเดตสถานะงาน</div><div class="tr-sub">เมื่อสถานะ RFQ/ใบเสนอราคาเปลี่ยนแปลง</div></div><div class="switch on" data-pref="notif_status" onclick="kxTogglePref(this)"></div></div>
             </div>
@@ -13084,7 +13084,6 @@ html, body{
       <div class="doc-foot">
         <a class="au-link" onclick="navigateTo('page-privacy')">อ่านนโยบายความเป็นส่วนตัว →</a>
       </div>
-      <p class="doc-fine">หมายเหตุ: ควรให้ที่ปรึกษากฎหมายตรวจสอบก่อนใช้บังคับ</p>
     </article>
   </div>
 </div>
@@ -13193,7 +13192,6 @@ html, body{
       <div class="doc-foot">
         <a class="au-link" onclick="navigateTo('page-terms')">อ่านข้อกำหนดการใช้งาน →</a>
       </div>
-      <p class="doc-fine">หมายเหตุ: ควรให้ที่ปรึกษากฎหมายตรวจสอบก่อนใช้บังคับ</p>
     </article>
   </div>
 </div>
@@ -17937,7 +17935,11 @@ body.kx-no-offers #page-my-requests .myjob-tabs,
    ประกาศขาย, and with that gone ทั้งหมด and เสนอราคา are the same list */
 body.kx-no-offers #page-my-bids .origin-tabs,
 /* ประเภท in ค้นหาขั้นสูง is the RFQ/Offer switch under another name */
-body.kx-no-offers #advKindField { display: none !important; }
+body.kx-no-offers #advKindField,
+/* a switch for "เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ" — with no
+   ประกาศขาย the notification it governs can never be sent, so the switch is a
+   setting with nothing behind it either way it is left */
+body.kx-no-offers #notifRequestRow { display: none !important; }
 
 /* ---- ปุ่มเข้าสู่ระบบที่ยังไม่เปิด ----
    Hidden rather than removed so the switch is one line either way. .au-social

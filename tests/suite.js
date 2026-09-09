@@ -699,6 +699,24 @@
     /* ค้นหาขั้นสูง's ประเภท is the RFQ/Offer switch wearing a different label.
        Hidden is not enough on its own: a value left on ต้องการขาย would go on
        filtering from a control nobody can see or reach to change. */
+    /* A notification switch for "เมื่อมีผู้ขอใบเสนอราคาสำหรับประกาศขายของคุณ".
+       The notification behind it comes from quote_requests, which only a
+       ประกาศขาย can produce — so whichever way the switch is left, nothing
+       different happens. A setting that governs nothing teaches people their
+       settings do not matter. */
+    it('drops the notification switch for a thing that cannot happen', function (w) {
+      /* Read off computed display, not getClientRects: ตั้งค่า shows one
+         section at a time, so every row in a closed tab measures zero and a
+         visibility check would pass whether the rule exists or not. */
+      var gone = w.document.getElementById('notifRequestRow');
+      var kept = w.document.querySelector('[data-pref="notif_quote"]')
+                  .closest('.toggle-row');
+      expect(!!gone).toBe(true, 'the row is still in the markup, only hidden');
+      expect(w.getComputedStyle(gone).display).toBe('none');
+      expect(w.getComputedStyle(kept).display === 'none').toBe(false,
+        'while the switches that still govern something stay');
+    });
+
     it('drops ประเภท from ค้นหาขั้นสูง, and leaves it unset', function (w) {
       expect(vis(w, '#advKindField')).toBe(0);
       expect(w.document.getElementById('advKind').selectedIndex).toBe(0);
@@ -1329,6 +1347,20 @@
             'อ้างถึง "ข้อ ' + m[1] + '" but the document ends at ' + top);
         }
         expect(seen >= 0).toBe(true);
+      });
+    });
+
+    /* "หมายเหตุ: ควรให้ที่ปรึกษากฎหมายตรวจสอบก่อนใช้บังคับ" sat at the foot of
+       both documents. It is a note to whoever was drafting them, not to the
+       person reading them — published, it reads as the operator saying in
+       writing that the terms they are asking you to accept have not been
+       checked. The advice is still right; the place for it was never the
+       document itself. */
+    it('says nothing to the reader that was meant for the author', function (w) {
+      ['page-terms', 'page-privacy'].forEach(function (id) {
+        var t = w.document.getElementById(id).textContent || '';
+        expect(t).notToContain('ที่ปรึกษากฎหมาย', id);
+        expect(t).notToContain('ก่อนใช้บังคับ', id);
       });
     });
 
