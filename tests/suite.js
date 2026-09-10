@@ -1386,6 +1386,86 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* Two boxes, forty pixels apart, same white field and same solid blue button,
+     told apart only by placeholder text and a one-word label: one continues the
+     thread above it, the other starts a new question. The owner got one on every
+     answered thread, so five questions meant five identical boxes down the page.
+     The reply field is closed now and opens from a link. */
+  describe('ถาม-ตอบ — ช่องตอบกับช่องถามใหม่ต้องไม่ชนกัน', function () {
+    var PID = 'cccccccc-3333-4333-8333-cccccccccccc';
+    var Q   = 'dddddddd-4444-4444-8444-dddddddddddd';
+
+    async function drawQa(w, opts) {
+      var post = {
+        id: PID, kind: 'rfq', status: 'open',
+        owner_id: opts.owner, title: 'งานกลึง', description: 'x',
+        post_questions: [{
+          id: Q, parent_id: null, asker_id: opts.asker,
+          body: 'ถามเรื่องสเปก', answer: 'ตอบแล้ว',
+          answered_at: '2026-09-01T00:00:00Z', created_at: '2026-09-01T00:00:00Z',
+          profiles: { id: opts.asker, company_name: 'ผู้ถาม' }
+        }]
+      };
+      plan(w, { posts: { _: { data: post, error: null } } });
+      signIn(w);
+      await w.kxLoadPostDetail(PID, 'rfq');
+      restore(w);
+      /* The page has to be the open one. kxLoadPostDetail fills it but does not
+         navigate to it, and on a page that is display:none every element
+         measures zero — so "is it on screen" would answer no for all of them
+         and every assertion below would pass without testing anything. */
+      w.navigateTo('page-rfq-detail', true);
+      return w.document.getElementById('page-rfq-detail');
+    }
+    function shown(el) { return !!(el && el.getClientRects().length); }
+
+    it('ships the reply field closed, behind a link', async function (w) {
+      var page = await drawQa(w, { owner: OTHER, asker: ME });   // my own thread
+      var link = page.querySelector('.kx-followopen');
+      var box  = page.querySelector('.kx-followbox');
+      expect(!!link).toBe(true, 'the link that opens it');
+      expect(!!box).toBe(true, 'and the field, in the markup');
+      expect(shown(box)).toBe(false, 'but not on screen until it is asked for');
+    });
+
+    /* An inline display:flex would outrank [hidden]{display:none} and the box
+       would quietly ship open again — which is the whole bug back. */
+    it('hides it with a style, not with the hidden attribute', async function (w) {
+      var page = await drawQa(w, { owner: OTHER, asker: ME });
+      var box = page.querySelector('.kx-followbox');
+      expect(box.style.display).toBe('none');
+      expect(box.hasAttribute('hidden')).toBe(false);
+    });
+
+    it('opens on the link, and the link goes as the field arrives', async function (w) {
+      var page = await drawQa(w, { owner: OTHER, asker: ME });
+      var link = page.querySelector('.kx-followopen');
+      w.kxFollowOpen(link);
+      var box = page.querySelector('.kx-followbox');
+      expect(shown(box)).toBe(true, 'the field is there now');
+      expect(shown(link)).toBe(false, 'and the link is not, so the row shows one thing');
+      expect(w.document.activeElement).toBe(box.querySelector('.kx-followin'),
+        'with the caret in it — otherwise it takes two clicks to do one thing');
+    });
+
+    /* Only one box stands open by default, so the one that is always visible
+       has to say what it does rather than leave it to a grey placeholder. */
+    it('labels the box that starts a new question', async function (w) {
+      var page = await drawQa(w, { owner: OTHER, asker: ME });
+      var ask = page.querySelector('.kx-askin');
+      expect(!!ask).toBe(true);
+      expect(shown(ask)).toBe(true, 'this one is open — it is the ordinary action');
+      expect(page.textContent).toContain('ถามคำถามใหม่');
+    });
+
+    /* The owner is the case that was worst: a box on every answered thread. */
+    it('closes it on the owner’s side too', async function (w) {
+      var page = await drawQa(w, { owner: ME, asker: OTHER });
+      expect(shown(page.querySelector('.kx-followbox'))).toBe(false);
+      expect(!!page.querySelector('.kx-followopen')).toBe(true);
+    });
+  });
+
   /* The line under the poster's name — จังหวัด, the deadline, the budget — is
      the same row on the feed card, both detail pages, งานของฉัน, ใบเสนอราคา and
      the profile wall. It read at 400 everywhere, lighter than the title above it

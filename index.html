@@ -23079,12 +23079,30 @@ body.kx-guest #load-more-offers { display: none !important; }
         '</div></div>';
     }).join('');
 
+    /* Closed until asked for.
+       This box used to stand open on every thread, forty pixels above the box
+       that starts a *new* question and looking exactly like it — same white
+       field, same solid blue button, told apart only by placeholder text and a
+       one-word label. Worse for the owner, who gets one on every answered
+       thread: five questions meant five identical boxes down the page.
+
+       A link instead, and the field appears when it is wanted. Nothing else
+       opens or closes on its own — someone half-way through typing in another
+       thread does not lose it. */
     var box = (mineToContinue && postStatus === 'open')
-      ? '<div style="display:flex;gap:8px;margin:10px 0 0 42px;">' +
-          '<input type="text" class="kx-followin" data-parent="' + esc(root.id) + '" ' +
-            'placeholder="' + (isOwner ? 'ตอบเพิ่มเติม...' : 'ถามต่อจากคำตอบนี้...') + '" ' +
-            'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;font-weight:500;font-family:inherit;outline:none;color:var(--ink);">' +
-          '<button type="button" onclick="kxAskFollowUp(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ส่ง</button>' +
+      ? '<div style="margin:8px 0 0 42px;">' +
+          '<a href="#" class="kx-followopen" onclick="kxFollowOpen(this);return false;" ' +
+            'style="font-size:14px;font-weight:600;color:var(--blue-700);text-decoration:none;">' +
+            (isOwner ? '↩ ตอบเพิ่มเติม' : '↩ ถามต่อ') + '</a>' +
+          /* display:none inline, not the hidden attribute: an inline
+             display:flex would outrank [hidden]{display:none} and the box
+             would ship open again. */
+          '<div class="kx-followbox" style="display:none;gap:8px;">' +
+            '<input type="text" class="kx-followin" data-parent="' + esc(root.id) + '" ' +
+              'placeholder="' + (isOwner ? 'ตอบเพิ่มเติม...' : 'ถามต่อจากคำตอบนี้...') + '" ' +
+              'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:9px 12px;font-size:15px;font-weight:500;font-family:inherit;outline:none;color:var(--ink);">' +
+            '<button type="button" onclick="kxAskFollowUp(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:9px 16px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ส่ง</button>' +
+          '</div>' +
         '</div>'
       : '';
     return msgs + box;
@@ -23241,10 +23259,16 @@ body.kx-guest #load-more-offers { display: none !important; }
             (isOwner ? 'ยังไม่มีคำถาม — คำถามจากผู้ที่สนใจจะมาแสดงที่นี่ และคุณตอบได้จากตรงนี้'
                      : 'ยังไม่มีคำถามสำหรับงานนี้') + '</div>') +
       (canAsk
-        ? '<div style="display:flex;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
+        /* Labelled, not left to the placeholder. With the reply field closed
+           this is the only box on screen, and saying what it starts is what
+           keeps it from being read as a reply to whatever is above it. */
+        ? '<div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">' +
+            '<div style="font-size:14px;font-weight:600;color:var(--ink-soft);margin-bottom:8px;">ถามคำถามใหม่</div>' +
+            '<div style="display:flex;gap:10px;">' +
             '<input type="text" class="kx-askin" placeholder="ถามเรื่องสเปก/เงื่อนไขงาน..." ' +
               'style="flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);">' +
             '<button type="button" onclick="kxAskQuestion(this)" style="background:var(--blue-600);border:none;border-radius:10px;padding:11px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;">ถาม</button>' +
+            '</div>' +
           '</div>'
         : '');
   }
@@ -23277,6 +23301,19 @@ body.kx-guest #load-more-offers { display: none !important; }
      to the same table by the same insert — with parent_id set. Whoever sends it
      is the asker_id, which is how the thread knows an owner's reply from the
      person who asked. */
+  /* Opens the reply field on one thread. The link goes as the field arrives, so
+     the row never shows both — and focus lands in the field, because a control
+     that appears where you just clicked and does not take the caret makes you
+     click twice for one intention. */
+  window.kxFollowOpen = function(a){
+    var wrap = a.parentElement, boxEl = wrap && wrap.querySelector('.kx-followbox');
+    if(!boxEl) return;
+    boxEl.style.display = 'flex';
+    a.style.display = 'none';
+    var input = boxEl.querySelector('.kx-followin');
+    if(input) input.focus();
+  };
+
   window.kxAskFollowUp = async function(btn){
     var block = btn.closest('[data-post-id]');
     var input = btn.parentElement.querySelector('.kx-followin');
