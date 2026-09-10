@@ -5404,6 +5404,11 @@ input[type="number"]:focus, textarea:focus, select:focus{
     border-radius: 16px;
     font-size: 15px;
     font-weight: 500;
+    /* Keep the line breaks that were typed. A message sent as a short list —
+       quantity, size, delivery date — arrived as one run-on line, and the
+       sender had no way to tell it had happened. (รีวิว and the ถาม-ตอบ
+       thread already keep theirs, with pre-wrap.) */
+    white-space: pre-line;
     line-height: 1.6
     }
 #page-messages .bubble-row.in .bubble {
@@ -8929,12 +8934,45 @@ html, body{
       <div class="left" data-pf-tab="overview">
 
         <!-- ABOUT -->
-        <div class="card" data-pf-sec="overview">
-          <h3>เกี่ยวกับบริษัท</h3>
-          <!-- no clamp and no ดูเพิ่มเติม: an about paragraph is a few lines, and a
-               toggle to read the rest of them was a control that earned nothing -->
-          <div class="about-text"></div>
-          <div class="info-list" id="pfInfoList">
+        <!-- ภาพรวม is one card, not six.
+             Six separate cards in a two-column grid left a ragged edge: each one
+             sized to its own content, so the column with the short card ended
+             early and the page showed a staircase of white boxes on grey. They
+             are sections of one answer — who is this account — so they are one
+             card now, and the board's own background carries the whole block.
+
+             Order here is the order on screen; the grid needs no order rules,
+             and a card hidden by pfShowSection simply leaves the flow. -->
+        <!-- "overview reviews", not "overview": รีวิว lives inside the board now,
+             and a child cannot be shown by a parent that is hidden — on the รีวิว
+             tab the board went, and took the only card that tab has with it. -->
+        <div class="pf-board" data-pf-sec="overview reviews">
+          <div class="card" data-pf-sec="overview">
+            <h3>เกี่ยวกับบริษัท</h3>
+            <!-- no clamp and no ดูเพิ่มเติม: an about paragraph is a few lines, and a
+                 toggle to read the rest of them was a control that earned nothing -->
+            <div class="about-text"></div>
+            <div class="info-list" id="pfInfoList">
+            </div>
+          </div>
+          <div class="card" data-pf-sec="overview" id="pfContactCard">
+            <h3>ติดต่อบริษัท</h3>
+            <div class="contact-list">
+            </div>
+            <!-- ส่งข้อความ moved up to the hero row, beside Connect. Here it only ever
+                 opened the message list, and it showed on your own profile too. -->
+          </div>
+          <div class="card" id="pfReviewsCard" data-pf-sec="overview reviews"></div>
+          <div class="card" data-pf-sec="overview" id="pfVerifyCard">
+            <h3>การยืนยันตัวตน</h3>
+          </div>
+          <div class="card" data-pf-sec="overview" id="pfSkillsCard">
+            <h3>ความเชี่ยวชาญ</h3>
+            <div class="tags">
+            </div>
+          </div>
+          <div class="card" data-pf-sec="overview" id="pfCertCard">
+            <h3>ใบรับรองและมาตรฐาน</h3>
           </div>
         </div>
 
@@ -8965,31 +9003,12 @@ html, body{
              card and a real profile briefly wore someone else's reputation. -->
         <!-- on both: รีวิว is part of who this account is, so it sits in the board on
              ภาพรวม, and its own tab is still the place to read all of them -->
-        <div class="card" id="pfReviewsCard" data-pf-sec="overview reviews"></div>
 
 
-        <div class="card" data-pf-sec="overview" id="pfContactCard">
-          <h3>ติดต่อบริษัท</h3>
-          <div class="contact-list">
-          </div>
-          <!-- ส่งข้อความ moved up to the hero row, beside Connect. Here it only ever
-               opened the message list, and it showed on your own profile too. -->
-        </div>
-
-        <div class="card" data-pf-sec="overview" id="pfVerifyCard">
-          <h3>การยืนยันตัวตน</h3>
-        </div>
-
-        <div class="card" data-pf-sec="overview" id="pfCertCard">
-          <h3>ใบรับรองและมาตรฐาน</h3>
-        </div>
 
 
-        <div class="card" data-pf-sec="overview" id="pfSkillsCard">
-          <h3>ความเชี่ยวชาญ</h3>
-          <div class="tags">
-          </div>
-        </div>
+
+
 
         <!-- the profile's own wall: everything this account has posted.
              Last on the page on purpose — who they are (ติดต่อ, การยืนยันตัวตน,
@@ -9180,7 +9199,15 @@ html, body{
      and รีวิว back on ภาพรวม whatever tab was showing. They re-apply the section
      instead now. */
   function pfShowSection(sec){
-    document.querySelectorAll('#page-company-profile .left > .card').forEach(function(c){
+    /* The board and the cards inside it, as well as the cards still sitting
+       directly in the column. Listed rather than written as a descendant
+       selector, because `.left .card` would also catch anything a card renders
+       that happens to carry the class. */
+    document.querySelectorAll(
+      '#page-company-profile .left > .card,' +
+      '#page-company-profile .left > .pf-board,' +
+      '#page-company-profile .left > .pf-board > .card'
+    ).forEach(function(c){
       var own = (c.getAttribute('data-pf-sec') || 'overview').split(/\s+/);
       // data-pf-hide marks a card kept off this particular page — ผลงานล่าสุด on a
       // stranger's profile, ความเชี่ยวชาญ with no tags. Belonging to the section is
@@ -15781,37 +15808,57 @@ body.kx-auth .kx-burger{ display:none !important; }
    Scoped to ภาพรวม: the other tabs show a single card, and one card alone in a
    two-column grid would sit in half the page for no reason. pfTab keeps
    data-pf-tab current. */
-#page-company-profile .left[data-pf-tab="overview"]{
+/* ภาพรวม is one card with two columns.
+
+   It was six separate cards in a two-column grid, and the grid was set to
+   align-items:start so a two-line ความเชี่ยวชาญ would not stretch to match a long
+   รีวิว. That is right for separate cards and it is exactly what looked untidy:
+   every card ended at its own content, so the page showed a staircase of white
+   boxes with grey showing through the steps.
+
+   As sections of one card the problem disappears, because the ground is
+   continuous — a short section simply leaves white space, the way a short
+   paragraph does. The board carries the chrome; the sections inside carry none.
+
+   No dividing rules between the sections on purpose. Which sections are on
+   screen changes (การยืนยันตัวตน is off, ความเชี่ยวชาญ hides with no tags), and a
+   rule drawn by nth-child lands in the wrong place the moment one of them goes.
+   The headings and the spacing carry the structure instead. */
+#page-company-profile .pf-board{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 1fr));
-  /* not stretch: pairing a long รีวิว against a two-line ความเชี่ยวชาญ would blow the
-     short one up into a mostly empty card */
   align-items:start;
+  column-gap:8px;
+  background:var(--card, #fff);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:6px;
+}
+#page-company-profile .pf-board > .card{
+  background:none;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  padding:16px 18px;
+  margin:0;
+}
+/* the two that are lists of posts keep the full width they had, outside the
+   board: a listing reads worse in half a column */
+#page-company-profile .left[data-pf-tab="overview"]{
+  display:flex;
+  flex-direction:column;
   gap:16px;
 }
-/* full width is the default; the six below opt out of it */
-#page-company-profile .left[data-pf-tab="overview"] > .card{ grid-column:1 / -1; order:9; }
-#page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type,
-#page-company-profile .left[data-pf-tab="overview"] > #pfContactCard,
-#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard,
-#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard,
-#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard,
-#page-company-profile .left[data-pf-tab="overview"] > #pfCertCard{ grid-column:auto; }
 
-#page-company-profile .left[data-pf-tab="overview"] > .card:first-of-type{ order:1; } /* เกี่ยวกับ */
-#page-company-profile .left[data-pf-tab="overview"] > #pfContactCard{ order:2; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfReviewsCard{ order:3; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfVerifyCard{ order:4; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfSkillsCard{ order:5; }
-#page-company-profile .left[data-pf-tab="overview"] > #pfCertCard{ order:6; }
-/* full width, like the wall: a portfolio is a list of jobs, and it sits above
-   the posts because it is what a buyer reads before deciding to ask for a price */
-#page-company-profile .left[data-pf-tab="overview"] > #pfWorkCard{ order:8; }
+/* On any tab but ภาพรวม the board holds a single visible section, and half a
+   column of card beside an empty half is not a layout. */
+#page-company-profile .left:not([data-pf-tab="overview"]) .pf-board > .card{
+  grid-column:1 / -1;
+}
 
-/* one column on anything narrow — two half-width cards on a phone is neither */
+/* one column on anything narrow — two half-width sections on a phone is neither */
 @media (max-width: 900px){
-  #page-company-profile .left[data-pf-tab="overview"]{ grid-template-columns:minmax(0,1fr); }
-  #page-company-profile .left[data-pf-tab="overview"] > .card{ grid-column:1 / -1; }
+  #page-company-profile .pf-board{ grid-template-columns:minmax(0,1fr); }
 }
 
 /* the flex column the other tabs still use */

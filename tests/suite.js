@@ -1386,6 +1386,74 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* ภาพรวม was six separate cards in a two-column grid, each sized to its own
+     content, so the column holding the short one ended early and the page
+     showed a staircase of white boxes with grey between the steps. They are one
+     card now, and the sections inside carry no chrome of their own. */
+  describe('ภาพรวมบนหน้าโปรไฟล์เป็นการ์ดเดียวสองคอลัมน์', function () {
+    function open(w, tab) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };   // the page is behind the guard
+      w.navigateTo('page-company-profile', true);
+      if (w.pfShowSection) { try { w.pfShowSection(tab || 'overview'); } catch (e) {} }
+      return function () { w.kxSession = had; };
+    }
+    function board(w) { return w.document.querySelector('#page-company-profile .pf-board'); }
+    function seen(el) { return !!(el && el.getClientRects().length); }
+
+    it('holds all six sections in one card', function (w) {
+      var done = open(w);
+      var b = board(w);
+      expect(!!b).toBe(true, 'the board exists');
+      var ids = Array.prototype.map.call(b.querySelectorAll(':scope > .card'),
+        function (c) { return c.id || '(about)'; });
+      ['(about)', 'pfContactCard', 'pfReviewsCard', 'pfVerifyCard',
+       'pfSkillsCard', 'pfCertCard'].forEach(function (id) {
+        expect(ids).toContain(id);
+      });
+      done();
+    });
+
+    /* The board carries the border and the ground; the sections carry none.
+       If a section keeps its own, the staircase comes straight back. */
+    it('gives the chrome to the card, not to the sections', function (w) {
+      var done = open(w);
+      var b = board(w);
+      expect(w.getComputedStyle(b).borderTopWidth).toBe('1px');
+      Array.prototype.forEach.call(b.querySelectorAll(':scope > .card'), function (c) {
+        expect(w.getComputedStyle(c).borderTopWidth).toBe('0px', c.id || '(about)');
+        expect(w.getComputedStyle(c).backgroundColor).toBe('rgba(0, 0, 0, 0)', c.id || '(about)');
+      });
+      done();
+    });
+
+    it('lays the sections out in two columns', function (w) {
+      var done = open(w);
+      var vis = Array.prototype.filter.call(board(w).querySelectorAll(':scope > .card'), seen);
+      done();
+      if (vis.length < 2) return;                 // nothing to pair on an empty profile
+      var xs = vis.map(function (c) { return Math.round(c.getBoundingClientRect().left); });
+      var distinct = xs.filter(function (v, i) { return xs.indexOf(v) === i; });
+      expect(distinct.length).toBe(2, 'two column positions, not one and not six');
+    });
+
+    /* รีวิว sits inside the board and also has a tab of its own. A child cannot
+       be shown by a parent that is hidden — putting it in the board took the
+       รีวิว tab out with it, and this is the test that caught it. */
+    it('still shows รีวิว on its own tab', function (w) {
+      var done = open(w, 'reviews');
+      var rv = w.document.getElementById('pfReviewsCard');
+      expect(seen(board(w))).toBe(true, 'the board comes along to that tab');
+      expect(seen(rv)).toBe(true, 'and the card inside it is on screen');
+      // and it takes the width, rather than sitting in half a card
+      expect(Math.round(rv.getBoundingClientRect().width) >
+             Math.round(board(w).getBoundingClientRect().width) * 0.8).toBe(true,
+        'a single section spans the board rather than leaving half of it empty');
+      open(w, 'overview')();
+      done();
+    });
+  });
+
   /* Two boxes, forty pixels apart, same white field and same solid blue button,
      told apart only by placeholder text and a one-word label: one continues the
      thread above it, the other starts a new question. The owner got one on every
@@ -2003,9 +2071,14 @@
 
   // ======================================================= profile: the tabs ===
   describe('pfShowSection — which cards belong to which tab', function () {
+    /* The six ภาพรวม sections moved inside .pf-board, so a query for the column's
+       direct children alone no longer sees them — and a card that is not looked
+       at cannot be reported as hidden by mistake. Both levels, and the board. */
     function cards(w) {
       return Array.prototype.filter.call(
-        w.document.querySelectorAll('#page-company-profile .left > .card'),
+        w.document.querySelectorAll(
+          '#page-company-profile .left > .card,' +
+          '#page-company-profile .left > .pf-board > .card'),
         function (c) { return c.style.display !== 'none'; }).map(function (c) { return c.id || 'about'; });
     }
     it('ภาพรวม hides the cards that belong to other tabs', function (w) {
@@ -2019,13 +2092,26 @@
       w.pfShowSection('reviews');
       expect(cards(w)).toContain('pfReviewsCard', 'and on its own tab — the same card');
     });
-    it('stamps the tab so the two-column board only applies to ภาพรวม', function (w) {
+    /* The stamp still decides the shape, but the two columns moved: the column
+       is a plain stack now and .pf-board is the grid inside it. What the stamp
+       does on any other tab is let a lone section take the whole board rather
+       than sit in half of it. */
+    it('stamps the tab, and a lone section takes the whole board', function (w) {
       var left = w.document.querySelector('#page-company-profile .left');
+      var b = w.document.querySelector('#page-company-profile .pf-board');
       w.pfShowSection('overview');
       expect(left.getAttribute('data-pf-tab')).toBe('overview');
-      expect(w.getComputedStyle(left).display).toBe('grid', 'ภาพรวม is the board');
+      /* display only. The page is not the open one here, so the computed
+         template comes back as the written `repeat(2, …)` rather than resolved
+         pixel tracks — counting words in it measures the stylesheet, not the
+         layout. The two columns are measured for real in
+         "lays the sections out in two columns". */
+      expect(w.getComputedStyle(b).display).toBe('grid', 'the board is the two columns');
       w.pfShowSection('reviews');
-      expect(w.getComputedStyle(left).display).toBe('flex', 'one card alone is not a two-column grid');
+      expect(left.getAttribute('data-pf-tab')).toBe('reviews');
+      expect(w.getComputedStyle(w.document.getElementById('pfReviewsCard')).gridColumn)
+        .toContain('1 / -1', 'one section alone spans both columns');
+      w.pfShowSection('overview');
     });
     it('does not un-hide a card that was hidden for a reason', function (w) {
       var skills = w.document.getElementById('pfSkillsCard');
