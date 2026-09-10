@@ -23476,7 +23476,14 @@ body.kx-guest #load-more-offers { display: none !important; }
       var bits = [];
       if(pr.rating_count) bits.push('★ ' + pr.rating_avg + ' (' + pr.rating_count + ' รีวิว)');
       else bits.push('ยังไม่มีรีวิว');
-      if(pr.address || pr.province) bits.push('📍 ' + (pr.address || pr.province));
+      /* จังหวัด only. This preferred the full address and fell back to the
+         province, so an account that had filled in a street address wore the
+         whole thing here — house number, sub-district, postcode — on one line
+         between "ยังไม่มีรีวิว" and the industry, wrapping onto a second row and
+         pushing everything under it down. The address has a place already: the
+         ติดต่อ section, where somebody who wants it goes to look. This line
+         answers "roughly where is this account", and a province answers it. */
+      if(pr.province) bits.push('📍 ' + pr.province);
       if(pr.industry) bits.push(pr.industry);
       meta.textContent = bits.join(' · ');
     }

@@ -1386,6 +1386,39 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The line under the name on a profile. It preferred the full address and
+     only fell back to the province, so an account that had filled in a street
+     address wore the whole thing — house number, sub-district, postcode — on
+     one line between "ยังไม่มีรีวิว" and the industry, wrapping to a second row. */
+  describe('บรรทัดใต้ชื่อบนโปรไฟล์บอกแค่จังหวัด', function () {
+    function heroMeta(w, pr) {
+      var real = w.sb;
+      // kxRenderProfileShell fires a quotes count for the stats strip; a fake
+      // client keeps that off the network without changing what is painted
+      w.sb = KX.makeSb({ quotes: { _: { data: [], error: null } } });
+      try { w.kxRenderProfileShell(pr); } finally { w.sb = real; }
+      return (w.document.getElementById('pfHeroMeta').textContent || '');
+    }
+    var ADDR = 'สถาบันวิจัยดาราศาสตร์แห่งชาติ (องค์การมหาชน) 260 หมู่ 4 ต. ดอนแก้ว อ. แม่ริม จ. เชียงใหม่ 50180';
+
+    it('shows the province and not the street address', function (w) {
+      var t = heroMeta(w, { id: ME, province: 'เชียงใหม่', address: ADDR, industry: 'Engineering' });
+      expect(t).toContain('เชียงใหม่');
+      expect(t).notToContain('260 หมู่ 4', 'the address does not belong on this line');
+      expect(t).notToContain('50180');
+      expect(t).toContain('Engineering', 'and what follows it is still there');
+    });
+
+    /* Nothing is lost by leaving it out — the address is in ติดต่อ, which is
+       where someone who wants it goes to look. */
+    it('says nothing about place when there is no province', function (w) {
+      var t = heroMeta(w, { id: ME, address: ADDR, industry: 'Engineering' });
+      expect(t).notToContain('260 หมู่ 4', 'an address is not a stand-in for a province');
+      expect(t).notToContain('📍');
+      expect(t).toContain('Engineering');
+    });
+  });
+
   /* ภาพรวม was six separate cards in a two-column grid, each sized to its own
      content, so the column holding the short one ended early and the page
      showed a staircase of white boxes with grey between the steps. They are one
