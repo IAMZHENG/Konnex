@@ -11955,7 +11955,7 @@ html, body{
       <div class="icon-btn" onclick="navigateTo('page-notifications')">🔔<span class="badge" style="display:none">0</span></div>
       <div class="icon-btn" onclick="navigateTo('page-messages')">💬</div>
       <div class="icon-btn" onclick="navigateTo('page-saved')">🔖</div>
-      <div class="avatar-chip"><span class="av-usericon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span></div>
+      <div class="avatar-chip"><span class="av-usericon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>▾</div>
     </div>
   </div>
   <div class="layout sh-layout">
@@ -11988,7 +11988,7 @@ html, body{
       <div class="icon-btn" onclick="navigateTo('page-notifications')">🔔<span class="badge" style="display:none">0</span></div>
       <div class="icon-btn" onclick="navigateTo('page-messages')">💬</div>
       <div class="icon-btn" onclick="navigateTo('page-saved')">🔖</div>
-      <div class="avatar-chip"><span class="av-usericon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span></div>
+      <div class="avatar-chip"><span class="av-usericon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"></path></svg></span>▾</div>
     </div>
   </div>
   <div class="layout sh-layout">
@@ -17579,7 +17579,40 @@ body.kx-auth .kx-burger{ display:none !important; }
      this row that says nothing a tap does not already say — the avatar opens the
      menu whether the arrow is there or not. It is a bare text node, so font-size
      is the only handle; .av-usericon inside is sized in px and does not follow. */
-  .navbar .avatar-chip, .sh-nav .avatar-chip{ font-size:0; gap:0; }
+  /* !important for the same reason as the gaps above: ตั้งค่า and ใบเสนอราคาที่ขอ
+     each ship a `#page-x .avatar-chip{font-size:15px}`, which outranked this
+     and put the ▾ back on those two pages only — their chip measured 55px
+     against 34 everywhere else. */
+  .navbar .avatar-chip, .sh-nav .avatar-chip{ font-size:0 !important; gap:0 !important; }
+}
+
+/* ===== the navbar icons are one size on every page =====
+   The glyph inside a top-bar button is a .kx-ico span sized 1.25em, and the
+   pages do not agree on the button's font-size: some set 24px, the rest
+   inherit 16px. So the same search icon drew at 30px on the feed and 20px on
+   the profile, and every other page fell on one side or the other. Measured
+   across all of them before this was written — 15 pages at 30, 4 at 20.
+   Fixed in px, outside any media query, so it holds at every width; 22 in a
+   40px button is the ratio the touch targets above were sized for. */
+.navbar .icon-btn .kx-ico, .sh-nav .icon-btn .kx-ico{ width:22px; height:22px; }
+.navbar .icon-btn .kx-ico svg, .sh-nav .icon-btn .kx-ico svg{ width:100%; height:100%; }
+/* The button box too, at every width. The 1024px block above already forces
+   40px on phones; on a desktop the pages were still on their own numbers —
+   26px on most, 22 on the profile, 20 on the two forms — so the ring around
+   the same 22px glyph changed size from page to page. One box everywhere.
+   !important because each page's `#page-x .icon-btn` outranks this class. */
+.navbar .icon-btn, .sh-nav .icon-btn{
+  width:40px !important; height:40px !important; border-radius:50%;
+  display:inline-flex !important; align-items:center; justify-content:center; flex:none;
+}
+/* and the avatar chip: ตั้งค่า and ใบเสนอราคาที่ขอ set their own font-size and
+   gap on it, so on a desktop its ▾ sat 2–3px differently there than anywhere
+   else. On phones the 1024px block hides the ▾ entirely — and this is scoped
+   to wider screens rather than written bare, because both rules carry
+   !important at the same specificity and this one sits later in the file: bare,
+   it would win on phones too and put the ▾ back there. */
+@media (min-width: 1025px){
+  .navbar .avatar-chip, .sh-nav .avatar-chip{ font-size:14px !important; gap:6px !important; }
 }
 
 /* Below this the gaps alone no longer cover it — a 360px phone is still a few

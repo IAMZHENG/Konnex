@@ -1390,6 +1390,80 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The top bar is shipped once per page — twenty copies — and each page's own
+     stylesheet touches it, so the same icon drew at 30px on the feed and 20px
+     on the profile, and the avatar chip was 55px wide on two pages and 34 on
+     the rest. One measurement over every page, so the next drift says which
+     page and which part. */
+  describe('แถบบนเหมือนกันทุกหน้า', function () {
+    function pages(w) {
+      return Array.prototype.map.call(w.document.querySelectorAll('.app-page'), function (p) { return p.id; })
+        .filter(function (id) { return id && !/^page-(auth|terms|privacy|admin)$/.test(id); });
+    }
+    function R(el) {
+      if (!el) return null;
+      var r = el.getBoundingClientRect();
+      return Math.round(r.width) + 'x' + Math.round(r.height);
+    }
+    function measure(w) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };
+      var out = {};
+      try {
+        pages(w).forEach(function (id) {
+          w.navigateTo(id, true);
+          var nav = w.document.querySelector('#' + id + ' .navbar');
+          if (!nav || !nav.getClientRects().length) return;
+          var btns = Array.prototype.filter.call(nav.querySelectorAll('.icon-btn'),
+            function (b) { return b.getClientRects().length; });
+          out[id] = {
+            icon:   btns.map(function (b) { return R(b.querySelector('svg')); }).join('/'),
+            button: btns.map(R).join('/'),
+            avatar: R(nav.querySelector('.avatar-chip')),
+            logo:   R(nav.querySelector('.brand-logo'))
+          };
+        });
+      } finally { w.kxSession = had; }
+      return out;
+    }
+    function odd(out, key) {
+      var count = {};
+      Object.keys(out).forEach(function (id) { var v = out[id][key]; count[v] = (count[v] || []).concat(id); });
+      var majority = Object.keys(count).sort(function (a, b) { return count[b].length - count[a].length; })[0];
+      var strays = [];
+      Object.keys(count).forEach(function (v) {
+        if (v !== majority) strays.push(v + ' on ' + count[v].join(', ') + ' (rest are ' + majority + ')');
+      });
+      return strays;
+    }
+
+    it('draws the search and bell icons at one size on every page', function (w) {
+      var out = measure(w);
+      expect(Object.keys(out).length > 10).toBe(true, 'measured across the app');
+      expect(odd(out, 'icon')).toEqual([]);
+      /* How many icons show depends on the width — on a desktop the search is
+         a bar, so only the bell is a button — but every one that shows is 22. */
+      var sizes = [];
+      Object.keys(out).forEach(function (id) { sizes = sizes.concat(out[id].icon.split('/')); });
+      var wrong = sizes.filter(function (s) { return s && s !== '22x22'; });
+      expect(wrong).toEqual([], 'the size the buttons were sized for');
+    });
+
+    it('keeps the buttons themselves one size', function (w) {
+      expect(odd(measure(w), 'button')).toEqual([]);
+    });
+
+    /* Two pages carried their own font-size and gap on the chip, which put the
+       ▾ back and widened it. */
+    it('keeps the avatar chip one size', function (w) {
+      expect(odd(measure(w), 'avatar')).toEqual([]);
+    });
+
+    it('keeps the brand mark one size', function (w) {
+      expect(odd(measure(w), 'logo')).toEqual([]);
+    });
+  });
+
   /* A listing with no picture. Six renderers each reached for the brand mark
      to fill the frame; now they share one tile. Checked at the source rather
      than card by card, because the next renderer written will copy whichever
