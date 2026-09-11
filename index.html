@@ -8102,10 +8102,9 @@ html, body{
       <div class="adv-panel" id="advPanel" style="display:none;">
         <div class="adv-grid">
           <div class="adv-field"><label>คำค้น / คีย์เวิร์ด</label><input type="text" id="advKw" placeholder="เช่น CNC, เลเซอร์, ขนส่ง"></div>
-          <div class="adv-field"><label>จังหวัด</label><select id="advProv"><option>ทุกจังหวัด</option><option>กรุงเทพมหานคร</option><option>ชลบุรี</option><option>สมุทรปราการ</option><option>ปทุมธานี</option><option>ระยอง</option></select></div>
+          <div class="adv-field"><label for="advProv">จังหวัด</label><select id="advProv"><option>ทุกจังหวัด</option></select></div>
           <div class="adv-field" id="advKindField"><label>ประเภท</label><select id="advKind"><option>ทั้งหมด</option><option>ต้องการซื้อ (RFQ)</option><option>ต้องการขาย (Offer)</option></select></div>
           <div class="adv-field"><label for="advMin">ราคาขั้นต่ำ (บาท)</label><input type="text" id="advMin" inputmode="numeric" placeholder="0"></div>
-          <div class="adv-field"><label for="advMax">ราคาสูงสุด (บาท)</label><input type="text" id="advMax" inputmode="numeric" placeholder="ไม่จำกัด"></div>
         </div>
         <div class="adv-actions">
           <button class="btn-browse" onclick="saveSearchAlert()">🔔 บันทึกการค้นหา + แจ้งเตือนงานใหม่</button>
@@ -8273,6 +8272,28 @@ html, body{
   });
   var TH_PROVINCES = ['ทั้งหมด','กรุงเทพมหานคร','กระบี่','กาญจนบุรี','กาฬสินธุ์','กำแพงเพชร','ขอนแก่น','จันทบุรี','ฉะเชิงเทรา','ชลบุรี','ชัยนาท','ชัยภูมิ','ชุมพร','เชียงราย','เชียงใหม่','ตรัง','ตราด','ตาก','นครนายก','นครปฐม','นครพนม','นครราชสีมา','นครศรีธรรมราช','นครสวรรค์','นนทบุรี','นราธิวาส','น่าน','บึงกาฬ','บุรีรัมย์','ปทุมธานี','ประจวบคีรีขันธ์','ปราจีนบุรี','ปัตตานี','พระนครศรีอยุธยา','พะเยา','พังงา','พัทลุง','พิจิตร','พิษณุโลก','เพชรบุรี','เพชรบูรณ์','แพร่','ภูเก็ต','มหาสารคาม','มุกดาหาร','แม่ฮ่องสอน','ยโสธร','ยะลา','ร้อยเอ็ด','ระนอง','ระยอง','ราชบุรี','ลพบุรี','ลำปาง','ลำพูน','เลย','ศรีสะเกษ','สกลนคร','สงขลา','สตูล','สมุทรปราการ','สมุทรสงคราม','สมุทรสาคร','สระแก้ว','สระบุรี','สิงห์บุรี','สุโขทัย','สุพรรณบุรี','สุราษฎร์ธานี','สุรินทร์','หนองคาย','หนองบัวลำภู','อ่างทอง','อำนาจเจริญ','อุดรธานี','อุตรดิตถ์','อุทัยธานี','อุบลราชธานี'];
   var PIN_SVG = '<svg class="li-svg" viewBox="0 0 24 24" style="width:15px;height:15px;vertical-align:middle;margin-right:4px"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>';
+  /* ค้นหาขั้นสูง's จังหวัด. It was six options typed by hand — กรุงเทพ and the
+     eastern seaboard — so a listing in เชียงใหม่ could not be searched for by
+     province at all, and the box was quietly telling people QubeQuote only
+     covered five provinces. Filled from the same list the location chip uses,
+     so the two cannot disagree about what a province is called. The first
+     option stays "ทุกจังหวัด": that is the value applyAdvSearch treats as no
+     filter, and it must be what the box shows before anyone touches it. */
+  function buildAdvProvinces(){
+    var sel = document.getElementById('advProv');
+    if(!sel || sel.dataset.built) return;
+    sel.dataset.built = '1';
+    TH_PROVINCES.forEach(function(p){
+      if(p === 'ทั้งหมด') return;          // the select has its own "all" already
+      var o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      sel.appendChild(o);
+    });
+    sel.selectedIndex = 0;
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildAdvProvinces);
+  else buildAdvProvinces();
+
   function buildProvinceList(){
     var list = document.getElementById('locList');
     if(!list || list.dataset.built) return;
@@ -12817,7 +12838,7 @@ html, body{
     document.getElementById('advToggleChip').style.background = open ? 'var(--blue-50)' : '';
   }
   function clearAdvSearch(){
-    ['advKw','advMin','advMax'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    ['advKw','advMin'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
     ['advCat','advProv','advKind'].forEach(function(id){ var el=document.getElementById(id); if(el) el.selectedIndex=0; });
     applyAdvSearch();
   }
@@ -12830,7 +12851,7 @@ html, body{
       var v = (document.getElementById(id).value || '').replace(/[, ]/g, '');
       return v && !isNaN(+v) ? +v : null;
     };
-    var min = num('advMin'), max = num('advMax');
+    var min = num('advMin');
     var shown = 0;
     document.querySelectorAll('#page-feed .feed-list .post-card').forEach(function(c){
       var okKw = !kw || (c.textContent||'').toLowerCase().indexOf(kw) > -1;
@@ -12846,7 +12867,6 @@ html, body{
       var priceNum = /[0-9]/.test(priceTxt) ? +priceTxt.replace(/[^0-9]/g, '') : null;
       var okPrice = true;
       if(min !== null) okPrice = okPrice && priceNum !== null && priceNum >= min;
-      if(max !== null) okPrice = okPrice && priceNum !== null && priceNum <= max;
       var ok = okKw && okProv && okKind && okPrice;
       c.style.display = ok ? '' : 'none';
       if(ok) shown++;
@@ -20343,7 +20363,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
      Delegated on the document, so fields built later are covered too. */
   var KX_MONEY = '#cpPrice,#cpBudgetLow,#cpBudgetHigh,#rqPrice,#rqjBudget,' +
-                 '#advMin,#advMax,#offerPrice,#brPrice';
+                 '#advMin,#offerPrice,#brPrice';
   function kxGroup(s){
     var neg = /^-/.test(s);
     var digits = String(s).replace(/[^\d]/g, '');

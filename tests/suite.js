@@ -1386,6 +1386,99 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* ค้นหาขั้นสูง. The province box offered six provinces typed by hand, so a
+     listing anywhere else could not be searched for by province — and the box
+     was quietly telling people the site covered five. ราคาสูงสุด went at the
+     owner's request. What is left has to actually filter. */
+  describe('ค้นหาขั้นสูง — ใช้งานได้จริง', function () {
+    function mk(w, over) {
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML(Object.assign({
+        id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', kind: 'rfq', status: 'open',
+        title: 'งานกลึง', description: 'x', province: 'เชียงใหม่',
+        created_at: '2026-09-01T00:00:00Z', owner_id: OTHER,
+        quote_count: 1, quote_avg: 5000, post_images: [],
+        profiles: { company_name: 'ผู้ซื้อ' }
+      }, over));
+      return d.firstElementChild;
+    }
+    /* Two cards in the real feed list, run the real filter, read what is left.
+       Everything is put back afterwards — a card left in the list fails the
+       "nothing invented on the page" audit further down. */
+    function run(w, setup) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };
+      w.navigateTo('page-feed', true);
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var a = mk(w, { id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', province: 'เชียงใหม่', title: 'งานกลึง', quote_avg: 5000 });
+      var b = mk(w, { id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', province: 'ชลบุรี',   title: 'ตู้เชื่อม', quote_avg: null, quote_count: 0 });
+      list.prepend(b); list.prepend(a);
+      try {
+        w.clearAdvSearch();
+        setup(w);
+        w.applyAdvSearch();
+        return { a: a.style.display !== 'none', b: b.style.display !== 'none' };
+      } finally {
+        a.remove(); b.remove();
+        w.clearAdvSearch();
+        w.kxSession = had;
+      }
+    }
+
+    it('lists every province, with ทุกจังหวัด first', function (w) {
+      var sel = w.document.getElementById('advProv');
+      expect(sel.options.length).toBe(78, '77 provinces plus the all option');
+      expect(sel.options[0].textContent).toBe('ทุกจังหวัด');
+      expect(sel.selectedIndex).toBe(0, 'and that is what it shows untouched');
+      var names = Array.prototype.map.call(sel.options, function (o) { return o.textContent; });
+      ['เชียงใหม่', 'แม่ฮ่องสอน', 'นราธิวาส', 'อุบลราชธานี', 'กรุงเทพมหานคร'].forEach(function (p) {
+        expect(names).toContain(p);
+      });
+    });
+
+    it('has no ราคาสูงสุด any more', function (w) {
+      expect(w.document.getElementById('advMax')).toBe(null);
+      expect(!!w.document.getElementById('advMin')).toBe(true, 'ราคาขั้นต่ำ stays');
+    });
+
+    it('filters by province', function (w) {
+      var r = run(w, function (w) { w.document.getElementById('advProv').value = 'เชียงใหม่'; });
+      expect(r.a).toBe(true,  'the เชียงใหม่ card stays');
+      expect(r.b).toBe(false, 'the ชลบุรี card goes');
+    });
+
+    it('shows everything again on ทุกจังหวัด', function (w) {
+      var r = run(w, function (w) { w.document.getElementById('advProv').selectedIndex = 0; });
+      expect(r.a && r.b).toBe(true);
+    });
+
+    it('filters by keyword', function (w) {
+      var r = run(w, function (w) { w.document.getElementById('advKw').value = 'ตู้เชื่อม'; });
+      expect(r.a).toBe(false);
+      expect(r.b).toBe(true);
+    });
+
+    /* A card with no price yet cannot satisfy a lower bound — asking for a
+       minimum means asking for cards that have a number to compare. */
+    it('filters by ราคาขั้นต่ำ, and a card with no price does not pass it', function (w) {
+      var r = run(w, function (w) { w.document.getElementById('advMin').value = '4,000'; });
+      expect(r.a).toBe(true,  '5,000 clears 4,000');
+      expect(r.b).toBe(false, 'ยังไม่มี is not a price');
+    });
+
+    it('ล้าง puts every card back', function (w) {
+      var r = run(w, function (w) {
+        w.document.getElementById('advProv').value = 'เชียงใหม่';
+        w.document.getElementById('advKw').value = 'งานกลึง';
+        w.applyAdvSearch();
+        w.clearAdvSearch();
+      });
+      expect(r.a && r.b).toBe(true);
+      expect(w.document.getElementById('advProv').selectedIndex).toBe(0);
+      expect(w.document.getElementById('advKw').value).toBe('');
+    });
+  });
+
   /* The profile wall draws a listing with the feed's own card builder, so the
      two can only differ by stylesheet — and they did: the wall showed the whole
      description under the title, four lines of spec on a card the feed shows
