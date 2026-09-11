@@ -1386,6 +1386,92 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* ข้อเสนอ and ราคาเฉลี่ย are what a card is for — how many sellers answered,
+     and what they are asking — and they sat as a small pale pill and a two-line
+     stack huddled in the middle of a white strip. The thing to read first was
+     the faintest thing on the card. Now a tinted band across the card, two
+     equal cells, label over value, values the largest type on it. */
+  describe('แถบ ข้อเสนอ · ราคาเฉลี่ย บนการ์ด', function () {
+    function card(w) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };
+      w.navigateTo('page-feed', true);
+      var list = w.document.querySelector('#page-feed .post-card');
+      var host = list ? list.parentElement : w.document.getElementById('page-feed');
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML({
+        id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', kind: 'rfq', status: 'open',
+        title: 'งานกลึง', description: 'x', province: 'เชียงใหม่',
+        created_at: new Date().toISOString(), owner_id: OTHER,
+        quote_count: 3, quote_avg: 9150000, post_images: [],
+        profiles: { company_name: 'ผู้ซื้อ' }
+      });
+      var el = d.firstElementChild;
+      host.prepend(el);
+      return { el: el, done: function () { el.remove(); w.kxSession = had; } };
+    }
+    function R(el) { return el.getBoundingClientRect(); }
+
+    it('is a band across the card, not a cluster in the middle', function (w) {
+      var c = card(w);
+      var band = c.el.querySelector('.pc-stats');
+      var bg = w.getComputedStyle(band).backgroundColor;
+      // the card's own 1px border sits outside the band, so "edge to edge"
+      // means within the border, not over it
+      var gap = Math.abs(R(band).width - R(c.el).width);
+      c.done();
+      expect(bg === 'rgba(0, 0, 0, 0)').toBe(false, 'the band is tinted');
+      expect(gap <= 2).toBe(true, 'and spans the card edge to edge (' + gap + 'px off)');
+    });
+
+    it('splits into two equal cells', function (w) {
+      var c = card(w);
+      var a = R(c.el.querySelector('.pc-offers')), b = R(c.el.querySelector('.pc-price'));
+      c.done();
+      expect(Math.abs(a.width - b.width) < 2).toBe(true, 'equal halves');
+      expect(Math.round(a.top)).toBe(Math.round(b.top), 'side by side');
+      expect(b.left > a.left).toBe(true);
+    });
+
+    /* Label above value, in both cells — they used to be built differently
+       (a pill with the number inline, then a stacked pair) and read as two
+       unrelated things. */
+    it('puts the label over the value in both cells, the same shape', function (w) {
+      var c = card(w);
+      var lbls = c.el.querySelectorAll('.pc-stat-lbl');
+      expect(lbls.length).toBe(2);
+      var offLbl = R(lbls[0]), offNum = R(c.el.querySelector('.offer-num'));
+      var prLbl = R(lbls[1]), prNum = R(c.el.querySelector('.pc-price-num'));
+      c.done();
+      expect(offLbl.bottom <= offNum.top + 1).toBe(true, 'ข้อเสนอ above its number');
+      expect(prLbl.bottom <= prNum.top + 1).toBe(true, 'ราคาเฉลี่ย above its number');
+    });
+
+    it('sets the two values as the largest type on the card', function (w) {
+      var c = card(w);
+      var num = parseFloat(w.getComputedStyle(c.el.querySelector('.offer-num')).fontSize);
+      var price = parseFloat(w.getComputedStyle(c.el.querySelector('.pc-price-num')).fontSize);
+      var title = parseFloat(w.getComputedStyle(c.el.querySelector('.post-title')).fontSize);
+      var w8 = w.getComputedStyle(c.el.querySelector('.offer-num')).fontWeight;
+      c.done();
+      expect(num).toBe(price, 'the two values match each other');
+      expect(num > title).toBe(true, 'and outrank the title');
+      expect(Number(w8) >= 700).toBe(true);
+    });
+
+    /* The scripts that read the count and repaint the price on a live card go
+       by these classes; the restyle must not have moved them. */
+    it('keeps the hooks the feed scripts read', function (w) {
+      var c = card(w);
+      var num = c.el.querySelector('.offer-num').textContent;
+      var price = c.el.querySelector('.pc-price-num').textContent;
+      c.done();     // before asserting: a card left behind fails the "nothing
+                    // invented on the page" audit further down the suite
+      expect(num).toBe('3');
+      expect(price).toContain('9,150,000');
+    });
+  });
+
   /* The line under the name on a profile. It preferred the full address and
      only fell back to the province, so an account that had filled in a street
      address wore the whole thing — house number, sub-district, postcode — on
