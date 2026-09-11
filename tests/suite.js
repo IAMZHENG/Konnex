@@ -1387,11 +1387,11 @@
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
   /* ข้อเสนอ and ราคาเฉลี่ย are what a card is for — how many sellers answered,
-     and what they are asking — and they sat as a small pale pill and a two-line
-     stack huddled in the middle of a white strip. The thing to read first was
-     the faintest thing on the card. Now a tinted band across the card, two
-     equal cells, label over value, values the largest type on it. */
-  describe('แถบ ข้อเสนอ · ราคาเฉลี่ย บนการ์ด', function () {
+     and what they are asking. They have been a pale pill beside a stacked pair,
+     then a tinted band split in two; this is the shape the owner drew: two
+     rounded chips side by side in the middle of the strip, blue for the count
+     and green for the price, each with a mark, a hairline between them. */
+  describe('ป้าย ข้อเสนอ · ราคาเฉลี่ย บนการ์ด', function () {
     function card(w) {
       var had = w.kxSession;
       w.kxSession = w.kxSession || { user: { id: ME } };
@@ -1411,40 +1411,55 @@
       return { el: el, done: function () { el.remove(); w.kxSession = had; } };
     }
     function R(el) { return el.getBoundingClientRect(); }
+    function bg(w, el) { return w.getComputedStyle(el).backgroundColor; }
 
-    it('is a band across the card, not a cluster in the middle', function (w) {
+    it('is two tinted chips on a white strip, not a band', function (w) {
       var c = card(w);
-      var band = c.el.querySelector('.pc-stats');
-      var bg = w.getComputedStyle(band).backgroundColor;
-      // the card's own 1px border sits outside the band, so "edge to edge"
-      // means within the border, not over it
-      var gap = Math.abs(R(band).width - R(c.el).width);
+      var strip = c.el.querySelector('.pc-stats');
+      var off = c.el.querySelector('.pc-offers'), pr = c.el.querySelector('.pc-price');
+      var got = {
+        strip: bg(w, strip), off: bg(w, off), pr: bg(w, pr),
+        radius: w.getComputedStyle(off).borderTopLeftRadius,
+        offW: R(off).width, stripW: R(strip).width
+      };
       c.done();
-      expect(bg === 'rgba(0, 0, 0, 0)').toBe(false, 'the band is tinted');
-      expect(gap <= 2).toBe(true, 'and spans the card edge to edge (' + gap + 'px off)');
+      expect(got.strip).toBe('rgb(255, 255, 255)', 'the strip itself is white');
+      expect(got.off === 'rgba(0, 0, 0, 0)').toBe(false, 'the count chip is tinted');
+      expect(got.pr === 'rgba(0, 0, 0, 0)').toBe(false, 'and so is the price chip');
+      expect(got.off === got.pr).toBe(false, 'in two different colours');
+      expect(got.radius).toBe('999px', 'pills, not boxes');
+      expect(got.offW < got.stripW / 2).toBe(true, 'a chip, not a half-width cell');
     });
 
-    it('splits into two equal cells', function (w) {
+    it('centres the pair in the strip with a hairline between them', function (w) {
       var c = card(w);
+      var strip = R(c.el.querySelector('.pc-stats'));
       var a = R(c.el.querySelector('.pc-offers')), b = R(c.el.querySelector('.pc-price'));
+      var dv = c.el.querySelector('.pc-divider');
+      var dvBox = dv ? R(dv) : null;
       c.done();
-      expect(Math.abs(a.width - b.width) < 2).toBe(true, 'equal halves');
-      expect(Math.round(a.top)).toBe(Math.round(b.top), 'side by side');
-      expect(b.left > a.left).toBe(true);
+      expect(b.left > a.right).toBe(true, 'side by side');
+      var mid = (a.left + b.right) / 2, stripMid = strip.left + strip.width / 2;
+      expect(Math.abs(mid - stripMid) < 4).toBe(true,
+        'the pair sits in the middle (' + Math.round(mid - stripMid) + 'px off)');
+      expect(!!dvBox).toBe(true, 'the hairline exists');
+      expect(dvBox.left > a.right && dvBox.right < b.left).toBe(true, 'and is between them');
     });
 
-    /* Label above value, in both cells — they used to be built differently
-       (a pill with the number inline, then a stacked pair) and read as two
-       unrelated things. */
-    it('puts the label over the value in both cells, the same shape', function (w) {
+    /* The count reads as one bold phrase — "3 ข้อเสนอ" on one line; the price
+       keeps a small label over its value. Each chip carries its own mark. */
+    it('lays the count out on one line and the price as label over value', function (w) {
       var c = card(w);
-      var lbls = c.el.querySelectorAll('.pc-stat-lbl');
-      expect(lbls.length).toBe(2);
-      var offLbl = R(lbls[0]), offNum = R(c.el.querySelector('.offer-num'));
-      var prLbl = R(lbls[1]), prNum = R(c.el.querySelector('.pc-price-num'));
+      var num = R(c.el.querySelector('.offer-num'));
+      var offLbl = R(c.el.querySelector('.pc-offers .pc-stat-lbl'));
+      var prLbl = R(c.el.querySelector('.pc-price .pc-stat-lbl'));
+      var prNum = R(c.el.querySelector('.pc-price-num'));
+      var marks = c.el.querySelectorAll('.pc-chip-ic svg').length;
       c.done();
-      expect(offLbl.bottom <= offNum.top + 1).toBe(true, 'ข้อเสนอ above its number');
-      expect(prLbl.bottom <= prNum.top + 1).toBe(true, 'ราคาเฉลี่ย above its number');
+      expect(Math.abs(num.top - offLbl.top) < 6).toBe(true, 'number and word on one line');
+      expect(offLbl.left > num.right).toBe(true, 'number first, then the word');
+      expect(prLbl.bottom <= prNum.top + 1).toBe(true, 'ราคาเฉลี่ย above its value');
+      expect(marks).toBe(2, 'a mark in each chip, drawn as SVG');
     });
 
     it('sets the two values as the largest type on the card', function (w) {

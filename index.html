@@ -16671,43 +16671,67 @@ body.kx-auth .kx-burger{ display:none !important; }
    the view count used to, and something else may again. Centring a flex row instead
    would move with its own content: the sell chip (ผู้ขอใบเสนอราคา) is nearly twice the
    width of the buy chip, so the price would land differently on every card. */
-/* ===== the stats band: ข้อเสนอ and ราคาเฉลี่ย =====
+/* ===== ข้อเสนอ and ราคาเฉลี่ย: two chips =====
    These two numbers are what a card is for — how many sellers have answered,
-   and what they are asking — and they sat as a small pale pill and a two-line
-   stack, huddled in the middle of a white strip with nothing either side. The
-   thing to read first was the faintest thing on the card.
+   and what they are asking. They have been a pale pill beside a stacked pair,
+   then a tinted band split in two; this is the shape the owner drew: two
+   rounded chips side by side in the middle of the strip, blue for the count
+   and green for the price, each with a mark, a hairline between them.
 
-   Now a tinted band across the card, split into two equal cells, label over
-   value, with the values the largest type on the card. Written once for the
-   feed and the profile wall: the wall reuses the feed's card builder, and two
-   copies of these rules were already drifting when this was rewritten. */
+   Written once for the feed and the profile wall — the wall reuses the feed's
+   card builder, and two copies of these rules had drifted before. Sizes and
+   weights are set with the rest of the card's type scale, further down. */
 #page-feed .pc-stats,
 #page-company-profile .kx-wall .pc-stats{
-  display:block; padding:0; background:var(--blue-50, #eaf1ff);
-  border-top:1px solid #dbe6ff; border-bottom:1px solid var(--line);
+  display:block; padding:14px 16px; background:var(--card, #fff);
+  border-top:0; border-bottom:1px solid var(--line);
 }
 #page-feed .pc-center,
 #page-company-profile .kx-wall .pc-center{
-  display:grid; grid-template-columns:1fr 1fr; align-items:stretch; min-width:0;
+  display:flex; align-items:center; justify-content:center; gap:14px; min-width:0;
 }
 #page-feed .pc-offers, #page-feed .pc-price,
 #page-company-profile .kx-wall .pc-offers, #page-company-profile .kx-wall .pc-price{
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:1px; padding:11px 10px; min-width:0; text-align:center;
-  /* the pill it used to be */
-  background:none; border:0; border-radius:0; font-size:inherit; line-height:1.4;
+  display:inline-flex; flex-direction:row; align-items:center; gap:10px;
+  padding:8px 18px 8px 10px; border-radius:999px; border:0;
+  min-width:0; text-align:left; font-size:inherit; line-height:1.25;
 }
 #page-feed .pc-offers,
-#page-company-profile .kx-wall .pc-offers{ border-right:1px solid #c2d6ff; }
-/* colour and fit only — sizes and weights are set with the rest of the card's
-   type scale, further down, so the band cannot drift from the card around it */
-#page-feed .pc-stat-lbl,
-#page-company-profile .kx-wall .pc-stat-lbl{ color:#365a9e; letter-spacing:.1px; }
-#page-feed .pc-offers .offer-num, #page-feed .pc-price-num,
-#page-company-profile .kx-wall .pc-offers .offer-num, #page-company-profile .kx-wall .pc-price-num{
-  color:#0846c7; letter-spacing:-.3px; line-height:1.2;
-  /* 1.2 not 1.1: Thai tone marks on ราคาเฉลี่ย's value were clipped at the top */
-  max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+#page-company-profile .kx-wall .pc-offers{ background:#eaf1ff; }
+#page-feed .pc-price,
+#page-company-profile .kx-wall .pc-price{ background:#e8f7ee; }
+#page-feed .pc-divider,
+#page-company-profile .kx-wall .pc-divider{ width:1px; height:30px; background:var(--line); flex:none; }
+/* the mark: a solid disc for the count, bare bars for the price, as drawn */
+#page-feed .pc-chip-ic,
+#page-company-profile .kx-wall .pc-chip-ic{
+  width:34px; height:34px; border-radius:50%; flex:none;
+  display:inline-flex; align-items:center; justify-content:center;
+}
+#page-feed .pc-chip-ic svg,
+#page-company-profile .kx-wall .pc-chip-ic svg{ width:18px; height:18px; display:block; }
+#page-feed .pc-ic-blue,
+#page-company-profile .kx-wall .pc-ic-blue{ background:var(--blue-600, #0a5bff); color:#fff; }
+#page-feed .pc-ic-green,
+#page-company-profile .kx-wall .pc-ic-green{ color:#16a34a; }
+#page-feed .pc-ic-green svg,
+#page-company-profile .kx-wall .pc-ic-green svg{ width:24px; height:24px; }
+/* the words: one line for the count, a stacked pair for the price */
+#page-feed .pc-chip-txt,
+#page-company-profile .kx-wall .pc-chip-txt{
+  display:flex; align-items:baseline; gap:6px; min-width:0; white-space:nowrap;
+}
+#page-feed .pc-chip-stack,
+#page-company-profile .kx-wall .pc-chip-stack{ flex-direction:column; align-items:flex-start; gap:0; }
+#page-feed .pc-offers .offer-num, #page-feed .pc-offers .pc-stat-lbl,
+#page-company-profile .kx-wall .pc-offers .offer-num,
+#page-company-profile .kx-wall .pc-offers .pc-stat-lbl{ color:#052a7a; }
+#page-feed .pc-price .pc-stat-lbl,
+#page-company-profile .kx-wall .pc-price .pc-stat-lbl{ color:#3f7a55; }
+#page-feed .pc-price-num,
+#page-company-profile .kx-wall .pc-price-num{
+  color:#15803d; letter-spacing:-.2px; line-height:1.25;
+  max-width:100%; overflow:hidden; text-overflow:ellipsis;
 }
 
 /* what you can do */
@@ -17599,23 +17623,30 @@ body.kx-auth .kx-burger{ display:none !important; }
 #page-feed .pc-text .post-desc,
 #page-company-profile .kx-wall .pc-text .post-desc{ font-size:15px; font-weight:500; line-height:1.7; }
 
-/* The stats band. Two labels at 13/600 over two values at 24/800 — the values
-   are the largest type on the card, because the count of offers and the
-   average price are what the card exists to show, and until this rewrite they
-   were the smallest. (Layout for the band is by #page-feed .pc-stats; sizes
-   live here with the rest of the card's scale so they cannot drift from it.) */
-#page-feed .pc-stat-lbl,
-#page-company-profile .kx-wall .pc-stat-lbl{ font-size:13px; font-weight:600; }
-#page-feed .pc-offers .offer-num, #page-feed .pc-price-num,
+/* The two chips. The count reads as one bold phrase — "0 ข้อเสนอ" — so its
+   number and its word share a size; the price keeps a small label over a bold
+   value. Both values at 19/800, above the 16px title: the count of offers and
+   the average price are what the card exists to show. (Layout is by
+   #page-feed .pc-stats; sizes live here with the rest of the card's scale so
+   they cannot drift from it.) */
+#page-feed .pc-offers .offer-num, #page-feed .pc-offers .pc-stat-lbl,
 #page-company-profile .kx-wall .pc-offers .offer-num,
-#page-company-profile .kx-wall .pc-price-num{ font-size:24px; font-weight:800; }
-/* two cells still fit at 375; only the values come down a step. Here, after
-   the scale above, because a media query adds no specificity and an earlier
-   21px would simply lose to the 24px. */
+#page-company-profile .kx-wall .pc-offers .pc-stat-lbl{ font-size:19px; font-weight:800; }
+#page-feed .pc-price .pc-stat-lbl,
+#page-company-profile .kx-wall .pc-price .pc-stat-lbl{ font-size:13px; font-weight:600; }
+#page-feed .pc-price-num,
+#page-company-profile .kx-wall .pc-price-num{ font-size:19px; font-weight:800; }
+/* a step down at phone width. Here, after the scale above, because a media
+   query adds no specificity and an earlier rule would simply lose. */
 @media (max-width: 1024px){
-  #page-feed .pc-offers .offer-num, #page-feed .pc-price-num,
+  #page-feed .pc-offers .offer-num, #page-feed .pc-offers .pc-stat-lbl, #page-feed .pc-price-num,
   #page-company-profile .kx-wall .pc-offers .offer-num,
-  #page-company-profile .kx-wall .pc-price-num{ font-size:21px; }
+  #page-company-profile .kx-wall .pc-offers .pc-stat-lbl,
+  #page-company-profile .kx-wall .pc-price-num{ font-size:17px; }
+  #page-feed .pc-center,
+  #page-company-profile .kx-wall .pc-center{ gap:10px; }
+  #page-feed .pc-offers, #page-feed .pc-price,
+  #page-company-profile .kx-wall .pc-offers, #page-company-profile .kx-wall .pc-price{ padding:7px 14px 7px 8px; gap:8px; }
 }
 #page-feed .pc-actions .pc-act,
 #page-company-profile .kx-wall .pc-actions .pc-act{ font-size:15px; font-weight:600; }
@@ -22652,13 +22683,27 @@ body.kx-guest #load-more-offers { display: none !important; }
           (!isRfq && mine
             ? ' style="cursor:pointer;" title="ดูคำขอใบเสนอราคา" onclick="event.stopPropagation();openQuoteRequestsModal(\'' + post.id + '\')"'
             : '') + '>' +
-          /* label above the number, the same shape as the price beside it —
-             the two used to be built differently (a pill, then a stacked pair)
-             and read as unrelated. */
-          '<span class="pc-stat-lbl">' + (isRfq ? 'ข้อเสนอ' : 'ผู้ขอใบเสนอราคา') + '</span>' +
-          '<b class="offer-num">' + offerCount + '</b></span>' +
-        '<span class="pc-price"><span class="pc-stat-lbl pc-price-lbl">' + (isRfq ? 'ราคาเฉลี่ย' : 'ราคาเริ่มต้น') + '</span>' +
-          '<b class="pc-price-num">' + priceText + '</b></span>' +
+          /* Two chips, drawn to the owner's own mock-up: a blue one for the
+             count with a document mark in a solid disc, a green one for the
+             price with bars beside a stacked label and value. The icons are
+             inline SVG rather than emoji, so they are the same shape on every
+             machine. */
+          '<span class="pc-chip-ic pc-ic-blue" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/></svg></span>' +
+          '<span class="pc-chip-txt">' +
+            '<b class="offer-num">' + offerCount + '</b>' +
+            '<span class="pc-stat-lbl">' + (isRfq ? 'ข้อเสนอ' : 'ผู้ขอใบเสนอราคา') + '</span>' +
+          '</span></span>' +
+        '<span class="pc-divider" aria-hidden="true"></span>' +
+        '<span class="pc-price">' +
+          '<span class="pc-chip-ic pc-ic-green" aria-hidden="true">' +
+            '<svg viewBox="0 0 24 24" fill="currentColor">' +
+            '<rect x="4" y="13" width="4" height="7" rx="1"/><rect x="10" y="8" width="4" height="12" rx="1"/><rect x="16" y="3" width="4" height="17" rx="1"/></svg></span>' +
+          '<span class="pc-chip-txt pc-chip-stack">' +
+            '<span class="pc-stat-lbl pc-price-lbl">' + (isRfq ? 'ราคาเฉลี่ย' : 'ราคาเริ่มต้น') + '</span>' +
+            '<b class="pc-price-num">' + priceText + '</b>' +
+          '</span></span>' +
       '</span></div>' +
       '<div class="pc-actions">' +
         '<span class="pc-act pc-share" onclick="event.stopPropagation();' +
