@@ -82,6 +82,27 @@
      to the feed, and you never reach the set-a-new-password form. */
   window.kxRecoveryInUrl = (window.location.hash || '').indexOf('type=recovery') >= 0;
 
+  /* The picture a listing shows when it has none.
+     Six places used the brand mark for this — the blue hexagonal Q, scaled to
+     fill a thumbnail. On งานของฉัน it came out as a logo the size of the card's
+     text block, which reads as "this listing is about QubeQuote", and on a
+     detail page it filled the whole gallery. A logo is not a placeholder; it
+     is a claim about the content.
+
+     One SVG, built here so every frame draws the same thing: a quiet grey
+     ground with a small picture glyph, sized in a 4:3 box so object-fit:cover
+     keeps the glyph in the middle at any frame size. Used by the feed card,
+     งานของฉัน, ใบเสนอราคา, บันทึกไว้, the detail gallery and บริการ. */
+  window.KX_NO_IMAGE = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">' +
+      '<rect width="400" height="300" fill="#eef2f7"/>' +
+      '<g transform="translate(164 114)" fill="none" stroke="#b3bfd1" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">' +
+        '<rect x="0" y="0" width="72" height="72" rx="10"/>' +
+        '<path d="M6 60l18-22 14 16 10-11 18 17"/>' +
+        '<circle cx="50" cy="20" r="6"/>' +
+      '</g>' +
+    '</svg>');
+
   /* An OAuth sign-in that fails comes back to this page as
      ?error=…&error_description=… (or the same pair in the hash), and supabase-js
      wipes them the moment it has looked at them — same disappearing act as the
@@ -14905,7 +14926,7 @@ function savedCardHTML(r){
   var p = r.posts || {};
   var isRfq = p.kind !== 'offer';
   var imgs = (p.post_images || []).slice().sort(function(a,b){ return (a.sort||0)-(b.sort||0); });
-  var img = imgs.length ? imgs[0].url : 'assets/img/qubequote-mark.svg';
+  var img = imgs.length ? imgs[0].url : window.KX_NO_IMAGE;
   var count = isRfq ? (p.quote_count || 0) : (p.request_count || 0);
   var countLbl = isRfq ? ' ข้อเสนอ' : ' ผู้ขอใบเสนอราคา';
   return '<div class="sh-scard" data-type="' + (isRfq ? 'buy' : 'sell') + '" data-post-id="' + p.id + '"' +
@@ -22573,7 +22594,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   function cardThumbHTML(images, cls){
     var list = (images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); });
     var urls = list.map(function(im){ return im.url; });
-    if(!urls.length) urls = ['assets/img/qubequote-mark.svg'];
+    if(!urls.length) urls = [window.KX_NO_IMAGE];
     var one = urls.length === 1;
     return '<div class="' + cls + ' kx-cthumb" data-i="0"' +
         ' data-all="' + esc(JSON.stringify(urls)) + '" onclick="event.stopPropagation()">' +
@@ -23110,7 +23131,7 @@ body.kx-guest #load-more-offers { display: none !important; }
       slot.innerHTML = images.length
         ? galleryHTML(images)
         : '<div class="kx-gal" data-n="1"><span class="kx-gcell" style="cursor:default">' +
-          '<img class="kx-gimg" src="assets/img/qubequote-mark.svg" style="object-fit:contain;">' +
+          '<img class="kx-gimg" src="' + window.KX_NO_IMAGE + '" alt="">' +
           '</span></div>';
       if(wrap) wrap.style.display = 'none';
     }
@@ -23907,7 +23928,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   function myRfqCardHTML(post){
     var images = post.post_images || [];
-    var thumb = images.length ? images[0].url : 'assets/img/qubequote-mark.svg';
+    var thumb = images.length ? images[0].url : window.KX_NO_IMAGE;
     var docs = post.post_attachments || [];
     var prices = (post.quotes || []).map(function(q){ return q.price; }).filter(function(v){ return v != null; });
     var avg = prices.length ? prices.reduce(function(a, b){ return a + b; }, 0) / prices.length : null;
@@ -23950,7 +23971,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   function myOfferRowHTML(post){
     var images = post.post_images || [];
-    var thumb = images.length ? images[0].url : 'assets/img/qubequote-mark.svg';
+    var thumb = images.length ? images[0].url : window.KX_NO_IMAGE;
     // the public counter, so this agrees with the feed card and the detail page
     var reqs = post.request_count != null ? post.request_count : (post.quote_requests || []).length;
     var statusVal = post.status === 'open' ? 'active' : post.status;
@@ -24959,7 +24980,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     card.innerHTML = head + (res.data.length
       ? '<div class="svc-grid" id="pfServices">' + res.data.map(function(s){
           return '<div class="svc" data-id="' + s.id + '">' +
-            '<img src="' + esc(s.image_url || 'assets/img/qubequote-mark.svg') + '">' +
+            '<img src="' + (s.image_url ? esc(s.image_url) : window.KX_NO_IMAGE) + '" alt="">' +
             (isOwner ? '<button type="button" class="svc-del" title="ลบบริการนี้" aria-label="ลบบริการนี้" ' +
                        'onclick="kxDeleteService(\'' + s.id + '\')">🗑</button>' : '') +
             '<div class="svc-body"><div class="svc-title">' + esc(s.title) + '</div>' +

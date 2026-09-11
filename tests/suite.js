@@ -94,10 +94,14 @@
       expect(html).toContain('data-i="0"', 'starts at the first');
       expect(html).toContain('b.jpg', 'the second is loaded, not fetched on demand');
     });
-    it('falls back to the QubeQuote mark rather than leaving a hole', function (w) {
+    /* It used to fall back to the brand mark — the blue Q, scaled to fill the
+       frame, which reads as "this listing is about QubeQuote". A placeholder
+       has to say "no picture", not make a claim. */
+    it('falls back to the no-image tile rather than leaving a hole', function (w) {
       // a list card is a fixed-height row; an empty thumb column would collapse it
       var html = w.kxCardThumbHTML([], 'cls');
-      expect(html).toContain('qubequote-mark', 'no images still needs something in the frame');
+      expect(html).toContain(w.KX_NO_IMAGE, 'no images still needs something in the frame');
+      expect(html).notToContain('qubequote-mark', 'and that something is not the logo');
       expect(html).toContain('data-i="0"');
     });
   });
@@ -1386,6 +1390,39 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* A listing with no picture. Six renderers each reached for the brand mark
+     to fill the frame; now they share one tile. Checked at the source rather
+     than card by card, because the next renderer written will copy whichever
+     line it finds first. */
+  describe('รูปแทนเมื่อประกาศไม่มีรูป', function () {
+    it('is a tile that says "no picture", not the logo', function (w) {
+      var src = w.KX_NO_IMAGE;
+      expect(typeof src).toBe('string');
+      expect(src.indexOf('data:image/svg+xml')).toBe(0, 'self-contained, nothing to fetch');
+      expect(src).notToContain('qubequote');
+    });
+
+    it('is what every renderer falls back to — none reach for the logo', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      /* The logo is allowed as the brand mark in the navbar and on the two
+         documents. What is not allowed is the logo as a *fallback* — the
+         shapes those six lines took. */
+      var asFallback = src.match(/(\?|\|\||:)\s*'assets\/img\/qubequote-mark[^']*'/g) || [];
+      expect(asFallback).toEqual([], 'a renderer is using the logo when a listing has no picture');
+      var uses = (src.match(/window\.KX_NO_IMAGE/g) || []).length;
+      expect(uses >= 6).toBe(true, 'the six renderers share the one tile (found ' + uses + ')');
+    });
+
+    it('draws the tile on งานของฉัน for a listing without pictures', function (w) {
+      var html = w.kxMyRfqCardHTML
+        ? w.kxMyRfqCardHTML({ id: 'x', title: 'ท', post_images: [], status: 'open', deadline: '2026-12-31', quote_count: 0 })
+        : null;
+      if (html === null) return;          // not exposed; the source check above still holds
+      expect(html).toContain(w.KX_NO_IMAGE);
+      expect(html).notToContain('qubequote-mark');
+    });
+  });
+
   /* ค้นหาขั้นสูง. The province box offered six provinces typed by hand, so a
      listing anywhere else could not be searched for by province — and the box
      was quietly telling people the site covered five. ราคาสูงสุด went at the
