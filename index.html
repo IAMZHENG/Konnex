@@ -7973,6 +7973,14 @@ html, body{
 /* 8a: declutter feed cards */
 #page-feed .post-chips{ display:none !important; }
 #page-feed .post-desc{ display:none !important; }
+/* The profile wall draws the same card with the same builder and has to look
+   the same: it was showing the whole description under the title — four lines
+   of spec on a card the feed shows with none — so the same listing read as two
+   different things depending on where you met it. Same two rules, same
+   !important, for the same reason the feed's carry it: these hide, and every
+   later rule that sizes the description would otherwise put it back. */
+#page-company-profile .kx-wall .post-chips{ display:none !important; }
+#page-company-profile .kx-wall .post-desc{ display:none !important; }
 #page-rfq-offers .rfq-chips{ display:none !important; }
 #page-my-offers .offer-tags{ display:none !important; }
 #page-rfq-detail .offer-features{ display:none !important; }

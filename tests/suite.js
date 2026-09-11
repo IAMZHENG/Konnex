@@ -1386,6 +1386,106 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The profile wall draws a listing with the feed's own card builder, so the
+     two can only differ by stylesheet — and they did: the wall showed the whole
+     description under the title, four lines of spec on a card the feed shows
+     with none. The same listing read as two different things depending on
+     where you met it. Measured as a diff, so the next drift is named. */
+  describe('การ์ดบนผนังโปรไฟล์เหมือนการ์ดในฟีด', function () {
+    var POST = {
+      id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', kind: 'rfq', status: 'open',
+      title: 'งานกลึง', description: 'หนึ่ง\nสอง\nสาม\nสี่', province: 'เชียงใหม่',
+      created_at: '2026-09-01T00:00:00Z', owner_id: OTHER,
+      quote_count: 3, quote_avg: 9150000, post_images: [],
+      profiles: { company_name: 'ผู้ซื้อ' }
+    };
+    var PARTS = ['.pc-head', '.pc-text', '.post-title', '.pc-sub', '.post-desc',
+                 '.post-chips', '.pc-stats', '.pc-offers', '.pc-price', '.pc-actions'];
+    var PROPS = ['display', 'font-size', 'font-weight', 'line-height', 'padding',
+                 'margin', 'background-color', 'border-radius'];
+
+    function snapshot(w, el) {
+      var out = {};
+      PARTS.forEach(function (sel) {
+        var n = el.querySelector(sel);
+        if (!n) { out[sel] = '(none)'; return; }
+        var cs = w.getComputedStyle(n), o = {};
+        PROPS.forEach(function (p) { o[p] = cs.getPropertyValue(p); });
+        out[sel] = o;
+      });
+      return out;
+    }
+    function mount(w, host) {
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML(POST);
+      var el = d.firstElementChild;
+      host.prepend(el);
+      return el;
+    }
+
+    it('renders with the same computed style, part for part', function (w) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };
+      try {
+        w.navigateTo('page-feed', true);
+        var fHost = (w.document.querySelector('#page-feed .post-card') || {}).parentElement
+                 || w.document.getElementById('page-feed');
+        var fEl = mount(w, fHost);
+        var feed = snapshot(w, fEl);
+        fEl.remove();
+
+        w.navigateTo('page-company-profile', true);
+        if (w.pfShowSection) { try { w.pfShowSection('overview'); } catch (e) {} }
+        var wall = w.document.querySelector('#page-company-profile .kx-wall');
+        var made = null;
+        if (!wall) {
+          // an empty profile has no wall yet; stand one up where it would go
+          wall = w.document.createElement('div'); wall.className = 'kx-wall';
+          made = wall;
+          (w.document.getElementById('pfWallCard') ||
+           w.document.querySelector('#page-company-profile .left')).appendChild(wall);
+        }
+        var wEl = mount(w, wall);
+        var prof = snapshot(w, wEl);
+        wEl.remove(); if (made) made.remove();
+
+        var drift = [];
+        PARTS.forEach(function (sel) {
+          var a = feed[sel], b = prof[sel];
+          if (typeof a === 'string' || typeof b === 'string') {
+            if (a !== b) drift.push(sel + ': ' + a + ' vs ' + b);
+            return;
+          }
+          PROPS.forEach(function (p) {
+            if (a[p] !== b[p]) drift.push(sel + ' ' + p + ': ' + a[p] + ' vs ' + b[p]);
+          });
+        });
+        expect(drift).toEqual([], 'feed vs wall');
+      } finally { w.kxSession = had; }
+    });
+
+    /* The specific thing that was wrong. Kept as its own case so the diff above
+       cannot be "fixed" by making the feed show the description too. */
+    it('hides the description on both, as a card and not a listing', function (w) {
+      var had = w.kxSession;
+      w.kxSession = w.kxSession || { user: { id: ME } };
+      try {
+        w.navigateTo('page-company-profile', true);
+        var wall = w.document.querySelector('#page-company-profile .kx-wall');
+        var made = null;
+        if (!wall) {
+          wall = w.document.createElement('div'); wall.className = 'kx-wall'; made = wall;
+          (w.document.getElementById('pfWallCard') ||
+           w.document.querySelector('#page-company-profile .left')).appendChild(wall);
+        }
+        var el = mount(w, wall);
+        var shown = w.getComputedStyle(el.querySelector('.post-desc')).display;
+        el.remove(); if (made) made.remove();
+        expect(shown).toBe('none');
+      } finally { w.kxSession = had; }
+    });
+  });
+
   /* ข้อเสนอ and ราคาเฉลี่ย are what a card is for — how many sellers answered,
      and what they are asking. They have been a pale pill beside a stacked pair,
      then a tinted band split in two; this is the shape the owner drew: two
