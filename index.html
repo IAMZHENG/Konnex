@@ -12947,13 +12947,19 @@ html, body{
     box.innerHTML = rows.length ? rows.map(function(r){
       var off = !!r.suspended_at;
       var self = r.id === me;
+      /* The name opens the real profile — the page a buyer would see — so a
+         report about an account can be checked before anything is done to it.
+         Same kxViewProfile the feed cards use. */
+      var open = 'kxViewProfile(\'' + r.id + '\')';
       return '<div class="ad-row"><div class="ad-row-main">' +
-        '<div class="ad-row-t">' + esc(r.company_name || 'ยังไม่ได้กรอกชื่อ') +
+        '<div class="ad-row-t"><a href="#" class="ad-name" onclick="' + open + ';return false;">' +
+          esc(r.company_name || 'ยังไม่ได้กรอกชื่อ') + '</a>' +
           (r.is_admin ? ' <span class="ad-chip admin">ผู้ดูแล</span>' : '') +
           (off ? ' <span class="ad-chip off">ถูกระงับ</span>' : '') + '</div>' +
         '<div class="ad-row-s">' + esc(r.contact_name || '') +
           (r.email ? ' · ' + esc(r.email) : '') + ' · สมัคร ' + when(r.created_at) + '</div>' +
       '</div><div class="ad-row-act">' +
+        '<button type="button" class="ad-btn" onclick="' + open + '">ดูโปรไฟล์</button>' +
         (self
           ? '<span class="ad-self">บัญชีของคุณ</span>'
           : '<button type="button" class="ad-btn' + (off ? '' : ' danger') + '" onclick="kxAdminSuspend(\'' +
@@ -17597,6 +17603,8 @@ body.kx-guest #load-more-offers { display: none !important; }
     }
 .ad-row-main { flex: 1 1 auto; min-width: 0; }
 .ad-row-t { font-size: 15.5px; font-weight: 600; color: var(--ink, #1c1a18); line-height: 1.6; }
+.ad-row-t .ad-name { color: inherit; text-decoration: none; }
+.ad-row-t .ad-name:hover { color: #0056fd; text-decoration: underline; }
 .ad-row-b { font-size: 15px; color: var(--ink, #1c1a18); line-height: 1.75; margin-top: 4px; white-space: pre-wrap; }
 .ad-row-s { font-size: 13.5px; color: var(--ink-soft, #565b6e); margin-top: 3px; }
 .ad-row-act { flex: none; display: flex; gap: 8px; }

@@ -606,8 +606,32 @@
       var rows = w.document.querySelectorAll('#adPeople .ad-row');
       expect(rows.length).toBe(2);
       expect(rows[0].innerHTML).toContain('บัญชีของคุณ');
-      expect(rows[0].querySelector('.ad-btn')).toBeFalsy('no button on your own row');
-      expect(rows[1].querySelector('.ad-btn').textContent).toContain('ระงับบัญชี');
+      expect(rows[0].querySelector('.ad-btn.danger')).toBeFalsy('no suspend button on your own row');
+      expect(rows[1].querySelector('.ad-btn.danger').textContent).toContain('ระงับบัญชี');
+    });
+    /* A report about an account is judged by looking at the account — the
+       profile a buyer would see, not a row of two fields. The name and a
+       button both open it, through the same kxViewProfile the feed uses. */
+    it('opens the real profile from the row', async function (w) {
+      asAdmin(w, true);
+      plan(w, {
+        _rpc: { kx_admin_stats: { data: {}, error: null } },
+        posts:    { _: { data: [], error: null } },
+        feedback: { _: { data: [], error: null } },
+        profiles: { _: { data: [
+          { id: OTHER, company_name: 'บจก. โกลโฟล', created_at: '2026-01-02T00:00:00Z', suspended_at: null, is_admin: false }
+        ], error: null } }
+      });
+      await w.kxAdminLoad();
+      restore(w);
+      var row = w.document.querySelector('#adPeople .ad-row');
+      var name = row.querySelector('.ad-row-t a');
+      expect(name && name.textContent).toBe('บจก. โกลโฟล');
+      expect(name.getAttribute('onclick')).toContain("kxViewProfile('" + OTHER + "')");
+      var btns = Array.prototype.map.call(row.querySelectorAll('.ad-btn'), function (b) { return b.textContent; });
+      expect(btns).toContain('ดูโปรไฟล์');
+      expect(btns).toContain('ระงับบัญชี', 'and the suspend button is still there beside it');
+      expect(typeof w.kxViewProfile).toBe('function');
     });
     it('shows a suspended account as suspended, and offers the way back', async function (w) {
       asAdmin(w, true);
@@ -624,7 +648,7 @@
       restore(w);
       var row = w.document.querySelector('#adPeople .ad-row');
       expect(row.innerHTML).toContain('ถูกระงับ');
-      expect(row.querySelector('.ad-btn').textContent).toContain('ปลดระงับ');
+      expect(row.querySelector('.ad-btn:not(:first-child)').textContent).toContain('ปลดระงับ');
     });
   });
 
