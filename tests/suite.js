@@ -1623,6 +1623,21 @@
     it('keeps the brand mark one size', function (w) {
       expect(odd(measure(w), 'logo')).toEqual([]);
     });
+
+    /* The cause, not the symptom. Every page used to carry its own copy of the
+       seven rules that style the top bar — ninety-one page-scoped rules meant
+       to be identical — and each top-bar bug this week was one of those copies
+       having drifted. They are one shared block now; this is what stops the
+       next page written from bringing a copy back with it. */
+    it('has no page-scoped copy of the top-bar rules left in the stylesheet', async function (w) {
+      var src = await (await fetch('../index.html')).text();
+      var re = /^\s*#page-[a-z-]+\s+\.(navbar|nav-left|nav-right|icon-btn|badge)\s*\{/gm;
+      var found = [];
+      var m;
+      while ((m = re.exec(src))) found.push(m[0].trim());
+      expect(found).toEqual([], 'style the top bar through .navbar, never through a page id');
+      expect(/^\.navbar\s*\{/m.test(src)).toBe(true, 'and the shared block exists');
+    });
   });
 
   /* A listing with no picture. Six renderers each reached for the brand mark

@@ -687,15 +687,6 @@ body.kx-show-back .nav-back{ display:inline-flex; }
 #page-settings{ --blue-900:#052a7a; --blue-700:#0846c7; --blue-600:#0a5bff; --blue-50:#eaf1ff; --ink:#1c1a18; --ink-soft:#565b6e; --ink-faint:#565b6e; --line:#e6e7f0; --bg:#f6f8fc; --card:#fff; --green:#15803d; --green-bg:#ecfdf3; --amber:#b45309; --red:#dc2626; }
 #page-settings{ margin:0; background:var(--bg); font-family:"IBM Plex Sans Thai","IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:var(--ink); font-weight:500; }
 #page-settings img{ display:block; max-width:100%; }
-#page-settings .navbar{ background:#fff; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding-top:12px; padding-bottom:12px; position:sticky; top:0; z-index:50; }
-#page-settings .nav-left{ display:flex; align-items:center; gap:28px; flex:1; }
-#page-settings .logo{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:22px; letter-spacing:.2px; color:var(--ink); text-decoration:none; }
-#page-settings .logo .mark{ width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,var(--blue-600),var(--blue-900)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; }
-#page-settings .search{ display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:9px 16px; width:400px; color:var(--ink-soft); font-size:15px; }
-#page-settings .nav-right{ display:flex; align-items:center; gap:20px; }
-#page-settings .icon-btn{ position:relative; width:26px; height:26px; color:var(--ink-soft); cursor:pointer; font-size:24px; display:flex; align-items:center; justify-content:center; }
-#page-settings .badge{ position:absolute; top:-7px; right:-8px; background:var(--red); color:#fff; font-size:12px; font-weight:600; border-radius:999px; padding:1px 5px; }
-#page-settings .avatar-chip{ display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-soft); font-size:14px; }
 #page-settings .avatar{ width:32px; height:32px; border-radius:50%; background:var(--blue-600); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
 #page-settings .layout{ max-width:1180px; margin:0 auto; display:grid; grid-template-columns:230px 1fr; gap:20px; padding:20px 32px; align-items:start; }
 #page-settings .side-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius,16px); padding:10px; box-shadow:0 4px 12px rgba(12,63,115,.1); }
@@ -1062,82 +1053,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     max-width: 100%
     }
 /* NAVBAR */
-#page-feed .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-feed .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-feed .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: 0.2px
-    }
-#page-feed .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-feed .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-feed .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-feed .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-feed .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-feed .avatar {
     width: 32px;
     height: 32px;
@@ -1806,82 +1721,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     box-shadow: 0 4px 12px rgba(30, 27, 75, 0.12), 0 2px 5px rgba(30, 27, 75, 0.08)
     }
 /* NAVBAR */
-#page-rfq-offers .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-rfq-offers .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-rfq-offers .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: 0.2px
-    }
-#page-rfq-offers .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-rfq-offers .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-rfq-offers .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-rfq-offers .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-rfq-offers .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-rfq-offers .avatar {
     width: 32px;
     height: 32px;
@@ -2301,81 +2140,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-family: inherit
     }
 /* NAVBAR */
-#page-rfq-detail .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-rfq-detail .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-rfq-detail .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-rfq-detail .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-rfq-detail .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-rfq-detail .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-rfq-detail .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-rfq-detail .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-rfq-detail .avatar {
     width: 32px;
     height: 32px;
@@ -3131,55 +2895,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     max-width: 100%
     }
 /* NAVBAR */
-#page-company-profile .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-company-profile .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-company-profile .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px;
-    letter-spacing: 0.2px
-    }
-#page-company-profile .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-company-profile .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 340px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
 #page-company-profile .nav-links {
     display: flex;
     gap: 26px;
@@ -3189,29 +2904,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-company-profile .nav-links a.active {
     color: var(--blue-600)
-    }
-#page-company-profile .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 18px
-    }
-#page-company-profile .icon-btn {
-    position: relative;
-    width: 22px;
-    height: 22px;
-    color: var(--ink-soft);
-    cursor: pointer
-    }
-#page-company-profile .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: #dc2626;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
     }
 #page-company-profile .avatar {
     width: 32px;
@@ -3874,79 +3566,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
 #page-edit-profile input, #page-edit-profile textarea, #page-edit-profile select {
     font-family: inherit
     }
-#page-edit-profile .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:11px; padding-bottom:11px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-edit-profile .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    flex: 1
-    }
-#page-edit-profile .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 20px
-    }
-#page-edit-profile .logo .mark {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-edit-profile .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 8px 15px;
-    width: 280px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-edit-profile .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 16px
-    }
-#page-edit-profile .icon-btn {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    color: var(--ink-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-edit-profile .badge {
-    position: absolute;
-    top: -6px;
-    right: -7px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-edit-profile .co-chip {
     display: flex;
     align-items: center;
@@ -4444,76 +4063,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-create-post input, #page-create-post textarea, #page-create-post select {
     font-family: inherit
-    }
-#page-create-post .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:11px; padding-bottom:11px
-    }
-#page-create-post .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    flex: 1
-    }
-#page-create-post .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 20px
-    }
-#page-create-post .logo .mark {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-create-post .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 8px 15px;
-    width: 280px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-create-post .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 16px
-    }
-#page-create-post .icon-btn {
-    position: relative;
-    width: 20px;
-    height: 20px;
-    color: var(--ink-soft);
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-create-post .badge {
-    position: absolute;
-    top: -6px;
-    right: -7px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
     }
 #page-create-post .co-chip {
     display: flex;
@@ -5087,81 +4636,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     color: var(--ink);
     font-weight: 400
     }
-#page-messages .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-messages .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-messages .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-messages .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-messages .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-messages .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-messages .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-messages .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-messages .avatar {
     width: 32px;
     height: 32px;
@@ -5602,81 +5076,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     color: var(--ink);
     font-weight: 400
     }
-#page-notifications .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-notifications .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-notifications .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-notifications .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-notifications .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-notifications .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-notifications .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-notifications .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-notifications .avatar {
     width: 32px;
     height: 32px;
@@ -5880,81 +5279,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     font-family: "IBM Plex Sans Thai", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--ink);
     font-weight: 400
-    }
-#page-my-bids .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-my-bids .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-my-bids .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-my-bids .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-my-bids .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-my-bids .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-my-bids .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-my-bids .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
     }
 #page-my-bids .avatar {
     width: 32px;
@@ -6591,81 +5915,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     color: var(--ink);
     font-weight: 400
     }
-#page-my-offers .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-my-offers .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-my-offers .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-my-offers .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-my-offers .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-my-offers .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-my-offers .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-my-offers .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
-    }
 #page-my-offers .avatar {
     width: 32px;
     height: 32px;
@@ -7169,81 +6418,6 @@ input[type="number"]:focus, textarea:focus, select:focus{
     }
 #page-offer-detail input, #page-offer-detail textarea {
     font-family: inherit
-    }
-#page-offer-detail .navbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-top:12px; padding-bottom:12px;
-    position: sticky;
-    top: 0;
-    z-index: 50
-    }
-#page-offer-detail .nav-left {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-    flex: 1
-    }
-#page-offer-detail .logo {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    font-size: 22px
-    }
-#page-offer-detail .logo .mark {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--blue-600), var(--blue-900));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600
-    }
-#page-offer-detail .search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 16px;
-    width: 400px;
-    color: var(--ink-soft);
-    font-size: 15px
-    }
-#page-offer-detail .nav-right {
-    display: flex;
-    align-items: center;
-    gap: 20px
-    }
-#page-offer-detail .icon-btn {
-    position: relative;
-    width: 26px;
-    height: 26px;
-    color: var(--ink-soft);
-    cursor: pointer;
-    font-size: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center
-    }
-#page-offer-detail .badge {
-    position: absolute;
-    top: -7px;
-    right: -8px;
-    background: var(--red);
-    color: #fff;
-    font-size: 12px;
-    font-weight: 600;
-    border-radius: 999px;
-    padding: 1px 5px
     }
 #page-offer-detail .avatar {
     width: 32px;
@@ -7860,6 +7034,49 @@ html, body{
 .av-usericon svg{ width:20px; height:20px; stroke:#fff; fill:rgba(255,255,255,.22); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 /* the mark is #0a5bff exactly, so the word cannot sit on the darker step beside it */
 .brand-word{ font-weight:700; font-size:18px; letter-spacing:.2px; color:var(--blue-600,#0a5bff); }
+/* ===== the top bar, once =====
+   The navbar is shipped once per page — thirteen copies in the markup — and
+   for as long as the site has existed every page also carried its own copy
+   of the seven rules that style it: #page-feed .navbar, #page-feed .nav-left,
+   .nav-right, .icon-btn, .badge, .logo, .search, and the same seven again
+   under #page-rfq-offers, #page-messages, and ten more. Ninety-one rules that
+   were meant to be identical and, being separate, were not: the icon button
+   was 26px on eight pages, 22 on one, 20 on two; the search icon inside it
+   drew at 30 or 20 depending on which page's font-size it inherited; the
+   avatar chip was a different width on two pages. Every top-bar bug this
+   week was one of those copies having drifted, and each was patched with an
+   !important that outranked all thirteen at once — a fix for the symptom.
+
+   This is the fix for the cause. One rule per part, keyed on the class the
+   markup already carries, and the page-scoped copies are gone. What used to
+   need !important to beat a page's own rule now has no page rule to beat, so
+   the mobile block above that raises the buttons to 40px keeps its
+   !important for one reason only: it still has to beat the desktop value
+   below, which sits later in the cascade. */
+.navbar{
+  background:#fff; border-bottom:1px solid var(--line);
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top:12px; padding-bottom:12px;
+  position:sticky; top:0; z-index:50;
+}
+.navbar .nav-left{ display:flex; align-items:center; gap:28px; flex:1; }
+.navbar .nav-right{ display:flex; align-items:center; gap:20px; }
+.navbar .logo{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:22px; letter-spacing:.2px; }
+.navbar .search{
+  display:flex; align-items:center; gap:8px;
+  background:var(--bg); border:1px solid var(--line); border-radius:999px;
+  padding:9px 16px; width:400px; color:var(--ink-soft); font-size:15px;
+}
+.navbar .icon-btn{
+  position:relative; width:26px; height:26px; color:var(--ink-soft); cursor:pointer;
+  font-size:24px; display:flex; align-items:center; justify-content:center;
+}
+.navbar .badge{
+  position:absolute; top:-7px; right:-8px;
+  background:var(--red); color:#fff; font-size:12px; font-weight:600;
+  border-radius:999px; padding:1px 5px;
+}
+/* .logo outside a navbar — the auth page and the two documents */
 .logo{ display:flex; align-items:center; gap:7px; }
 .av-menu-ov{ display:none; position:fixed; inset:0; z-index:1100; }
 .av-menu-ov.open{ display:block; }
@@ -11566,17 +10783,6 @@ html, body{
 <div id="page-my-requests" class="app-page">
   <style>
     #page-my-requests .layout{ display:grid; grid-template-columns:230px minmax(0,1fr); gap:20px; max-width:1180px; margin:0 auto; padding:20px 32px; align-items:start; }
-    /* 12, like every other page — at 13 this navbar was a pixel taller and the
-       rail beneath it started a pixel lower than everywhere else */
-    #page-my-requests .navbar{ display:flex; align-items:center; justify-content:space-between; padding-top:12px; padding-bottom:12px; background:#fff; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:50; }
-    #page-my-requests .nav-left{ display:flex; align-items:center; gap:22px; flex:1; }
-    #page-my-requests .nav-right{ display:flex; align-items:center; gap:18px; }
-    #page-my-requests .logo{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:22px; color:var(--ink); text-decoration:none; }
-    #page-my-requests .logo .mark{ width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,var(--blue-600),var(--blue-900)); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:600; }
-    #page-my-requests .search{ display:flex; align-items:center; gap:8px; background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:9px 16px; width:400px; color:var(--ink-soft); font-size:15px; }
-    #page-my-requests .icon-btn{ position:relative; width:26px; height:26px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--ink-soft); }
-    #page-my-requests .badge{ position:absolute; top:-7px; right:-7px; background:var(--red); color:#fff; font-size:12px; font-weight:600; border-radius:999px; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:1px 5px; border:1.5px solid #fff; }
-    #page-my-requests .avatar-chip{ display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--ink-soft); font-size:15px; }
     #page-my-requests .avatar{ width:32px; height:32px; border-radius:50%; background:var(--blue-600); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; }
     #page-my-requests .mr-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
     #page-my-requests h1{ font-size:26px; margin:0 0 5px; }
