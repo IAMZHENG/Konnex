@@ -82,11 +82,11 @@
      to the feed, and you never reach the set-a-new-password form. */
   window.kxRecoveryInUrl = (window.location.hash || '').indexOf('type=recovery') >= 0;
 
-  /* The six categories, in the order database/schema.sql inserts them. One
-     list, read by the composer's หมวดงาน select and the feed's หมวด chip, so
-     the two cannot disagree — and so a post made here lands on an id the
-     posts.category_id foreign key accepts. 'other' is last on purpose: it is
-     the answer for a job that fits none of the others, not the default. */
+  /* The six categories, in the order database/schema.sql inserts them — the
+     ids the posts.category_id foreign key accepts. The composer does not ask
+     for one (the owner decided against a หมวดงาน field) and the feed has no
+     หมวด chip; every post is filed under 'other'. This list stays for the
+     label a card shows and for ค้นหาขั้นสูง, which still filters on it. */
   window.KX_CATS = [
     ['mfg',    'งานผลิต & เครื่องจักร'],
     ['const',  'ก่อสร้าง & รับเหมา'],
@@ -7366,11 +7366,6 @@ html, body{
             <div class="loc-list" id="locList"></div>
           </div>
         </div>
-        <!-- หมวด. Buyers and sellers think in categories — CNC, ก่อสร้าง, ขนส่ง —
-             and the only way to filter by one was inside ค้นหาขั้นสูง. Same
-             dropdown the sort chip uses; the menu is filled from KX_CATS on
-             load so it cannot drift from what the composer offers. -->
-        <div class="fdd" id="fddCat"><button class="select-chip" id="fddCatBtn" onclick="toggleFdd('fddCat')">หมวด ⌄</button><div class="fdd-menu" id="fddCatMenu"><div class="fdd-opt active" onclick="setFeedCat('all',this,'หมวด')">ทุกหมวด</div></div></div>
         <div class="fdd" id="fddSort"><button class="select-chip" id="fddSortBtn" onclick="toggleFdd('fddSort')">ล่าสุด ⌄</button><div class="fdd-menu"><div class="fdd-opt active" onclick="setFeedSort('recent',this,'ล่าสุด')">ล่าสุด</div><div class="fdd-opt" onclick="setFeedSort('oldest',this,'เก่าสุด')">เก่าสุด</div><div class="fdd-opt" onclick="setFeedSort('offers',this,'ข้อเสนอมากสุด')">ข้อเสนอมากสุด</div><div class="fdd-opt" onclick="setFeedSort('match',this,'แนะนำสำหรับคุณ')">แนะนำสำหรับคุณ</div></div></div>
         <div class="select-chip adv-toggle" onclick="toggleAdvSearch()" id="advToggleChip">⚙️ ค้นหาขั้นสูง</div>
       </div>
@@ -7408,7 +7403,7 @@ html, body{
            .btn-create out of it, which this copy did not have. It could never
            appear on screen and never will, so it is gone rather than renamed. -->
 
-      <div class="load-more" id="feedLoadMore">โหลดเพิ่มเติม ⌄</div>
+      <div class="load-more" id="feedLoadMore" role="button" tabindex="0" onclick="kxLoadFeed(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();kxLoadFeed(true);}">โหลดเพิ่มเติม ⌄</div>
     </div>
 
     <!-- RIGHT SIDEBAR -->
@@ -7485,7 +7480,7 @@ html, body{
       if(show) visibleCount++;
     });
     document.getElementById('feedEmpty').style.display = visibleCount === 0 ? 'block' : 'none';
-    document.getElementById('feedLoadMore').style.display = visibleCount === 0 ? 'none' : 'block';
+    document.getElementById('feedLoadMore').style.display = (visibleCount && window.kxFeedHasMore()) ? 'block' : 'none';
   }
   // ===== filter dropdown chips (type / category / sort) =====
   function toggleFdd(id){
@@ -7511,50 +7506,16 @@ html, body{
     });
     applyFeedFilters();
   }
-  function setFeedCat(v, el, label){
-    currentFeedCatFilter = v;
-    fddPick(el.parentNode, el);
-    document.getElementById('fddCatBtn').textContent = label + ' \u2304';
-    applyFeedFilters();
-  }
   /* Ordering lives in one place \u2014 kxRankFeed, which reads currentFeedSort. This
      used to sort here off a data-origIdx stamped on first use, which meant
      "\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14" restored whatever order the cards were in the first time someone
      touched the menu rather than the order they were posted in. */
-  function setFeedCat(id, el, label){
-    currentFeedCatFilter = id;
-    fddPick(el.parentNode, el);
-    document.getElementById('fddCatBtn').textContent = label + ' ⌄';
-    applyFeedFilters();
-  }
-  (function(){
-    var menu = document.getElementById('fddCatMenu');
-    if(!menu || menu.dataset.built) return;
-    menu.dataset.built = '1';
-    KX_CATS.forEach(function(c){
-      var d = document.createElement('div');
-      d.className = 'fdd-opt'; d.textContent = c[1];
-      d.onclick = function(){ setFeedCat(c[0], d, c[1]); };
-      menu.appendChild(d);
-    });
-  })();
   function setFeedSort(mode, el, label){
     currentFeedSort = mode;
     fddPick(el.parentNode, el);
     document.getElementById('fddSortBtn').textContent = label + ' \u2304';
     if(window.kxRankFeed) window.kxRankFeed();
   }
-  var FEED_CATS = [['mfg','งานผลิต & เครื่องจักร'],['const','ก่อสร้าง & รับเหมา'],['logi','ขนส่ง & โลจิสติกส์'],['it','ไอที & ซอฟต์แวร์'],['design','ออกแบบ & สื่อสาร'],['other','บริการอื่นๆ']];
-  function buildFeedCatMenu(){
-    var menu = document.getElementById('fddCatMenu');
-    if(!menu || menu.dataset.built) return;
-    menu.dataset.built = '1';
-    var html = '<div class="fdd-opt active" onclick="setFeedCat(\'all\',this,\'หมวดหมู่\')">ทุกหมวดหมู่</div>';
-    FEED_CATS.forEach(function(c){ html += '<div class="fdd-opt" onclick="setFeedCat(\''+c[0]+'\',this,\''+c[1]+'\')">'+c[1]+'</div>'; });
-    menu.innerHTML = html;
-  }
-  document.addEventListener('DOMContentLoaded', buildFeedCatMenu);
-  setTimeout(buildFeedCatMenu, 300);
   document.querySelectorAll('.filter-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
       document.querySelectorAll('.filter-tab').forEach(t=>t.classList.remove('active'));
@@ -9439,17 +9400,6 @@ html, body{
 
         <!-- "เลือกประเภทการเสนอราคา" (ปิดราคา / เปิดราคา) stood here. Every RFQ is
              sealed now, so there was nothing left to choose: see renderRfqDetail. -->
-
-        <!-- หมวดงาน. Every post was saved as 'other' — the composer never asked —
-             so the หมวด filter on the feed had one bucket, and แนะนำสำหรับคุณ,
-             which weighs a job's category against the seller's services, had
-             nothing to weigh. Asked here, beside จังหวัด, with no default: a
-             pre-selected หมวด is the one nobody changes. -->
-        <div id="cpCatCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
-          <label for="cpCat" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">หมวดงาน <span class="au-req">*</span></label>
-          <select id="cpCat" style="width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);background:#fff;"></select>
-          <div style="font-size:13px;color:#565b6e;margin-top:6px;">ช่วยให้ผู้ขายในสายงานนี้เห็นประกาศของคุณก่อน</div>
-        </div>
 
         <div id="cpProvCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
           <label for="cpProv" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">จังหวัดของงานนี้</label>
@@ -12179,7 +12129,7 @@ html, body{
     });
     document.getElementById('feedEmpty').style.display = shown === 0 ? 'block' : 'none';
     var more = document.getElementById('feedLoadMore');
-    if(more) more.style.display = shown === 0 ? 'none' : 'block';
+    if(more) more.style.display = (shown && window.kxFeedHasMore()) ? 'block' : 'none';
   }
   /* Was a confirmation bar and nothing else — neither a saved search nor an
      alert existed afterwards. It writes to saved_searches now
@@ -18604,7 +18554,7 @@ body.kx-guest #load-more-offers { display: none !important; }
       var empty = document.getElementById('feedEmpty');
       var more = document.getElementById('feedLoadMore');
       if(empty) empty.style.display = shown === 0 ? 'block' : 'none';
-      if(more) more.style.display = shown === 0 ? 'none' : 'block';
+      if(more) more.style.display = (shown && window.kxFeedHasMore()) ? 'block' : 'none';
     };
     window.applyFeedFilters.__kxWrapped = true;
   }
@@ -19515,27 +19465,6 @@ body.kx-guest #load-more-offers { display: none !important; }
      even when the profile does have one: a company in กรุงเทพ can need the
      work done in ระยอง. So the composer asks, and only uses the profile's
      province as the pre-filled answer. */
-  /* The หมวดงาน select. Filled once from KX_CATS with a blank first option, so
-     the form opens on "เลือกหมวด" and publishing without choosing is refused
-     rather than quietly filed under อื่นๆ. On edit the post's own id is
-     selected; 'other' from before this field existed is shown as what it is. */
-  function cpFillCats(selected){
-    var sel = document.getElementById('cpCat');
-    if(!sel) return;
-    if(!sel.options.length){
-      sel.innerHTML = '<option value="">เลือกหมวดงาน</option>' + KX_CATS.map(function(c){
-        return '<option value="' + c[0] + '">' + c[1] + '</option>';
-      }).join('');
-    }
-    sel.value = selected || '';
-    if(sel.selectedIndex < 0) sel.value = '';
-    sel.classList.remove('bad');
-  }
-  // options in place from the start, not only after the first resetForm —
-  // the select is part of the page, and a page should not have an empty control
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ cpFillCats(null); });
-  else cpFillCats(null);
-
   function cpFillProvinces(selected){
     var sel = document.getElementById('cpProv');
     if(!sel) return;
@@ -19562,7 +19491,6 @@ body.kx-guest #load-more-offers { display: none !important; }
     IMGS.forEach(function(im){ if(im.file) URL.revokeObjectURL(im.url); });
     IMGS = []; DOCS = [];
     cpFillProvinces(null);
-    cpFillCats(null);
     var t = document.getElementById('cpTitle'); if(t) t.value = '';
     var d = document.querySelector('#page-create-post textarea'); if(d) d.value = '';
     var p = document.getElementById('cpPrice'); if(p){ p.value = ''; p.classList.remove('bad'); }
@@ -19612,7 +19540,6 @@ body.kx-guest #load-more-offers { display: none !important; }
     var dlEl = document.getElementById('cpDeadline');
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
     cpFillProvinces(post.province || 'ไม่ระบุ');
-    cpFillCats(post.category_id || null);
 
 
     (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); })
@@ -19849,17 +19776,6 @@ body.kx-guest #load-more-offers { display: none !important; }
       document.getElementById('cpTitle').focus();
       return;
     }
-    /* Refused rather than defaulted. Every post before this field existed was
-       filed under อื่นๆ because nothing asked; letting an unanswered select
-       fall through to 'other' would keep that going, one post at a time. */
-    var catSel = document.getElementById('cpCat');
-    if(catSel && !catSel.value){
-      catSel.classList.add('bad');
-      catSel.scrollIntoView({ block: 'center' });
-      catSel.focus();
-      kxToast('เลือกหมวดงานก่อนโพสต์');
-      return;
-    }
     var descEl = document.querySelector('#page-create-post textarea');
     var desc = ((descEl && descEl.value) || '').trim();
     var isRfq = !!document.querySelector('#cpRfqCheck') &&
@@ -19937,10 +19853,7 @@ body.kx-guest #load-more-offers { display: none !important; }
         kind: isRfq ? 'rfq' : 'offer',
         title: title,
         description: desc || 'ไม่มีรายละเอียดเพิ่มเติม',
-        category_id: (function(){
-          var sel = document.getElementById('cpCat');
-          return (sel && sel.value) || 'other';
-        })(),
+        category_id: 'other',   // the composer does not ask; see KX_CATS
         province: (function(){
           var sel = document.getElementById('cpProv');
           var v = sel && sel.value;
@@ -23772,11 +23685,31 @@ body.kx-guest #load-more-offers { display: none !important; }
     return true;
   };
 
-  window.kxLoadFeed = async function(){
+  /* How many rows a page of the feed is. Small enough that the first paint is
+     quick on a phone, large enough that โหลดเพิ่มเติม is not pressed on every
+     screenful. */
+  var FEED_PAGE = 20;
+  var feedOffset = 0;              // rows already on the page, for the next range
+  var feedDone = false;            // the last page came back short
+  /* The filter chips re-decide whether โหลดเพิ่มเติม shows every time they
+     run, by visible count alone; without this they would bring the button
+     back after the last page had already come and gone. */
+  window.kxFeedHasMore = function(){ return !feedDone; };
+
+  window.kxLoadFeed = async function(append){
     var list = document.querySelector('#page-feed .feed-list');
     if(!list) return;
     if(feedLoading) return;             // a second call while one is in flight
+    /* โหลดเพิ่มเติม used to be a div with no handler at all — a label that
+       looked like a button and did nothing, under a feed that fetched its
+       first 60 rows and stopped. It pages now: the next FEED_PAGE rows are
+       appended below what is there, and the button goes when a page comes
+       back short. A fresh load (no `append`) starts from the top again. */
+    if(append && feedDone) return;
+    if(!append){ feedOffset = 0; feedDone = false; }
     feedLoading = true;
+    var more = document.getElementById('feedLoadMore');
+    if(append && more){ more.textContent = 'กำลังโหลด…'; more.classList.add('busy'); }
     // reloading replaces the whole list, so hold the reading position
     var keepScroll = (document.querySelector('.app-page.active') || {}).id === 'page-feed'
       ? (window.pageYOffset || document.documentElement.scrollTop || 0) : null;
@@ -23787,7 +23720,7 @@ body.kx-guest #load-more-offers { display: none !important; }
        one thing this page must not say to someone deciding whether to stay.
        Only on a cold list: a refresh keeps the cards it has until the new ones
        arrive, so the page does not flash empty on every reload. */
-    if(!list.children.length){
+    if(!append && !list.children.length){
       list.innerHTML = new Array(4).join(
         '<div class="post-card kx-skel" aria-hidden="true">' +
           '<div class="kx-skel-head"><span class="kx-skel-av"></span><span class="kx-skel-line w40"></span></div>' +
@@ -23799,15 +23732,16 @@ body.kx-guest #load-more-offers { display: none !important; }
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
     var feedBase = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
+    var from = feedOffset, to = feedOffset + FEED_PAGE - 1;
     var res = await window.kxRfqOnly(sb.from('posts')
       .select(feedBase + (feedQaMissing ? '' : ', post_questions(id)'))
       .eq('status', 'open'))
       .order('created_at', { ascending:false })
-      .limit(60);
+      .range(from, to);
     if(res.error && /post_questions/i.test(res.error.message || '')){
       feedQaMissing = true;
       res = await window.kxRfqOnly(sb.from('posts').select(feedBase)
-        .eq('status', 'open')).order('created_at', { ascending:false }).limit(60);
+        .eq('status', 'open')).order('created_at', { ascending:false }).range(from, to);
     }
     // clear the in-flight flag on the way out, or a single failed load would
     // stop the feed from ever refreshing again
@@ -23819,13 +23753,28 @@ body.kx-guest #load-more-offers { display: none !important; }
         list.innerHTML = '<div class="kx-empty" style="padding:26px"><div class="kx-empty-sub">' +
           'โหลดประกาศไม่สำเร็จ — <a href="#" onclick="kxLoadFeed();return false;" style="color:var(--blue-700);font-weight:600">ลองอีกครั้ง</a></div></div>';
       }
+      if(more){ more.textContent = 'โหลดเพิ่มเติม \u2304'; more.classList.remove('busy'); }
       feedLoading = false; return;
     }
-    list.innerHTML = res.data.map(function(p){ return postCardHTML(p); }).join('');
-    if(window.kxApplyIcons) window.kxApplyIcons(list);
-    // reflect what is already saved on the cards that were just built
-    if(window.kxApplySavedMarks) window.kxApplySavedMarks(list);
-    var shown = res.data.length;
+    var html = res.data.map(function(p){ return postCardHTML(p); }).join('');
+    if(append){
+      // append below, and only paint what was just added — repainting the
+      // whole list would reset the carousels on cards already being read
+      var frag = document.createElement('div');
+      frag.innerHTML = html;
+      var added = Array.prototype.slice.call(frag.children);
+      added.forEach(function(c){ list.appendChild(c); });
+      if(window.kxApplyIcons) added.forEach(function(c){ window.kxApplyIcons(c); });
+      if(window.kxApplySavedMarks) added.forEach(function(c){ window.kxApplySavedMarks(c); });
+    }else{
+      list.innerHTML = html;
+      if(window.kxApplyIcons) window.kxApplyIcons(list);
+      // reflect what is already saved on the cards that were just built
+      if(window.kxApplySavedMarks) window.kxApplySavedMarks(list);
+    }
+    feedOffset += res.data.length;
+    feedDone = res.data.length < FEED_PAGE;
+    var shown = list.querySelectorAll('.post-card').length;
     var empty = document.getElementById('feedEmpty');
     if(empty){
       empty.style.display = shown ? 'none' : 'block';
@@ -23850,8 +23799,13 @@ body.kx-guest #load-more-offers { display: none !important; }
         if(btn){ btn.textContent = 'ล้างตัวกรองทั้งหมด'; btn.setAttribute('onclick', 'clearAdvSearch();applyAdvSearch()'); }
       }
     }
-    var more = document.getElementById('feedLoadMore');
-    if(more) more.style.display = shown ? 'block' : 'none';
+    if(more){
+      more.textContent = 'โหลดเพิ่มเติม \u2304';
+      more.classList.remove('busy');
+      // gone when the last page came back short: a button that says "more"
+      // over a list that has no more is a small lie told on every scroll
+      more.style.display = (shown && !feedDone) ? 'block' : 'none';
+    }
     loaded = true;
     feedLoadedAt = Date.now();
     feedLoading = false;

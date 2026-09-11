@@ -1456,56 +1456,126 @@
     });
   });
 
-  /* Every post was saved as 'other': the composer never asked for a category,
-     so the feed's category filter had one bucket and แนะนำสำหรับคุณ — which
-     weighs a job's category against the seller's services — had nothing to
-     weigh. Now the composer asks and the feed has a chip. */
-  describe('หมวดงาน — ถามตอนโพสต์ กรองบนฟีด', function () {
-    it('lists the same six categories in the composer and on the feed', function (w) {
-      var ids = w.KX_CATS.map(function (c) { return c[0]; });
-      expect(ids).toEqual(['mfg', 'const', 'logi', 'it', 'design', 'other'],
-        'the ids the posts.category_id foreign key accepts');
+  /* หมวดงาน was asked in the composer and offered as a chip on the feed for
+     one release; the owner decided against it ("ผมเข้าใจผิด ยังไม่ต้องการ").
+     Every post files under 'other' as before, and — the part that matters —
+     nothing refuses a post for a field that is no longer on the form. */
+  describe('ไม่มีช่องหมวดงาน — ทั้งฟอร์มโพสต์และฟีด', function () {
+    it('asks for no category when posting', function (w) {
       w.navigateTo('page-create-post', true);
-      var sel = w.document.getElementById('cpCat');
-      expect(!!sel).toBe(true);
-      var opts = Array.prototype.map.call(sel.options, function (o) { return o.value; });
-      expect(opts).toEqual([''].concat(ids), 'a blank first option, then the six');
-      var chip = Array.prototype.map.call(w.document.querySelectorAll('#fddCatMenu .fdd-opt'),
-        function (o) { return o.textContent; });
-      expect(chip.length).toBe(7, 'ทุกหมวด plus the six');
-      w.KX_CATS.forEach(function (c) { expect(chip).toContain(c[1]); });
+      expect(w.document.getElementById('cpCat')).toBeFalsy('the select');
+      expect(w.document.getElementById('cpCatCard')).toBeFalsy('and its card');
+      expect(w.document.body.innerHTML).notToContain('เลือกหมวดงานก่อนโพสต์',
+        'a guard that refuses posts over a field nobody can fill');
     });
-
-    it('opens on no category, so nobody is filed under อื่นๆ by not looking', function (w) {
-      w.navigateTo('page-create-post', true);
-      expect(w.document.getElementById('cpCat').value).toBe('');
-    });
-
-    it('filters the feed by the chip', function (w) {
-      var had = w.kxSession; w.kxSession = w.kxSession || { user: { id: ME } };
+    it('has no หมวด chip on the feed', function (w) {
       w.navigateTo('page-feed', true);
-      var list = w.document.querySelector('#page-feed .feed-list');
-      var mk = function (id, cat) {
-        var d = w.document.createElement('div');
-        d.innerHTML = w.kxPostCardHTML({ id: id, kind: 'rfq', status: 'open', title: 't', description: 'x',
-          province: 'เชียงใหม่', category_id: cat, created_at: '2026-09-01T00:00:00Z', owner_id: OTHER,
-          quote_count: 0, post_images: [], profiles: { company_name: 'p' } });
-        return d.firstElementChild;
-      };
-      var a = mk('aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'mfg');
-      var b = mk('bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', 'logi');
-      list.prepend(b); list.prepend(a);
-      try {
-        var opt = Array.prototype.filter.call(w.document.querySelectorAll('#fddCatMenu .fdd-opt'),
-          function (o) { return o.textContent.indexOf('งานผลิต') === 0; })[0];
-        w.setFeedCat('mfg', opt, 'งานผลิต & เครื่องจักร');
-        expect(a.style.display !== 'none').toBe(true, 'mfg stays');
-        expect(b.style.display === 'none').toBe(true, 'logi goes');
-        expect(w.document.getElementById('fddCatBtn').textContent).toContain('งานผลิต');
-        var all = w.document.querySelector('#fddCatMenu .fdd-opt');
-        w.setFeedCat('all', all, 'หมวด');
-        expect(b.style.display !== 'none').toBe(true, 'and ทุกหมวด brings it back');
-      } finally { a.remove(); b.remove(); w.kxSession = had; }
+      expect(w.document.getElementById('fddCat')).toBeFalsy();
+      expect(w.document.getElementById('fddCatMenu')).toBeFalsy();
+      expect(typeof w.setFeedCat).toBe('undefined');
+    });
+    it('still knows the six ids the foreign key accepts, for the label on a card', function (w) {
+      expect(w.KX_CATS.map(function (c) { return c[0]; }))
+        .toEqual(['mfg', 'const', 'logi', 'it', 'design', 'other']);
+      expect(w.kxCatLabel('logi')).toBe('ขนส่ง & โลจิสติกส์');
+    });
+  });
+
+  /* โหลดเพิ่มเติม was a div with no handler under a feed that fetched 60 rows
+     and stopped — a label shaped like a button. It pages now. */
+  describe('โหลดเพิ่มเติม — แบ่งหน้าจริง', function () {
+    var PAGE = 20;
+    function rows(n, offset) {
+      var out = [];
+      for (var i = 0; i < n; i++) {
+        var k = (offset + i).toString(16);
+        while (k.length < 12) k = '0' + k;
+        out.push({ id: 'aaaaaaaa-1111-4111-8111-' + k, kind: 'rfq', status: 'open', title: 'งาน ' + (offset + i),
+          description: 'x', province: 'เชียงใหม่', category_id: 'other', created_at: '2026-09-01T00:00:00Z',
+          owner_id: OTHER, quote_count: 0, post_images: [], quotes: [], profiles: { company_name: 'p' } });
+      }
+      return out;
+    }
+    /* Answers each posts read from the next page of `pages`, so a test can say
+       what the first and second requests return. */
+    function paged(w, pages) {
+      var n = 0;
+      return plan(w, { posts: { _: function () { var p = pages[Math.min(n++, pages.length - 1)]; return { data: p, error: null }; } } });
+    }
+    function postsCalls(sb) { return sb._calls.filter(function (c) { return c.table === 'posts'; }); }
+    function cards(w) { return w.document.querySelectorAll('#page-feed .feed-list .post-card').length; }
+    function moreShown(w) { return w.document.getElementById('feedLoadMore').style.display !== 'none'; }
+
+    it('asks for the first page as a range, not a limit', async function (w) {
+      var sb = paged(w, [rows(PAGE, 0)]);
+      signIn(w);
+      await w.kxLoadFeed();
+      restore(w);
+      var f = postsCalls(sb)[0].filters.join(' ');
+      expect(f).toContain('range(0,' + (PAGE - 1) + ')');
+      expect(f).notToContain('limit(');
+      expect(cards(w)).toBe(PAGE);
+      expect(moreShown(w)).toBe(true, 'a full page means there may be more');
+    });
+
+    it('is wired to the button, keyboard included', function (w) {
+      var b = w.document.getElementById('feedLoadMore');
+      expect(b.getAttribute('onclick')).toContain('kxLoadFeed(true)');
+      expect(b.getAttribute('role')).toBe('button');
+      expect(b.getAttribute('tabindex')).toBe('0');
+      expect(b.getAttribute('onkeydown')).toContain('kxLoadFeed(true)');
+    });
+
+    it('appends the next page below what is there and asks for the next range', async function (w) {
+      var sb = paged(w, [rows(PAGE, 0), rows(PAGE, PAGE)]);
+      signIn(w);
+      await w.kxLoadFeed();
+      var firstTop = w.document.querySelector('#page-feed .feed-list .post-card');
+      await w.kxLoadFeed(true);
+      restore(w);
+      var calls = postsCalls(sb);
+      expect(calls.length).toBe(2);
+      expect(calls[1].filters.join(' ')).toContain('range(' + PAGE + ',' + (2 * PAGE - 1) + ')');
+      expect(cards(w)).toBe(2 * PAGE);
+      expect(w.document.querySelector('#page-feed .feed-list .post-card') === firstTop).toBe(true,
+        'the cards already being read are not repainted');
+      expect(w.document.getElementById('feedLoadMore').textContent).toContain('โหลดเพิ่มเติม',
+        'label restored after the busy state');
+    });
+
+    it('hides the button when a page comes back short, and asks for nothing after', async function (w) {
+      var sb = paged(w, [rows(PAGE, 0), rows(5, PAGE)]);
+      signIn(w);
+      await w.kxLoadFeed();
+      await w.kxLoadFeed(true);
+      expect(cards(w)).toBe(PAGE + 5);
+      expect(moreShown(w)).toBe(false, 'a short page is the last page');
+      expect(w.kxFeedHasMore()).toBe(false);
+      await w.kxLoadFeed(true);
+      restore(w);
+      expect(postsCalls(sb).length).toBe(2, 'pressing again after the end sends nothing');
+    });
+
+    it('the filter chips do not bring the button back after the last page', async function (w) {
+      paged(w, [rows(3, 0)]);
+      signIn(w);
+      await w.kxLoadFeed();
+      restore(w);
+      expect(moreShown(w)).toBe(false);
+      w.applyFeedFilters();
+      expect(moreShown(w)).toBe(false, 'applyFeedFilters re-decides visibility by count alone unless told');
+    });
+
+    it('a fresh load starts from the top again', async function (w) {
+      var sb = paged(w, [rows(PAGE, 0), rows(PAGE, PAGE), rows(PAGE, 0)]);
+      signIn(w);
+      await w.kxLoadFeed();
+      await w.kxLoadFeed(true);
+      await w.kxLoadFeed();
+      restore(w);
+      var calls = postsCalls(sb);
+      expect(calls[2].filters.join(' ')).toContain('range(0,' + (PAGE - 1) + ')');
+      expect(cards(w)).toBe(PAGE, 'replaced, not appended');
     });
   });
 
@@ -3731,7 +3801,7 @@
       await w.navigateTo('page-feed', true);
       await new Promise(function (r) { setTimeout(r, 60); });
       clockOff(w); restore(w);
-      expect(feedQueries(sb)).toBe(n, '60 rows and your scroll position are not worth a tab switch');
+      expect(feedQueries(sb)).toBe(n, 'a page of rows and your scroll position are not worth a tab switch');
     });
     it('re-queries once the data on screen has gone stale again', async function (w) {
       var sb = await loadStaleFeed(w);

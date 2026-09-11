@@ -98,7 +98,7 @@
 
     function chain(table, op, args) {
       var node = { _table: table, _op: op, _filters: [] };
-      ['select', 'eq', 'neq', 'or', 'not', 'in', 'order', 'limit', 'gte', 'lte', 'is']
+      ['select', 'eq', 'neq', 'or', 'not', 'in', 'order', 'limit', 'range', 'gte', 'lte', 'is', 'lt', 'gt']
         .forEach(function (k) {
           node[k] = function () {
             node._filters.push(k + '(' + Array.prototype.slice.call(arguments).join(',') + ')');
