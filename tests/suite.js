@@ -1390,6 +1390,167 @@
 
   /* Two whole-file checks. Both catch the same kind of fault: something the
      source says plainly that the browser then quietly does not do. */
+  /* The feed was blank until the first response landed — a blank column
+     under the filter chips for as long as the network took, and a blank feed
+     reads as "nothing here" to exactly the person deciding whether to stay. */
+  describe('ฟีดมีโครงร่างระหว่างโหลดครั้งแรก', function () {
+    function held(w) {
+      var release;
+      var gate = new Promise(function (r) { release = r; });
+      var sb = KX.makeSb({ posts: { _: function () { return { data: [], error: null }; } } });
+      // hold every read until released, so the in-flight state can be looked at
+      var from = sb.from;
+      sb.from = function (t) {
+        var node = from.call(sb, t);
+        var then = node.then;
+        node.then = function (res, rej) { return gate.then(function () { return then.call(node, res, rej); }); };
+        return node;
+      };
+      return { sb: sb, release: release };
+    }
+
+    it('draws placeholder rows while the first load is in flight', async function (w) {
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var keep = list.innerHTML; list.innerHTML = '';
+      var h = held(w);
+      w.sb = h.sb; signIn(w);
+      var p = w.kxLoadFeed();
+      await new Promise(function (r) { setTimeout(r, 30); });
+      var during = list.querySelectorAll('.kx-skel').length;
+      var shimmer = during ? w.getComputedStyle(list.querySelector('.kx-skel-line')).animationName : null;
+      h.release(); await p;
+      var after = list.querySelectorAll('.kx-skel').length;
+      restore(w); list.innerHTML = keep;
+      expect(during >= 3).toBe(true, 'placeholders on screen while waiting (' + during + ')');
+      expect(shimmer !== 'none' && !!shimmer).toBe(true, 'and they move, so they read as coming');
+      expect(after).toBe(0, 'and are gone once the rows arrive');
+    });
+
+    /* A reload keeps the cards it has until the new ones land — otherwise
+       every refresh flashes the page empty. */
+    it('does not replace real cards with placeholders on a refresh', async function (w) {
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var keep = list.innerHTML;
+      list.innerHTML = '<div class="post-card">x</div>';
+      var h = held(w);
+      w.sb = h.sb; signIn(w);
+      var p = w.kxLoadFeed();
+      await new Promise(function (r) { setTimeout(r, 30); });
+      var during = list.querySelectorAll('.kx-skel').length;
+      h.release(); await p;
+      restore(w); list.innerHTML = keep;
+      expect(during).toBe(0);
+    });
+
+    /* A skeleton that never resolves promises rows that are not coming. */
+    it('turns into a retry line when the load fails', async function (w) {
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var keep = list.innerHTML; list.innerHTML = '';
+      plan(w, { posts: { _: { data: null, error: { code: 'PGRST000', message: 'down' } } } });
+      signIn(w);
+      await w.kxLoadFeed();
+      var text = list.textContent, skel = list.querySelectorAll('.kx-skel').length;
+      restore(w); list.innerHTML = keep;
+      expect(skel).toBe(0);
+      expect(text).toContain('ลองอีกครั้ง');
+    });
+  });
+
+  /* Every post was saved as 'other': the composer never asked for a category,
+     so the feed's category filter had one bucket and แนะนำสำหรับคุณ — which
+     weighs a job's category against the seller's services — had nothing to
+     weigh. Now the composer asks and the feed has a chip. */
+  describe('หมวดงาน — ถามตอนโพสต์ กรองบนฟีด', function () {
+    it('lists the same six categories in the composer and on the feed', function (w) {
+      var ids = w.KX_CATS.map(function (c) { return c[0]; });
+      expect(ids).toEqual(['mfg', 'const', 'logi', 'it', 'design', 'other'],
+        'the ids the posts.category_id foreign key accepts');
+      w.navigateTo('page-create-post', true);
+      var sel = w.document.getElementById('cpCat');
+      expect(!!sel).toBe(true);
+      var opts = Array.prototype.map.call(sel.options, function (o) { return o.value; });
+      expect(opts).toEqual([''].concat(ids), 'a blank first option, then the six');
+      var chip = Array.prototype.map.call(w.document.querySelectorAll('#fddCatMenu .fdd-opt'),
+        function (o) { return o.textContent; });
+      expect(chip.length).toBe(7, 'ทุกหมวด plus the six');
+      w.KX_CATS.forEach(function (c) { expect(chip).toContain(c[1]); });
+    });
+
+    it('opens on no category, so nobody is filed under อื่นๆ by not looking', function (w) {
+      w.navigateTo('page-create-post', true);
+      expect(w.document.getElementById('cpCat').value).toBe('');
+    });
+
+    it('filters the feed by the chip', function (w) {
+      var had = w.kxSession; w.kxSession = w.kxSession || { user: { id: ME } };
+      w.navigateTo('page-feed', true);
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var mk = function (id, cat) {
+        var d = w.document.createElement('div');
+        d.innerHTML = w.kxPostCardHTML({ id: id, kind: 'rfq', status: 'open', title: 't', description: 'x',
+          province: 'เชียงใหม่', category_id: cat, created_at: '2026-09-01T00:00:00Z', owner_id: OTHER,
+          quote_count: 0, post_images: [], profiles: { company_name: 'p' } });
+        return d.firstElementChild;
+      };
+      var a = mk('aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'mfg');
+      var b = mk('bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', 'logi');
+      list.prepend(b); list.prepend(a);
+      try {
+        var opt = Array.prototype.filter.call(w.document.querySelectorAll('#fddCatMenu .fdd-opt'),
+          function (o) { return o.textContent.indexOf('งานผลิต') === 0; })[0];
+        w.setFeedCat('mfg', opt, 'งานผลิต & เครื่องจักร');
+        expect(a.style.display !== 'none').toBe(true, 'mfg stays');
+        expect(b.style.display === 'none').toBe(true, 'logi goes');
+        expect(w.document.getElementById('fddCatBtn').textContent).toContain('งานผลิต');
+        var all = w.document.querySelector('#fddCatMenu .fdd-opt');
+        w.setFeedCat('all', all, 'หมวด');
+        expect(b.style.display !== 'none').toBe(true, 'and ทุกหมวด brings it back');
+      } finally { a.remove(); b.remove(); w.kxSession = had; }
+    });
+  });
+
+  /* A new account opens its profile on six sections that each say "ยังไม่มี",
+     and nothing says why any of them matter. One line does: the first field
+     still missing, and what filling it in buys. */
+  describe('แถบความครบของโปรไฟล์ตัวเอง', function () {
+    function paint(w, pr, mine, services) {
+      plan(w, { services: { _: { data: services || [], error: null, count: (services || []).length } } });
+      return w.kxRenderProfileNudge(pr, mine).then(function () {
+        restore(w);
+        var box = w.document.getElementById('pfNudge');
+        return { hidden: box.hidden, text: w.document.getElementById('pfNudgeText').textContent,
+                 btn: w.document.getElementById('pfNudgeBtn').textContent,
+                 fill: w.document.getElementById('pfNudgeFill').style.width };
+      });
+    }
+
+    it('names the first missing field and what it buys', async function (w) {
+      var r = await paint(w, { id: ME, contact_name: 'ก', province: '', skills: [] }, true);
+      expect(r.hidden).toBe(false);
+      expect(r.text).toContain('1/5');
+      expect(r.text).toContain('จังหวัด');
+      expect(r.text).toContain('ผู้ซื้อกรอง', 'the reason, not just the field');
+      expect(r.fill).toBe('20%');
+    });
+
+    it('sends บริการ to its own tab, not to แก้ไขโปรไฟล์', async function (w) {
+      var r = await paint(w, { id: ME, contact_name: 'ก', province: 'เชียงใหม่', skills: [] }, true);
+      expect(r.text).toContain('บริการ');
+      expect(r.btn).toBe('เพิ่มบริการ');
+    });
+
+    it('is not shown on anyone else’s profile', async function (w) {
+      var r = await paint(w, { id: OTHER, contact_name: '', province: '', skills: [] }, false);
+      expect(r.hidden).toBe(true);
+    });
+
+    it('goes away once the profile is complete', async function (w) {
+      var r = await paint(w, { id: ME, company_name: 'บจก.', province: 'เชียงใหม่', skills: ['CNC'], tagline: 'x' },
+                          true, [{ id: 's1' }]);
+      expect(r.hidden).toBe(true);
+    });
+  });
+
   /* The top bar is shipped once per page — twenty copies — and each page's own
      stylesheet touches it, so the same icon drew at 30px on the feed and 20px
      on the profile, and the avatar chip was 55px wide on two pages and 34 on

@@ -82,6 +82,24 @@
      to the feed, and you never reach the set-a-new-password form. */
   window.kxRecoveryInUrl = (window.location.hash || '').indexOf('type=recovery') >= 0;
 
+  /* The six categories, in the order database/schema.sql inserts them. One
+     list, read by the composer's หมวดงาน select and the feed's หมวด chip, so
+     the two cannot disagree — and so a post made here lands on an id the
+     posts.category_id foreign key accepts. 'other' is last on purpose: it is
+     the answer for a job that fits none of the others, not the default. */
+  window.KX_CATS = [
+    ['mfg',    'งานผลิต & เครื่องจักร'],
+    ['const',  'ก่อสร้าง & รับเหมา'],
+    ['logi',   'ขนส่ง & โลจิสติกส์'],
+    ['it',     'ไอที & ซอฟต์แวร์'],
+    ['design', 'ออกแบบ & สื่อสาร'],
+    ['other',  'บริการอื่นๆ']
+  ];
+  window.kxCatLabel = function(id){
+    for(var i = 0; i < KX_CATS.length; i++) if(KX_CATS[i][0] === id) return KX_CATS[i][1];
+    return 'บริการอื่นๆ';
+  };
+
   /* The picture a listing shows when it has none.
      Six places used the brand mark for this — the blue hexagonal Q, scaled to
      fill a thumbnail. On งานของฉัน it came out as a logo the size of the card's
@@ -7859,6 +7877,21 @@ html, body{
 .side-group-label{ font-size:12px; font-weight:600; color:var(--ink-faint); letter-spacing:.4px; padding:12px 12px 5px; }
 /* empty states */
 .kx-empty{ text-align:center; padding:56px 24px; background:var(--card,#fff); border:1px dashed var(--line,#e6e7f0); border-radius:16px; }
+/* The feed's placeholder rows while the first load is in flight — the shape
+   of a card, in grey, with a slow shimmer so it reads as "coming" and not as
+   a card that failed to draw. Reduced motion gets the grey without the sweep. */
+.kx-skel{ padding:16px; pointer-events:none; }
+.kx-skel-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.kx-skel-av{ width:40px; height:40px; border-radius:50%; flex:none; }
+.kx-skel-line{ display:block; height:14px; border-radius:7px; margin:8px 0; }
+.kx-skel-line.w40{ width:40%; margin:0; } .kx-skel-line.w60{ width:60%; } .kx-skel-line.w80{ width:80%; }
+.kx-skel-img{ height:180px; border-radius:12px; margin-top:12px; }
+.kx-skel-av, .kx-skel-line, .kx-skel-img{
+  background:linear-gradient(90deg, #eef1f6 25%, #f6f8fc 50%, #eef1f6 75%);
+  background-size:200% 100%; animation:kx-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes kx-shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+@media (prefers-reduced-motion: reduce){ .kx-skel-av, .kx-skel-line, .kx-skel-img{ animation:none; background:#eef1f6; } }
 .kx-empty-ic{ font-size:44px; margin-bottom:12px; opacity:.85; }
 .kx-empty-title{ font-size:16px; font-weight:700; color:var(--ink,#1c1a18); margin-bottom:6px; }
 .kx-empty-sub{ font-size:15px; color:var(--ink-soft,#565b6e); line-height:1.6; margin-bottom:18px; max-width:340px; margin-left:auto; margin-right:auto; }
@@ -8116,6 +8149,11 @@ html, body{
             <div class="loc-list" id="locList"></div>
           </div>
         </div>
+        <!-- หมวด. Buyers and sellers think in categories — CNC, ก่อสร้าง, ขนส่ง —
+             and the only way to filter by one was inside ค้นหาขั้นสูง. Same
+             dropdown the sort chip uses; the menu is filled from KX_CATS on
+             load so it cannot drift from what the composer offers. -->
+        <div class="fdd" id="fddCat"><button class="select-chip" id="fddCatBtn" onclick="toggleFdd('fddCat')">หมวด ⌄</button><div class="fdd-menu" id="fddCatMenu"><div class="fdd-opt active" onclick="setFeedCat('all',this,'หมวด')">ทุกหมวด</div></div></div>
         <div class="fdd" id="fddSort"><button class="select-chip" id="fddSortBtn" onclick="toggleFdd('fddSort')">ล่าสุด ⌄</button><div class="fdd-menu"><div class="fdd-opt active" onclick="setFeedSort('recent',this,'ล่าสุด')">ล่าสุด</div><div class="fdd-opt" onclick="setFeedSort('oldest',this,'เก่าสุด')">เก่าสุด</div><div class="fdd-opt" onclick="setFeedSort('offers',this,'ข้อเสนอมากสุด')">ข้อเสนอมากสุด</div><div class="fdd-opt" onclick="setFeedSort('match',this,'แนะนำสำหรับคุณ')">แนะนำสำหรับคุณ</div></div></div>
         <div class="select-chip adv-toggle" onclick="toggleAdvSearch()" id="advToggleChip">⚙️ ค้นหาขั้นสูง</div>
       </div>
@@ -8266,6 +8304,23 @@ html, body{
      used to sort here off a data-origIdx stamped on first use, which meant
      "\u0e25\u0e48\u0e32\u0e2a\u0e38\u0e14" restored whatever order the cards were in the first time someone
      touched the menu rather than the order they were posted in. */
+  function setFeedCat(id, el, label){
+    currentFeedCatFilter = id;
+    fddPick(el.parentNode, el);
+    document.getElementById('fddCatBtn').textContent = label + ' ⌄';
+    applyFeedFilters();
+  }
+  (function(){
+    var menu = document.getElementById('fddCatMenu');
+    if(!menu || menu.dataset.built) return;
+    menu.dataset.built = '1';
+    KX_CATS.forEach(function(c){
+      var d = document.createElement('div');
+      d.className = 'fdd-opt'; d.textContent = c[1];
+      d.onclick = function(){ setFeedCat(c[0], d, c[1]); };
+      menu.appendChild(d);
+    });
+  })();
   function setFeedSort(mode, el, label){
     currentFeedSort = mode;
     fddPick(el.parentNode, el);
@@ -8965,6 +9020,19 @@ html, body{
           <div class="hero-actions" id="pfHeroActions"></div>
           <div class="hero-statstrip">
           </div>
+        </div>
+
+        <!-- Your own profile, when it is still mostly empty. A new account
+             opens on a board of six sections that each say "ยังไม่มี", and
+             nothing says why any of them matter. This is the one line that
+             does: which field is missing, and what filling it in buys —
+             จังหวัด is how buyers find you, บริการ is what แนะนำสำหรับคุณ ranks
+             on. Painted by kxRenderProfileNudge; hidden on anyone else's page
+             and once the profile is complete. -->
+        <div class="pf-nudge" id="pfNudge" hidden>
+          <div class="pf-nudge-bar"><span id="pfNudgeFill"></span></div>
+          <div class="pf-nudge-text" id="pfNudgeText"></div>
+          <button type="button" class="pf-nudge-btn" id="pfNudgeBtn" onclick="navigateTo('page-edit-profile')">กรอกเลย</button>
         </div>
 
         <div class="tabs">
@@ -10154,6 +10222,17 @@ html, body{
 
         <!-- "เลือกประเภทการเสนอราคา" (ปิดราคา / เปิดราคา) stood here. Every RFQ is
              sealed now, so there was nothing left to choose: see renderRfqDetail. -->
+
+        <!-- หมวดงาน. Every post was saved as 'other' — the composer never asked —
+             so the หมวด filter on the feed had one bucket, and แนะนำสำหรับคุณ,
+             which weighs a job's category against the seller's services, had
+             nothing to weigh. Asked here, beside จังหวัด, with no default: a
+             pre-selected หมวด is the one nobody changes. -->
+        <div id="cpCatCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
+          <label for="cpCat" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">หมวดงาน <span class="au-req">*</span></label>
+          <select id="cpCat" style="width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;color:var(--ink);background:#fff;"></select>
+          <div style="font-size:13px;color:#565b6e;margin-top:6px;">ช่วยให้ผู้ขายในสายงานนี้เห็นประกาศของคุณก่อน</div>
+        </div>
 
         <div id="cpProvCard" style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:16px;">
           <label for="cpProv" style="display:block;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:7px;">จังหวัดของงานนี้</label>
@@ -14767,7 +14846,14 @@ window.kxLoadDashboard = async function(){
 
   // greeting and the verify banner both belong to whoever is signed in
   var h1 = document.querySelector('#page-dashboard .dash-head h1');
-  if(h1) h1.textContent = 'สวัสดี, ' + ((window.kxCurrentUser && window.kxCurrentUser.company_name) || 'คุณ') + ' 👋';
+  /* The name, whichever one the profile has. This fell back to "สวัสดี, คุณ"
+     — a greeting with a hole where the name goes — for every account that had
+     not typed a company name, which is every person and every new account.
+     contact_name is the person; with neither, a plain สวัสดี is a greeting and
+     "สวัสดี, คุณ" is a form letter. */
+  var who = window.kxCurrentUser || {};
+  var name = (who.company_name || who.contact_name || '').trim();
+  if(h1) h1.textContent = name ? 'สวัสดี, ' + name + ' 👋' : 'สวัสดี 👋';
   var banner = document.getElementById('dashVerifyBanner');
   // nothing to nudge anyone towards while the feature is off
   if(banner) banner.style.display =
@@ -14806,6 +14892,11 @@ window.kxLoadDashboard = async function(){
   DASH.myClosing = closing.data;
 
   renderDash();
+  /* The rows are drawn with the same 📍 💬 🕗 the rest of the app draws with,
+     and the same pass turns them into line icons — it just never ran here,
+     because the dashboard rebuilds its lists after the page-load pass has
+     been and gone. Every other list that paints from data calls this. */
+  if(window.kxApplyIcons) window.kxApplyIcons(document.getElementById('page-dashboard'));
 };
 
 function dashTab(n){
@@ -15824,6 +15915,27 @@ body.kx-auth .kx-burger{ display:none !important; }
 
 /* the tab strip lives inside the header card, which no longer has padding of its own */
 #page-company-profile .hero-card .tabs{ padding:0 20px; margin:0; }
+
+/* the completeness line above the tabs on your own profile */
+#page-company-profile .pf-nudge{
+  display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto;
+  column-gap:14px; row-gap:8px; align-items:center;
+  margin:0 20px 14px; padding:12px 14px;
+  background:var(--blue-50, #eaf1ff); border:1px solid #c2d6ff; border-radius:12px;
+}
+#page-company-profile .pf-nudge[hidden]{ display:none; }
+#page-company-profile .pf-nudge-bar{ grid-column:1 / -1; height:6px; border-radius:3px; background:#d5e2fb; overflow:hidden; }
+#page-company-profile .pf-nudge-bar span{ display:block; height:100%; width:0; background:var(--blue-600); border-radius:3px; transition:width .4s ease; }
+#page-company-profile .pf-nudge-text{ font-size:14px; line-height:1.55; color:#1c3a7a; min-width:0; }
+#page-company-profile .pf-nudge-text b{ font-weight:700; }
+#page-company-profile .pf-nudge-btn{
+  background:var(--blue-600); color:#fff; border:0; border-radius:999px;
+  padding:9px 16px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap;
+}
+@media (max-width: 600px){
+  #page-company-profile .pf-nudge{ grid-template-columns:1fr; }
+  #page-company-profile .pf-nudge-btn{ justify-self:start; }
+}
 
 /* ภาพรวม is a two-column board. The six cards that answer "who is this account" —
    เกี่ยวกับ, ติดต่อ, รีวิว, การยืนยันตัวตน, ความเชี่ยวชาญ, ใบรับรอง — pair up at the top,
@@ -20197,6 +20309,27 @@ body.kx-guest #load-more-offers { display: none !important; }
      even when the profile does have one: a company in กรุงเทพ can need the
      work done in ระยอง. So the composer asks, and only uses the profile's
      province as the pre-filled answer. */
+  /* The หมวดงาน select. Filled once from KX_CATS with a blank first option, so
+     the form opens on "เลือกหมวด" and publishing without choosing is refused
+     rather than quietly filed under อื่นๆ. On edit the post's own id is
+     selected; 'other' from before this field existed is shown as what it is. */
+  function cpFillCats(selected){
+    var sel = document.getElementById('cpCat');
+    if(!sel) return;
+    if(!sel.options.length){
+      sel.innerHTML = '<option value="">เลือกหมวดงาน</option>' + KX_CATS.map(function(c){
+        return '<option value="' + c[0] + '">' + c[1] + '</option>';
+      }).join('');
+    }
+    sel.value = selected || '';
+    if(sel.selectedIndex < 0) sel.value = '';
+    sel.classList.remove('bad');
+  }
+  // options in place from the start, not only after the first resetForm —
+  // the select is part of the page, and a page should not have an empty control
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ cpFillCats(null); });
+  else cpFillCats(null);
+
   function cpFillProvinces(selected){
     var sel = document.getElementById('cpProv');
     if(!sel) return;
@@ -20223,6 +20356,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     IMGS.forEach(function(im){ if(im.file) URL.revokeObjectURL(im.url); });
     IMGS = []; DOCS = [];
     cpFillProvinces(null);
+    cpFillCats(null);
     var t = document.getElementById('cpTitle'); if(t) t.value = '';
     var d = document.querySelector('#page-create-post textarea'); if(d) d.value = '';
     var p = document.getElementById('cpPrice'); if(p){ p.value = ''; p.classList.remove('bad'); }
@@ -20272,6 +20406,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var dlEl = document.getElementById('cpDeadline');
     if(dlEl) dlEl.value = post.deadline ? new Date(post.deadline).toISOString().slice(0, 10) : '';
     cpFillProvinces(post.province || 'ไม่ระบุ');
+    cpFillCats(post.category_id || null);
 
 
     (post.post_images || []).slice().sort(function(a, b){ return (a.sort || 0) - (b.sort || 0); })
@@ -20508,6 +20643,17 @@ body.kx-guest #load-more-offers { display: none !important; }
       document.getElementById('cpTitle').focus();
       return;
     }
+    /* Refused rather than defaulted. Every post before this field existed was
+       filed under อื่นๆ because nothing asked; letting an unanswered select
+       fall through to 'other' would keep that going, one post at a time. */
+    var catSel = document.getElementById('cpCat');
+    if(catSel && !catSel.value){
+      catSel.classList.add('bad');
+      catSel.scrollIntoView({ block: 'center' });
+      catSel.focus();
+      kxToast('เลือกหมวดงานก่อนโพสต์');
+      return;
+    }
     var descEl = document.querySelector('#page-create-post textarea');
     var desc = ((descEl && descEl.value) || '').trim();
     var isRfq = !!document.querySelector('#cpRfqCheck') &&
@@ -20585,7 +20731,10 @@ body.kx-guest #load-more-offers { display: none !important; }
         kind: isRfq ? 'rfq' : 'offer',
         title: title,
         description: desc || 'ไม่มีรายละเอียดเพิ่มเติม',
-        category_id: 'other',
+        category_id: (function(){
+          var sel = document.getElementById('cpCat');
+          return (sel && sel.value) || 'other';
+        })(),
         province: (function(){
           var sel = document.getElementById('cpProv');
           var v = sel && sel.value;
@@ -23651,6 +23800,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     // these read their own tables now
     if(window.kxLoadReviews)       window.kxLoadReviews(pr.id, mine);
     if(window.kxLoadServices)      window.kxLoadServices(pr.id, mine);
+    if(window.kxRenderProfileNudge) window.kxRenderProfileNudge(pr, mine);
     if(window.kxLoadPortfolio)     window.kxLoadPortfolio(pr.id, mine);
     if(window.kxRenderVerify)      window.kxRenderVerify(pr, mine);
     if(window.kxLoadProfileWall)   window.kxLoadProfileWall(pr.id, mine, pr);
@@ -24424,6 +24574,21 @@ body.kx-guest #load-more-offers { display: none !important; }
     // reloading replaces the whole list, so hold the reading position
     var keepScroll = (document.querySelector('.app-page.active') || {}).id === 'page-feed'
       ? (window.pageYOffset || document.documentElement.scrollTop || 0) : null;
+    /* Something to look at while the rows are on their way. The list was empty
+       until the response landed, so the first thing a new visitor saw of the
+       feed was a blank column under the filter chips, for as long as the
+       network took — and a blank feed reads as "nothing here", which is the
+       one thing this page must not say to someone deciding whether to stay.
+       Only on a cold list: a refresh keeps the cards it has until the new ones
+       arrive, so the page does not flash empty on every reload. */
+    if(!list.children.length){
+      list.innerHTML = new Array(4).join(
+        '<div class="post-card kx-skel" aria-hidden="true">' +
+          '<div class="kx-skel-head"><span class="kx-skel-av"></span><span class="kx-skel-line w40"></span></div>' +
+          '<span class="kx-skel-line w80"></span><span class="kx-skel-line w60"></span>' +
+          '<div class="kx-skel-img"></div>' +
+        '</div>');
+    }
     // profiles!posts_owner_id_fkey: posts also reaches profiles indirectly through
     // saved_posts and view_history, so PostgREST needs to be told which relationship
     // this embed means — the direct "who posted this" one.
@@ -24440,7 +24605,16 @@ body.kx-guest #load-more-offers { display: none !important; }
     }
     // clear the in-flight flag on the way out, or a single failed load would
     // stop the feed from ever refreshing again
-    if(res.error){ console.error('kxLoadFeed failed', res.error); feedLoading = false; return; }
+    if(res.error){
+      console.error('kxLoadFeed failed', res.error);
+      // a skeleton that never resolves is worse than an empty list: it promises
+      // rows are coming. Clear it, and say what happened.
+      if(list.querySelector('.kx-skel')){
+        list.innerHTML = '<div class="kx-empty" style="padding:26px"><div class="kx-empty-sub">' +
+          'โหลดประกาศไม่สำเร็จ — <a href="#" onclick="kxLoadFeed();return false;" style="color:var(--blue-700);font-weight:600">ลองอีกครั้ง</a></div></div>';
+      }
+      feedLoading = false; return;
+    }
     list.innerHTML = res.data.map(function(p){ return postCardHTML(p); }).join('');
     if(window.kxApplyIcons) window.kxApplyIcons(list);
     // reflect what is already saved on the cards that were just built
@@ -24999,6 +25173,50 @@ body.kx-guest #load-more-offers { display: none !important; }
   };
 
   // ---------- บริการของฉัน ----------
+  /* The completeness line on your own profile.
+
+     Five things, each with a reason a new seller would recognise. The order is
+     the order they pay off in: a name so a quote is signed, a province so
+     buyers filter to you, services so แนะนำสำหรับคุณ has something to rank
+     on, skills for the same, and a line about you so a buyer opening the
+     profile finds a person. services live in their own table, so that one is
+     asked for — the rest are on the row already in hand.
+
+     Says one thing at a time: the first field still missing, with what it
+     buys. Five bullet points of homework is a wall; one is a next step. */
+  window.kxRenderProfileNudge = async function(pr, isOwner){
+    var box = document.getElementById('pfNudge');
+    if(!box) return;
+    if(!isOwner || !pr){ box.hidden = true; return; }
+    var svc = 0;
+    try{
+      var r = await sb.from('services').select('id', { count:'exact', head:true }).eq('profile_id', pr.id);
+      svc = r && r.count != null ? r.count : ((r && r.data) ? r.data.length : 0);
+    }catch(e){ svc = 0; }
+    var checks = [
+      { ok: !!(pr.company_name || pr.contact_name), what: 'ชื่อ',        why: 'ใบเสนอราคาที่คุณส่งจะมีชื่อกำกับ' },
+      { ok: !!pr.province,                          what: 'จังหวัด',     why: 'ผู้ซื้อกรองหาผู้ขายใกล้ ๆ ตามจังหวัด' },
+      { ok: svc > 0,                                what: 'บริการ',      why: '“แนะนำสำหรับคุณ” จับคู่งานจากบริการที่คุณลงไว้', to: 'services' },
+      { ok: Array.isArray(pr.skills) && pr.skills.length > 0, what: 'ความเชี่ยวชาญ', why: 'ช่วยให้งานที่ตรงสายเด้งมาหาคุณก่อน' },
+      { ok: !!(pr.tagline || pr.about),             what: 'เกี่ยวกับคุณ', why: 'ผู้ซื้อที่เปิดโปรไฟล์จะรู้ว่ากำลังคุยกับใคร' }
+    ];
+    var done = checks.filter(function(c){ return c.ok; }).length;
+    if(done === checks.length){ box.hidden = true; return; }
+    var next = checks.filter(function(c){ return !c.ok; })[0];
+    document.getElementById('pfNudgeFill').style.width = Math.round(done / checks.length * 100) + '%';
+    document.getElementById('pfNudgeText').innerHTML =
+      '<b>โปรไฟล์ครบ ' + done + '/' + checks.length + '</b> · เพิ่ม<b>' + next.what + '</b> — ' + next.why;
+    var btn = document.getElementById('pfNudgeBtn');
+    if(btn){
+      // บริการ is added from its own tab, not from แก้ไขโปรไฟล์
+      btn.textContent = next.to === 'services' ? 'เพิ่มบริการ' : 'กรอกเลย';
+      btn.onclick = next.to === 'services'
+        ? function(){ var t = document.getElementById('pfServicesTab'); if(t) t.click(); }
+        : function(){ navigateTo('page-edit-profile'); };
+    }
+    box.hidden = false;
+  };
+
   window.kxLoadServices = async function(profileId, isOwner){
     var card = document.getElementById('pfServicesCard');
     if(!card || !profileId) return;

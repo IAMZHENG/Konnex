@@ -88,7 +88,12 @@
       var byOp = plan[table] && plan[table][op];
       var any  = plan[table] && plan[table]._;
       var r = (byOp !== undefined) ? byOp : (any !== undefined ? any : { data: [], error: null });
-      return typeof r === 'function' ? r() : r;
+      r = typeof r === 'function' ? r() : r;
+      /* `count` the way the real client fills it for { count:'exact' }: the
+         number of rows, unless the plan set one explicitly. Code that only
+         wants a count reads this and never looks at data. */
+      if (r && r.count === undefined && Array.isArray(r.data)) r.count = r.data.length;
+      return r;
     }
 
     function chain(table, op, args) {
