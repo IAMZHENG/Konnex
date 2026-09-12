@@ -311,13 +311,20 @@
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-offer-detail');
       });
     });
-    it('still sends them to the login form for everything else', function (w) {
+    it('lets them browse the feed, a profile and the search, but not post', function (w) {
       asVisitor(w, function () {
         w.navigateTo('page-feed', true);
-        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-feed');
+        w.navigateTo('page-search', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-search');
+        w.navigateTo('page-company-profile', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-company-profile');
         w.navigateTo('page-create-post', true);
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth',
           'posting still needs an account');
+        w.navigateTo('page-dashboard', true);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth',
+          'and so does every account page');
       });
     });
     it('keeps the documents reachable, as before', function (w) {
@@ -384,6 +391,116 @@
       expect(w.document.body.classList.contains('kx-guest')).toBe(false,
         '"not asked yet" is not "no account"');
       w.kxSession = had; w.kxAuthChecked = hadChecked; w.renderSidebars('page-feed');
+    });
+  });
+
+  /* The owner's decision (2026-09-12): the platform is open to look at.
+     Everyone sees the feed and the listings; เสนอราคา, โพสต์ and ถาม ask
+     for an account at the moment they are reached for, and bring you back
+     to where you were once you have one. */
+  describe('ดูได้ทุกคน — เสนอราคา โพสต์ ถาม ต้องเข้าสู่ระบบ', function () {
+    function asVisitor(w, fn) {
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      w.kxSession = null; w.kxAuthChecked = true;
+      plan(w, {});
+      try { return fn(); }
+      finally {
+        w.kxSession = had;
+        try { w.sessionStorage.removeItem('kx.afterLogin'); } catch (e) {}
+        if (was) w.navigateTo(was, true);
+        w.renderSidebars(was);
+        restore(w);
+      }
+    }
+    it('the front page is the feed, not the login form', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain(": 'page-feed';", 'the hash router falls back to the feed');
+      expect(html).notToContain(": 'page-auth';\n  navigateTo(start, true);");
+    });
+    it('names the pages a visitor may open', function (w) {
+      var open = Object.keys(w.KX_OPEN_PAGES).sort();
+      expect(open).toEqual(['page-auth', 'page-company-profile', 'page-feed', 'page-offer-detail',
+        'page-privacy', 'page-rfq-detail', 'page-search', 'page-terms']);
+    });
+    it('puts a way in on every top bar, and a line above the feed, for a visitor only', function (w) {
+      asVisitor(w, function () {
+        w.renderSidebars('page-feed');
+        var bars = w.document.querySelectorAll('.navbar .nav-right');
+        var logins = w.document.querySelectorAll('.navbar .nav-right .nav-login');
+        expect(logins.length).toBe(bars.length, 'one per copy of the bar');
+        w.navigateTo('page-feed', true);
+        expect(w.getComputedStyle(w.document.getElementById('feedGuestBar')).display).toBe('flex');
+        expect(w.document.getElementById('feedGuestBar').textContent).toContain('ผู้เยี่ยมชม');
+        expect(w.getComputedStyle(w.document.querySelector('#page-feed .nav-login')).display).notToContain('none');
+      });
+      signIn(w); w.kxAuthChecked = true; w.renderSidebars('page-feed');
+      expect(w.getComputedStyle(w.document.getElementById('feedGuestBar')).display).toBe('none', 'gone for a member');
+      expect(w.getComputedStyle(w.document.querySelector('#page-feed .nav-login')).display).toBe('none');
+    });
+    it('kxNeedLogin says why, closes any dialog, remembers the page, and goes to the form', function (w) {
+      asVisitor(w, function () {
+        var said = null, real = w.kxToast; w.kxToast = function (m) { said = m; };
+        var m = w.document.getElementById('offerModal'); m.classList.add('open');
+        w.navigateTo('page-feed', true);
+        try { w.kxNeedLogin('เข้าสู่ระบบก่อนเสนอราคา'); } finally { w.kxToast = real; }
+        expect(said).toBe('เข้าสู่ระบบก่อนเสนอราคา');
+        expect(m.classList.contains('open')).toBe(false);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+        expect(w.sessionStorage.getItem('kx.afterLogin')).toBe('#page-feed');
+      });
+    });
+    it('asks at the door of เสนอราคา, not after the form is filled in', function (w) {
+      asVisitor(w, function () {
+        w.navigateTo('page-rfq-detail', true);
+        w.openModal();
+        expect(w.document.getElementById('offerModal').classList.contains('open')).toBe(false);
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+      });
+    });
+    it('no action asks for an account with a bare toast any more', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).notToContain("kxToast('กรุณาเข้าสู่ระบบก่อน", 'every gate goes through kxNeedLogin');
+    });
+    it('after signing in, lands back on the listing the sign-in was asked for', function (w) {
+      var had = w.kxSession, calls = [], realOpen = w.kxOpenPost;
+      w.sessionStorage.setItem('kx.afterLogin', '#page-rfq-detail/aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa');
+      signIn(w); w.kxProfileIsNew = false;
+      w.kxOpenPost = function (id, kind) { calls.push([id, kind]); };
+      var page = w.kxAuthLanding();
+      return new Promise(function (r) { setTimeout(r, 10); }).then(function () {
+        w.kxOpenPost = realOpen; w.kxSession = had;
+        expect(page).toBe('page-rfq-detail');
+        expect(calls).toEqual([['aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'rfq']], 'the post is opened, not just the page');
+        expect(w.sessionStorage.getItem('kx.afterLogin')).toBe(null, 'used once');
+      });
+    });
+    it('or on the page, and on the feed when nothing was remembered', function (w) {
+      var had = w.kxSession;
+      w.sessionStorage.setItem('kx.afterLogin', '#page-company-profile');
+      signIn(w); w.kxProfileIsNew = false;
+      expect(w.kxAuthLanding()).toBe('page-company-profile');
+      expect(w.kxAuthLanding()).toBe('page-feed');
+      w.sessionStorage.setItem('kx.afterLogin', '#page-auth');
+      expect(w.kxAuthLanding()).toBe('page-feed', 'never back to the login form');
+      w.kxSession = had;
+    });
+    it('a visitor cannot be sent to their own profile — there is none', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain("else if(activeId === 'page-company-profile') navigateTo('page-feed', true);");
+    });
+    it('reloads the feed across a sign-in, so a member does not keep the visitor rows', async function (w) {
+      var sb = plan(w, { posts: { _: { data: [], error: null } } });
+      signIn(w);
+      await w.kxLoadFeed();
+      var posts = function () { return sb._calls.filter(function (c) { return c.table === 'posts'; }).length; };
+      var n = posts();
+      w.kxRefreshFeedIfStale();
+      expect(posts()).toBe(n, 'fresh: no query');
+      w.kxFeedInvalidate();
+      w.kxRefreshFeedIfStale();
+      await new Promise(function (r) { setTimeout(r, 30); });
+      restore(w);
+      expect(posts()).toBe(n + 1, 'invalidated: asks again');
     });
   });
 
@@ -5062,9 +5179,9 @@
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-terms');
         await w.navigateTo('page-privacy', true);
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-privacy');
-        await w.navigateTo('page-feed', true);
+        await w.navigateTo('page-my-bids', true);
         expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth',
-          'every other page still requires signing in');
+          'the account pages still require signing in');
       } finally { w.kxSession = had; }
     });
 

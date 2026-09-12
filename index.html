@@ -7388,6 +7388,7 @@ html, body{
         </div>
       </div>
 
+      <div id="feedGuestBar"><span>คุณกำลังดูในฐานะผู้เยี่ยมชม — เข้าสู่ระบบเพื่อเสนอราคา โพสต์ประกาศ หรือถามคำถาม</span><a href="#" onclick="kxRememberReturn();navigateTo('page-auth');return false;">เข้าสู่ระบบ / สมัครฟรี →</a></div>
       <div class="feed-empty" id="feedEmpty" style="display:none;">
         <div class="empty-ic">🔍</div>
         <div class="empty-title">ไม่พบงานที่ตรงกับเงื่อนไข</div>
@@ -7676,11 +7677,24 @@ html, body{
        otherwise watch the guest rail flash past on every page load. */
     var guest = window.kxAuthChecked && !window.kxSession;
     document.body.classList.toggle('kx-guest', !!guest);
+    /* The bell, messages and account chip go with the account; what takes
+       their place is the way in. Added once to each copy of the bar and left
+       there — the body class decides whether it shows. */
+    if(guest){
+      document.querySelectorAll('.navbar .nav-right').forEach(function(right){
+        if(right.querySelector('.nav-login')) return;
+        var a = document.createElement('a');
+        a.href = '#'; a.className = 'nav-login';
+        a.textContent = 'เข้าสู่ระบบ';
+        a.onclick = function(e){ e.preventDefault(); window.kxRememberReturn(); navigateTo('page-auth'); };
+        right.appendChild(a);
+      });
+    }
     if(guest){
       var g = '<div class="side-guest">' +
         '<div class="side-guest-t">เข้าสู่ระบบเพื่อเสนอราคา ถามคำถาม และบันทึกประกาศ</div>' +
-        '<a href="#" class="side-guest-btn primary" onclick="navigateTo(\'page-auth\');return false;">เข้าสู่ระบบ</a>' +
-        '<a href="#" class="side-guest-btn" onclick="navigateTo(\'page-auth\');return false;">สมัครสมาชิกฟรี</a>' +
+        '<a href="#" class="side-guest-btn primary" onclick="kxRememberReturn();navigateTo(\'page-auth\');if(window.authTab)authTab(\'login\');return false;">เข้าสู่ระบบ</a>' +
+        '<a href="#" class="side-guest-btn" onclick="kxRememberReturn();navigateTo(\'page-auth\');if(window.authTab)authTab(\'register\');return false;">สมัครสมาชิกฟรี</a>' +
       '</div>';
       document.querySelectorAll('.side-nav').forEach(function(nav){ nav.innerHTML = g; });
       return;
@@ -7989,7 +8003,13 @@ html, body{
   </div>
 
 <script>
-  function openModal(){ document.getElementById('offerModal').classList.add('open'); }
+  /* Asked at the door, not after the form is filled in: a visitor who has
+     typed a price and attached a drawing and is only then told to sign in
+     has been made to do the work twice. */
+  function openModal(){
+    if(!window.kxSession){ kxNeedLogin('เข้าสู่ระบบก่อนเสนอราคา'); return; }
+    document.getElementById('offerModal').classList.add('open');
+  }
   function closeModal(){ document.getElementById('offerModal').classList.remove('open'); }
 
   /* revealSealed() and the countdown that drove it were the demo's own: a clock
@@ -8067,7 +8087,7 @@ html, body{
     priceEl.classList.remove('bad');
 
     if(!window.kxSession){
-      kxToast('กรุณาเข้าสู่ระบบก่อนเสนอราคา');
+      kxNeedLogin('กรุณาเข้าสู่ระบบก่อนเสนอราคา');
       closeModal(); navigateTo('page-auth');
       return;
     }
@@ -8415,7 +8435,7 @@ html, body{
   window.submitReqQuote = async function(){
     var box = document.getElementById('reqQuoteBox');
     if(!box.dataset.orig) box.dataset.orig = box.innerHTML;
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
 
     var postId = (document.getElementById('rqjPost') || {}).value;
     var qty    = ((document.getElementById('rqjQty') || {}).value || '').trim();
@@ -8948,7 +8968,7 @@ html, body{
 
   // ---------- starting a chat from a post ----------
   window.kxStartChat = async function(otherId, postId){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนส่งข้อความ'); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อนส่งข้อความ'); return; }
     if(!otherId){ kxToast('ไม่พบผู้รับข้อความ'); return; }
     if(otherId === window.kxSession.user.id){ kxToast('ไม่สามารถส่งข้อความหาตัวเองได้'); return; }
     var res = await sb.rpc('kx_start_conversation', { other_id: otherId, p_post_id: postId || null });
@@ -10594,6 +10614,7 @@ html, body{
      typed into the previous confirmation screen. */
   var QUOTE_MODAL_HTML = null;
   function openQuoteModal(){
+    if(!window.kxSession){ kxNeedLogin('เข้าสู่ระบบก่อนขอใบเสนอราคา'); return; }
     var m = document.getElementById('quoteModal');
     if(m.parentElement !== document.body) document.body.appendChild(m);
     var box = document.getElementById('quoteModalBox');
@@ -10656,7 +10677,7 @@ html, body{
     var detail = (document.getElementById('qrDetail').value || '').trim();
     if(!qty){ document.getElementById('qrQty').focus(); kxToast('กรุณากรอกจำนวน/ปริมาณที่ต้องการ'); return; }
     if(!detail){ document.getElementById('qrDetail').focus(); kxToast('กรุณากรอกรายละเอียดเพิ่มเติม'); return; }
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนขอใบเสนอราคา'); closeQuoteModal(); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อนขอใบเสนอราคา'); return; }
 
     var postId = window.kxCurrentDetailPostId;
     if(!postId){ kxToast('ไม่พบประกาศนี้'); return; }
@@ -11562,7 +11583,7 @@ html, body{
     var row = cancelRfqTargetRow;
     var postId = row && row.getAttribute('data-post-id');
     if(!postId){ closeCancelRfq(); return; }
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); closeCancelRfq(); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); closeCancelRfq(); return; }
 
     var upd = await sb.from('posts').update({ status:'closed' }).eq('id', postId);
     if(upd.error){
@@ -11829,7 +11850,7 @@ html, body{
   };
 
   async function submitVerify(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     if(!vfFiles.length){ kxToast('กรุณาแนบเอกสารอย่างน้อย 1 รายการ'); return; }
     var btn = document.querySelector('#verifyBox .pf-btn.primary');
     var was = btn ? btn.textContent : '';
@@ -12136,7 +12157,7 @@ html, body{
      (database/settings_and_account.sql). The bar still confirms, but it is
      confirming something that happened. */
   window.saveSearchAlert = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนบันทึกการค้นหา'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อนบันทึกการค้นหา'); return; }
     var kw   = (document.getElementById('advKw').value||'').trim();
     var prov = document.getElementById('advProv').value;
     var kind = document.getElementById('advKind').value;
@@ -12745,7 +12766,7 @@ html, body{
 (function(){
   window.kxFeedbackOpen = function(){
     if(!window.kxSession){
-      kxToast('กรุณาเข้าสู่ระบบก่อนแจ้งปัญหา'); navigateTo('page-auth'); return;
+      kxNeedLogin('กรุณาเข้าสู่ระบบก่อนแจ้งปัญหา'); return;
     }
     var ov = document.getElementById('kxFb');
     if(!ov) return;
@@ -12764,7 +12785,7 @@ html, body{
   };
 
   window.kxFeedbackSend = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var field = document.getElementById('kxfbBody');
     var body = (field.value || '').trim();
     if(body.length < 10){
@@ -13521,7 +13542,7 @@ function editPost(type, id){
    anyone has already put a quote in, says that too — those are other companies'
    work, and their disappearing is the part the owner cannot see. */
 window.kxDeletePost = async function(kind, id, title, offers){
-  if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+  if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
   if(!id) return;
   var n = Number(offers) || 0;
   var what = kind === 'offer' ? 'ประกาศขาย' : 'ประกาศซื้อ';
@@ -13646,7 +13667,9 @@ document.addEventListener('keydown', function(e){
   function pageOf(h){ var i = h.indexOf('/'); return i < 0 ? h : h.slice(0, i); }
   // captured before navigateTo, which replaces the hash with the bare page id
   var rawHash = window.location.hash;
-  var start = validPages.includes(pageOf(rawHash.replace('#',''))) ? pageOf(rawHash.replace('#','')) : 'page-auth';
+  // the front page is the feed: a visitor sees what is on offer before being
+  // asked for anything, and a member is sent on from there by boot()
+  var start = validPages.includes(pageOf(rawHash.replace('#',''))) ? pageOf(rawHash.replace('#','')) : 'page-feed';
   navigateTo(start, true);
   // put the post back in the URL, so boot() below can still see which one it was
   if(rawHash.indexOf('/') > -1) history.replaceState(null, '', rawHash);
@@ -14119,7 +14142,7 @@ window.kxApplySavedMarks = function(root){
 };
 
 window.kxToggleSave = async function(el, postId){
-  if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนบันทึก'); navigateTo('page-auth'); return; }
+  if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อนบันทึก'); return; }
   if(!postId) return;
   var wasSaved = !!window.kxSavedIds[postId];
 
@@ -17483,6 +17506,23 @@ body.kx-no-line .au-line-btn { display: none !important; }
 body.kx-guest .nav-right .icon-btn,
 body.kx-guest .nav-right .avatar-chip,
 body.kx-guest .mobile-bottom-nav { display: none !important; }
+/* the way in, where the account chip would be */
+.navbar .nav-login { display: none; }
+body.kx-guest .navbar .nav-login {
+    display: inline-flex; align-items: center; height: 40px; padding: 0 18px;
+    border-radius: 999px; background: var(--blue, #0056fd); color: #fff;
+    font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap;
+    }
+body.kx-guest .navbar .nav-login:hover { background: var(--blue-700, #0044c9); }
+/* a visitor's feed says so once, above the cards, and says what signing in is for */
+#feedGuestBar { display: none; }
+body.kx-guest #feedGuestBar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin: 0 0 14px; padding: 12px 16px; border-radius: 12px;
+    background: #eef3ff; border: 1px solid #d5e0ff; color: var(--ink, #1c1a18); font-size: 14px; font-weight: 500;
+    }
+#feedGuestBar a { color: var(--blue, #0056fd); font-weight: 600; text-decoration: none; white-space: nowrap; }
+#feedGuestBar a:hover { text-decoration: underline; }
 /* จำนวนข้อเสนอกับราคาเฉลี่ยแสดงให้ทุกคนเห็น รวมถึงคนที่ยังไม่ได้เข้าสู่ระบบ
    The owner's call, made knowing that an average over a single offer is that
    offer's price: a buyer's listing is more attractive to the next supplier when
@@ -19521,7 +19561,7 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   window.cpStartEdit = async function(postId){
     init();
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var res = await sb.from('posts')
       .select('*, post_images(id,url,sort), post_attachments(id,file_name,file_url,file_kind,file_size)')
       .eq('id', postId).maybeSingle();
@@ -19776,7 +19816,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   window.cpPublish = async function(){
     init();
     if(!window.kxSession){
-      kxToast('กรุณาเข้าสู่ระบบก่อนโพสต์ประกาศ'); navigateTo('page-auth'); return;
+      kxNeedLogin('กรุณาเข้าสู่ระบบก่อนโพสต์ประกาศ'); return;
     }
     var title = (document.getElementById('cpTitle').value || '').trim();
     if(!title){
@@ -20134,7 +20174,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var mail = document.getElementById('setAuthEmailNew');
     var pw   = document.getElementById('setAuthEmailPw');
     [mail, pw].forEach(function(e){ e.classList.remove('bad'); });
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var next = (mail.value || '').trim().toLowerCase();
     var curEmail = (window.kxSession.user.email || '').toLowerCase();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)){
@@ -20227,7 +20267,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     if(!cur.value){ cur.classList.add('bad'); cur.focus(); kxToast('กรุณากรอกรหัสผ่านปัจจุบัน'); return; }
     if((nw.value || '').length < 8){ nw.classList.add('bad'); nw.focus(); kxToast('รหัสผ่านใหม่ต้องยาวอย่างน้อย 8 ตัวอักษร'); return; }
     if(nw.value !== nw2.value){ nw2.classList.add('bad'); nw2.focus(); kxToast('ยืนยันรหัสผ่านไม่ตรงกัน'); return; }
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
 
     var email = window.kxSession.user.email;
     var check = await sb.auth.signInWithPassword({ email: email, password: cur.value });
@@ -20283,7 +20323,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   }
 
   async function kxWritePrefs(patch){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return false; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return false; }
     var next = Object.assign({}, window.kxPrefs, patch);
     var res = await sb.from('profiles').update({ prefs: next }).eq('id', window.kxSession.user.id);
     if(res.error){
@@ -20429,7 +20469,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   };
 
   window.shClear = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var wrap = document.querySelector('#page-history .sh-hist');
     if(!wrap) return;
     var n = wrap.querySelectorAll('.sh-hitem').length;
@@ -20507,6 +20547,8 @@ body.kx-guest #load-more-offers { display: none !important; }
       if(window.kxLoadNotifications) window.kxLoadNotifications();
       // and the feed needs to know what is saved before it draws its bookmarks
       if(window.kxLoadSavedIds) window.kxLoadSavedIds();
+      // the rows loaded as a visitor lack the averages and the saved marks
+      if(window.kxFeedInvalidate) window.kxFeedInvalidate();
       // the profiles row is the real store for the profile page, so it fills
       // the form and the display from here rather than from this browser
       if(window.kxProfileFromRow) window.kxProfileFromRow(existing.data);
@@ -20612,7 +20654,24 @@ body.kx-guest #load-more-offers { display: none !important; }
     if(window.kxProfileError) return 'page-auth';
     // an account that has never accepted the documents stops here first
     if(window.kxConsentRequireIfMissing && window.kxConsentRequireIfMissing()) return 'page-auth';
-    if(!window.kxProfileIsNew) return 'page-feed';
+    var back = window.kxTakeReturn ? window.kxTakeReturn() : null;
+    if(!window.kxProfileIsNew){
+      /* Back to the listing or page the sign-in was asked for. A listing
+         carries its post in the hash; the page is shown now and the post
+         opened right after, so the caller's own navigateTo does not wipe the
+         id out of the address bar. */
+      if(back){
+        var m = /^#(page-(?:rfq|offer)-detail)\/([^\/]+)$/.exec(back);
+        if(m && window.kxOpenPost){
+          var pid = m[2], kind = m[1] === 'page-rfq-detail' ? 'rfq' : 'offer';
+          setTimeout(function(){ kxOpenPost(pid, kind); }, 0);
+          return m[1];
+        }
+        var pg = back.replace(/^#/, '').split('/')[0];
+        if(pg && pg !== 'page-auth' && document.getElementById(pg)) return pg;
+      }
+      return 'page-feed';
+    }
     window.kxProfileIsNew = false;          // only on the first landing
     kxToast('ยินดีต้อนรับ! กรอกโปรไฟล์ให้ครบเพื่อเริ่มใช้งาน');
     return 'page-edit-profile';
@@ -20646,7 +20705,7 @@ body.kx-guest #load-more-offers { display: none !important; }
      Everything cascades from profiles, so the posts, quotes, messages and files
      go with it. */
   window.kxDeleteAccount = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     if(!confirm('ยืนยันลบบัญชีถาวร?\n\nประกาศ ใบเสนอราคา ข้อความ และประวัติทั้งหมดจะถูกลบและกู้คืนไม่ได้')) return;
     // typing it out, rather than a second yes/no, because a second yes/no is
     // just the first one again
@@ -20673,6 +20732,7 @@ body.kx-guest #load-more-offers { display: none !important; }
       // the next person to sign in on this browser must not find the last
       // one's answers already in the แก้ไขโปรไฟล์ fields
       if(window.kxProfileReset) window.kxProfileReset();
+      if(window.kxFeedInvalidate) window.kxFeedInvalidate();
       /* Only off pages that need an account. This event also arrives once at
          startup when there is no session at all, and it used to navigate
          unconditionally — so a visitor arriving on a shared listing was thrown
@@ -20711,20 +20771,55 @@ body.kx-guest #load-more-offers { display: none !important; }
      policy_acceptances come back empty. Prices and who bid stay private, which
      is what sealed bidding means. Every action on these pages — เสนอราคา, ขอใบ
      เสนอราคา, ถาม, บันทึก, ส่งข้อความ — already checks kxSession for itself. */
+  /* The feed, a listing, a company's profile and the search over them are the
+     platform's shop window, and a shop window is for whoever walks past. The
+     owner's decision (2026-09-12): everyone browses; เสนอราคา, โพสต์, ถาม and
+     the rest of the account pages ask you to sign in at the moment you reach
+     for them, not at the door.
+
+     What a visitor can read is bounded by the database, not by this list:
+     with the anon key, open posts, profiles, post_images, post_attachments and
+     post_questions come back; quotes, quote_requests, saved_posts, messages
+     and policy_acceptances come back empty. Prices and who bid stay private. */
   var KX_OPEN_PAGES = {
     'page-auth': 1, 'page-terms': 1, 'page-privacy': 1,
-    'page-rfq-detail': 1, 'page-offer-detail': 1
+    'page-rfq-detail': 1, 'page-offer-detail': 1,
+    'page-feed': 1, 'page-company-profile': 1, 'page-search': 1
   };
+  window.KX_OPEN_PAGES = KX_OPEN_PAGES;
+
+  /* Where to go back to once they have signed in. A visitor who pressed
+     เสนอราคา on a listing wants that listing, not the feed. Kept in
+     sessionStorage rather than a variable because the Google and LINE sign-ins
+     leave the page and come back. Never the login page itself. */
+  window.kxRememberReturn = function(){
+    var h = window.location.hash || '';
+    if(!h || /^#page-auth/.test(h)) return;
+    try{ sessionStorage.setItem('kx.afterLogin', h); }catch(e){}
+  };
+  window.kxTakeReturn = function(){
+    var h = null;
+    try{ h = sessionStorage.getItem('kx.afterLogin'); sessionStorage.removeItem('kx.afterLogin'); }catch(e){}
+    return h;
+  };
+  /* The one way a signed-out person is asked to sign in. Every action that
+     needs an account calls this rather than toasting on its own, so each of
+     them says why, remembers where you were, and closes whatever dialog was
+     open — a modal left on top of the login form was the old failure. */
+  window.kxNeedLogin = function(msg){
+    window.kxRememberReturn();
+    document.querySelectorAll('.modal-overlay.open').forEach(function(m){ m.classList.remove('open'); });
+    if(typeof kxToast === 'function') kxToast(msg || 'เข้าสู่ระบบเพื่อใช้งานส่วนนี้');
+    navigateTo('page-auth');
+  };
+
   var _kxNav = window.navigateTo;
   window.navigateTo = function(id, skipHistory){
-    /* ข้อกำหนดการใช้งาน and นโยบายความเป็นส่วนตัว open without a session, because
-       the links to them are on the signup form: sending someone who has not
-       signed up yet back to the signup form to read what they are agreeing to
-       is a door that only opens from the inside. */
     if(kxAuthChecked && !KX_OPEN_PAGES[id] && !window.kxSession){
-      /* Say why. Now that a stranger can be reading a listing, the next thing
-         they click may well be the poster's name or the feed, and landing on a
-         login form with no explanation reads as the site having broken. */
+      /* Say why. The next thing a visitor clicks may well be งานของฉัน or
+         โพสต์ประกาศ, and landing on a login form with no explanation reads
+         as the site having broken. */
+      window.kxRememberReturn();
       if(typeof kxToast === 'function') kxToast('เข้าสู่ระบบเพื่อใช้งานส่วนนี้');
       return _kxNav('page-auth', skipHistory);
     }
@@ -20775,9 +20870,11 @@ body.kx-guest #load-more-offers { display: none !important; }
       // fills the edit form and the rail's name from the row, not from a cache
       if(window.kxLoadProfile) window.kxLoadProfile();
       var hashPost = window.kxPostFromHash && window.kxPostFromHash();
-      if(activeId === 'page-auth'){
-        // the OAuth round-trip lands back here, so this is where a first
-        // Google/Facebook sign-in gets sent to แก้ไขโปรไฟล์
+      /* The OAuth round-trip lands on the site's front page, which is the feed
+         now rather than the login form — so a first Google/LINE sign-in is
+         recognised here by the new-profile flag as well, and sent on to
+         แก้ไขโปรไฟล์ the same as one made on the form. */
+      if(activeId === 'page-auth' || (activeId === 'page-feed' && window.kxProfileIsNew)){
         navigateTo(window.kxAuthLanding());
       }else if(hashPost){
         /* Refreshed on a listing. The page was restored from the hash, but the
@@ -20809,12 +20906,19 @@ body.kx-guest #load-more-offers { display: none !important; }
       if(window.kxOAuthError && window.kxShowOAuthError){ kxShowOAuthError(); return; }
       var guestPost = window.kxPostFromHash && window.kxPostFromHash();
       if(guestPost) kxOpenPost(guestPost.id, guestPost.kind);
+      /* A visitor's own profile does not exist; reaching the profile page any
+         way but through someone's name shows an empty shell, so the feed. */
+      else if(activeId === 'page-company-profile') navigateTo('page-feed', true);
       /* Asked of KX_OPEN_PAGES rather than compared against page-auth alone.
          The old test let a visitor stay only on the login page, so opening
          #page-privacy or #page-terms directly — the links printed on Facebook's
          and Google's consent screens — bounced them to a login form instead of
          the document they were sent to read. */
       else if(activeId && !KX_OPEN_PAGES[activeId]) navigateTo('page-auth');
+      /* Already on an open page. Re-navigating re-runs the hooks now that the
+         answer is in — the rail redraws as the visitor's rail, and the feed
+         loads if the first pass did not get to it. */
+      else if(activeId) navigateTo(activeId, true);
     }
   })();
 
@@ -22734,7 +22838,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var input = btn.parentElement.querySelector('.kx-askin');
     var body = ((input && input.value) || '').trim();
     if(!body){ if(input){ input.classList.add('bad'); input.focus(); } kxToast('พิมพ์คำถามก่อนกดถาม'); return; }
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อนถามคำถาม'); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อนถามคำถาม'); return; }
     input.classList.remove('bad');
     btn.disabled = true;
     var res = await sb.from('post_questions').insert({
@@ -22775,7 +22879,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     var input = btn.parentElement.querySelector('.kx-followin');
     var body = ((input && input.value) || '').trim();
     if(!body){ if(input){ input.classList.add('bad'); input.focus(); } kxToast('พิมพ์ข้อความก่อนกดส่ง'); return; }
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     input.classList.remove('bad');
     btn.disabled = true;
     var res = await sb.from('post_questions').insert({
@@ -23687,6 +23791,19 @@ body.kx-guest #load-more-offers { display: none !important; }
   var feedLoadedAt = 0;
   var feedLoading = false;
   function feedIsStale(){ return !loaded || (Date.now() - feedLoadedAt) > FEED_STALE_MS; }
+  /* A visitor's feed and a member's are not the same rows: quotes(price) is
+     empty for the anon key, so the averages are missing, and no card can be
+     marked saved. Signing in or out throws the loaded page away so the next
+     visit to the feed asks again as whoever is there now. */
+  var feedReloadAfter = false;
+  window.kxFeedInvalidate = function(){
+    loaded = false; feedLoadedAt = 0; feedOffset = 0; feedDone = false;
+    /* The front page is the feed, so on a cold start it is already loading —
+       as a visitor — when getSession answers. kxRefreshFeedIfStale stands
+       down while a load is in flight, so the member would keep the visitor's
+       rows; instead the load that is running asks again when it finishes. */
+    if(feedLoading) feedReloadAfter = true;
+  };
   window.kxRefreshFeedIfStale = function(){
     if(feedLoading || !feedIsStale()) return false;
     window.kxLoadFeed();
@@ -23817,6 +23934,7 @@ body.kx-guest #load-more-offers { display: none !important; }
     loaded = true;
     feedLoadedAt = Date.now();
     feedLoading = false;
+    if(feedReloadAfter){ feedReloadAfter = false; window.kxLoadFeed(); return; }
     if(typeof applyFeedFilters === 'function') applyFeedFilters();
     if(typeof kxRankFeed === 'function') kxRankFeed();
     // put the reader back where they were, after the filters have run
@@ -24009,7 +24127,7 @@ body.kx-guest #load-more-offers { display: none !important; }
      and which column that is flips row by row depending on who asked. So the ids
      are collected first and the profiles fetched in one go. */
   window.kxOpenConnections = async function(profileId){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var me = window.kxSession.user.id;
     var whose = profileId || me;
     var own = whose === me;
@@ -24158,7 +24276,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   };
 
   window.kxToggleConnect = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); navigateTo('page-auth'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var st = kxConnState;
     if(!st || !st.other) return;
     var me = window.kxSession.user.id, other = st.other, row = st.row, res;
@@ -24286,7 +24404,7 @@ body.kx-guest #load-more-offers { display: none !important; }
   };
 
   window.kxSaveWork = async function(){
-    if(!window.kxSession){ kxToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+    if(!window.kxSession){ kxNeedLogin('กรุณาเข้าสู่ระบบก่อน'); return; }
     var title = (document.getElementById('pwTitle').value || '').trim();
     if(!title){ kxToast('กรอกชื่อผลงานก่อน'); return; }
     var btn = document.getElementById('pwSave');
