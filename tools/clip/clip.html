@@ -6,32 +6,40 @@
 <!-- FONTS -->
 <style>
   html, body { margin: 0; background: #111; }
-  canvas { display: block; width: 360px; height: 640px; margin: 20px auto; }
+  canvas { display: block; max-width: 96vw; max-height: 90vh; margin: 20px auto; }
   #log { color: #ccc; font: 13px monospace; white-space: pre; margin: 0 20px; }
 </style>
 </head>
 <body>
-<canvas id="c" width="1080" height="1920"></canvas>
+<canvas id="c"></canvas>
 <div id="log"></div>
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.min.js"></script>
 <script>
 /* ============================================================================
- * QubeQuote explainer, ~34 seconds, 1080x1920, drawn frame by frame on a canvas.
+ * QubeQuote explainer, ~34 seconds, drawn frame by frame on a canvas.
+ *
+ * Three framings from one drawing: 1080x1920 (Reels/TikTok/LINE), 1920x1080
+ * (YouTube) and 1080x1080 (Facebook feed). The step scenes are a header and
+ * a "body" — the phone, the cards — and the body is drawn once in its own
+ * 860-wide coordinate system, then placed and scaled per framing: under the
+ * header in portrait, beside it in the other two. The hook and the outro are
+ * centred compositions and take their positions from the frame.
  *
  * Everything is a pure function of time — draw(t) — so a frame can be looked
  * at, re-rendered, or encoded without the animation having to run at real
- * speed. The encoder is the browser's own (WebCodecs, H.264) and the file is
- * assembled by mp4-muxer; tools/build-clip.js opens this page headless and
- * receives the finished MP4.
+ * speed. Video is the browser's own H.264 encoder (WebCodecs); the music is
+ * synthesised with the Web Audio API (nothing licensed, nothing downloaded)
+ * and encoded to AAC the same way; mp4-muxer assembles the file, and
+ * tools/build-clip.js receives it.
  *
- * Open it in a browser with ?play=1 to watch it loop; ?t=12.5 to freeze one
- * frame. Nothing in here touches the app.
+ * ?w=1920&h=1080 picks the framing. ?play=1 loops it; ?t=12.5 freezes a frame.
  * ========================================================================== */
 'use strict';
 
-const W = 1080, H = 1920, FPS = 30;
-const c = document.getElementById('c'), ctx = c.getContext('2d');
 const q = new URLSearchParams(location.search);
+const W = +q.get('w') || 1080, H = +q.get('h') || 1920, FPS = 30;
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+c.width = W; c.height = H;
 
 /* ---- brand ---- */
 const BLUE = '#0056fd', BLUE_DEEP = '#0036a8', BLUE_SOFT = '#eef3ff', INK = '#1c1a18', INK_SOFT = '#565b6e';
@@ -59,13 +67,40 @@ const T = {
 };
 const DURATION = T.outro[1];
 
+/* ---- framing ---- */
+const BODY_W = 860, BODY_H = 1300;              // the body's own coordinate system
+function framing() {
+  const ar = W / H;
+  if (ar < .8) return {
+    kind: 'portrait', twoCol: false,
+    brand: { x: 70, y: 76, h: 62 },
+    header: { x: 120, y: 250, px: 66, badge: 56, sub: { y: 330, px: 32 } },
+    body: { x: 110, y: 400, s: 1 },
+    dots: { x: W / 2, y: H - 130 }
+  };
+  if (ar < 1.3) return {
+    kind: 'square', twoCol: true,
+    brand: { x: 60, y: 56, h: 50 },
+    header: { x: 60, y: 250, px: 46, badge: 42, twoLine: true, sub: { y: 370, px: 26, wrap: 400 } },
+    body: { x: 520, y: 120, s: .60 },
+    dots: { x: 250, y: H - 90 }
+  };
+  return {
+    kind: 'landscape', twoCol: true,
+    brand: { x: 100, y: 70, h: 64 },
+    header: { x: 100, y: 380, px: 66, badge: 56, sub: { y: 460, px: 32, wrap: 760 } },
+    body: { x: 990, y: 60, s: .74 },
+    dots: { x: 480, y: H - 100 }
+  };
+}
+const F = framing();
+
 /* ---- easing ---- */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, u) => a + (b - a) * u;
 const outCubic = u => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
 const inOutCubic = u => { u = clamp(u, 0, 1); return u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; };
 const outBack = u => { u = clamp(u, 0, 1); const s = 1.70158; return 1 + (s + 1) * Math.pow(u - 1, 3) + s * Math.pow(u - 1, 2); };
-// 0→1 over [a,b]
 const seg = (t, a, b, ease) => (ease || outCubic)((t - a) / (b - a));
 const fadeInOut = (t, a, b, f) => Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b, u => clamp(u, 0, 1)));
 
@@ -75,9 +110,9 @@ function rr(x, y, w, h, r) {
   ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
-function card(x, y, w, h, r, shadow) {
+function card(x, y, w, h, r) {
   ctx.save();
-  if (shadow !== false) { ctx.shadowColor = 'rgba(12,63,115,.10)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14; }
+  ctx.shadowColor = 'rgba(12,63,115,.10)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
   ctx.fillStyle = CARD; rr(x, y, w, h, r); ctx.fill();
   ctx.restore();
   ctx.strokeStyle = LINE; ctx.lineWidth = 2; rr(x, y, w, h, r); ctx.stroke();
@@ -89,18 +124,32 @@ function text(s, x, y, o) {
   ctx.fillStyle = o.color || INK;
   ctx.textAlign = o.align || 'left';
   ctx.textBaseline = o.base || 'alphabetic';
-  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  if (o.alpha != null) ctx.globalAlpha *= clamp(o.alpha, 0, 1);
   ctx.fillText(s, x, y);
   ctx.restore();
 }
 function measure(s, w, px) { ctx.font = font(w, px); return ctx.measureText(s).width; }
+/* Thai has no spaces to break on, so lines are broken where they fit — a
+   caption in the narrow left column of the square framing needs it. */
+function wrapText(s, w, px, maxW) {
+  ctx.font = font(w, px);
+  if (ctx.measureText(s).width <= maxW) return [s];
+  const words = s.split(' ');
+  const lines = []; let cur = '';
+  for (const wd of words) {
+    const test = cur ? cur + ' ' + wd : wd;
+    if (ctx.measureText(test).width <= maxW || !cur) cur = test; else { lines.push(cur); cur = wd; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 function pill(label, x, y, o) {
   o = o || {};
   const px = o.px || 30, padX = o.padX || 26, h = o.h || px * 1.9;
   const w = measure(label, 600, px) + padX * 2;
   const left = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
   ctx.save();
-  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  if (o.alpha != null) ctx.globalAlpha *= clamp(o.alpha, 0, 1);
   ctx.fillStyle = o.bg || BLUE_SOFT; rr(left, y, w, h, h / 2); ctx.fill();
   if (o.border) { ctx.strokeStyle = o.border; ctx.lineWidth = 2; rr(left, y, w, h, h / 2); ctx.stroke(); }
   text(label, left + w / 2, y + h / 2 + 1, { w: 600, px, color: o.color || BLUE, align: 'center', base: 'middle' });
@@ -117,7 +166,6 @@ function star(x, y, r, fill) {
   ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
 }
 function check(x, y, r, u, color, width) {
-  // circle sweep then tick
   ctx.save();
   ctx.strokeStyle = color; ctx.lineWidth = width || 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const cu = clamp(u / .55, 0, 1), tu = clamp((u - .5) / .5, 0, 1);
@@ -140,74 +188,89 @@ function loadImg(key, src) {
 }
 function mark(x, y, h, white) {
   const im = white ? IMG.markWhite : IMG.mark;
-  if (!im) return;
+  if (!im) return 0;
   const w = h * im.width / im.height;
   ctx.drawImage(im, x, y, w, h);
   return w;
 }
 function wordmark(x, y, px, white) {
-  // "Qube" bold + "Quote" regular, like the top bar
   ctx.save();
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   ctx.font = font(700, px); ctx.fillStyle = white ? '#fff' : BLUE; ctx.fillText('Qube', x, y);
   const w1 = ctx.measureText('Qube').width;
   ctx.font = font(500, px); ctx.fillStyle = white ? '#fff' : INK; ctx.fillText('Quote', x + w1, y);
   ctx.restore();
+  return w1 + measure('Quote', 500, px);
 }
+function wordmarkWidth(px) { return measure('Qube', 700, px) + measure('Quote', 500, px); }
 
-/* ---- backgrounds ---- */
+/* ---- grounds ---- */
 function paper() { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); }
 function blueGround(t) {
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, '#0a5cff'); g.addColorStop(1, '#0036a8');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // slow drifting soft circles
   ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = '#fff';
+  const R = Math.min(W, H);
   for (let i = 0; i < 5; i++) {
     const a = t * .15 + i * 1.3;
-    ctx.beginPath(); ctx.arc(W * (.2 + .6 * (.5 + .5 * Math.sin(a))), H * (.15 + .7 * (.5 + .5 * Math.cos(a * .8 + i))), 160 + 60 * i, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W * (.2 + .6 * (.5 + .5 * Math.sin(a))), H * (.15 + .7 * (.5 + .5 * Math.cos(a * .8 + i))), R * (.15 + .055 * i), 0, Math.PI * 2); ctx.fill();
   }
   ctx.restore();
-}
-
-/* Step header: number badge + title, shared by scenes 1–4. */
-function stepHeader(n, title, t, a) {
-  const u = seg(t, a, a + .55, outBack);
-  const y = 250;
-  ctx.save(); ctx.globalAlpha = clamp(u, 0, 1);
-  // badge
-  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(120, y, 56 * u, 0, Math.PI * 2); ctx.fill();
-  text(String(n), 120, y + 2, { w: 700, px: 56, color: '#fff', align: 'center', base: 'middle' });
-  const dx = lerp(40, 0, u);
-  text(title, 210 + dx, y + 2, { w: 700, px: 66, base: 'middle' });
-  ctx.restore();
-}
-// small progress dots at the bottom
-function dots(step) {
-  const y = H - 130, gap = 44;
-  for (let i = 0; i < 4; i++) {
-    ctx.fillStyle = i === step ? BLUE : '#c9d3ea';
-    ctx.beginPath(); ctx.arc(W / 2 + (i - 1.5) * gap, y, i === step ? 10 : 7, 0, Math.PI * 2); ctx.fill();
-  }
 }
 function topBrand(white) {
-  const h = 62;
-  const w = mark(70, 76, h, white) || 56;
-  wordmark(70 + w + 18, 76 + h / 2, 44, white);
+  const b = F.brand;
+  const w = mark(b.x, b.y, b.h, white);
+  wordmark(b.x + w + 18, b.y + b.h / 2, b.h * .7, white);
 }
 
-/* Phone frame with the app's top bar, returns the content box. */
+/* Step header: badge, title and a one-line caption. In the two-column
+   framings this is the whole left column. */
+function stepHeader(n, title, sub, t, a) {
+  const h = F.header;
+  const u = seg(t, a, a + .55, outBack);
+  ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
+  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(h.x, h.y, h.badge * u, 0, Math.PI * 2); ctx.fill();
+  text(String(n), h.x, h.y + 2, { w: 700, px: h.badge, color: '#fff', align: 'center', base: 'middle' });
+  const dx = lerp(40, 0, u);
+  // a '|' in the title marks where the narrow left column of the square
+  // framing breaks it; the other two have room for one line
+  const lines = h.twoLine ? title.split('|') : [title.replace('|', '')];
+  if (lines.length === 1) text(lines[0], h.x + h.badge + 34 + dx, h.y + 2, { w: 700, px: h.px, base: 'middle' });
+  else lines.forEach((ln, i) => text(ln, h.x + h.badge + 34 + dx, h.y + 2 + (i - .5) * h.px * 1.3, { w: 700, px: h.px, base: 'middle' }));
+  ctx.restore();
+  if (sub) {
+    const su = seg(t, a + .4, a + .9);
+    const lines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
+    lines.forEach((ln, i) => text(ln, h.x - h.badge, h.sub.y + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
+  }
+}
+function dots(step) {
+  const gap = 44;
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i === step ? BLUE : '#c9d3ea';
+    ctx.beginPath(); ctx.arc(F.dots.x + (i - 1.5) * gap, F.dots.y, i === step ? 10 : 7, 0, Math.PI * 2); ctx.fill();
+  }
+}
+/* Runs a body drawer in body coordinates, placed per framing. */
+function body(fn) {
+  ctx.save();
+  ctx.translate(F.body.x, F.body.y); ctx.scale(F.body.s, F.body.s);
+  fn();
+  ctx.restore();
+}
+
+/* Phone frame with the app's top bar; returns the content box (body coords). */
 function phone(x, y, w, h) {
   ctx.save();
   ctx.shadowColor = 'rgba(12,63,115,.18)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24;
   ctx.fillStyle = '#0f172a'; rr(x, y, w, h, 64); ctx.fill();
   ctx.restore();
   ctx.fillStyle = BG; rr(x + 16, y + 16, w - 32, h - 32, 50); ctx.fill();
-  // top bar
   ctx.save(); rr(x + 16, y + 16, w - 32, h - 32, 50); ctx.clip();
   ctx.fillStyle = '#fff'; ctx.fillRect(x + 16, y + 16, w - 32, 110);
   ctx.fillStyle = LINE; ctx.fillRect(x + 16, y + 126, w - 32, 2);
-  const mh = 46; const mw = mark(x + 56, y + 48, mh) || 40;
+  const mh = 46; const mw = mark(x + 56, y + 48, mh);
   wordmark(x + 56 + mw + 12, y + 48 + mh / 2, 32);
   ctx.restore();
   return { x: x + 16, y: y + 128, w: w - 32, h: h - 32 - 112 };
@@ -218,33 +281,33 @@ function phone(x, y, w, h) {
 function sceneHook(t) {
   const [a, b] = T.hook;
   blueGround(t);
-  const fade = fadeInOut(t, a, b, .5);
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
   topBrand(true);
-  // question badge bobbing
   const u0 = seg(t, a + .1, a + .8, outBack);
-  const by = 620 + Math.sin(t * 2.2) * 14;
-  ctx.save(); ctx.translate(W / 2, by); ctx.scale(u0, u0);
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 150, 0, Math.PI * 2); ctx.fill();
-  text('?', 0, 12, { w: 700, px: 200, color: BLUE, align: 'center', base: 'middle' });
+  const l1 = seg(t, a + .5, a + 1.1), l2 = seg(t, a + .85, a + 1.45), l3 = seg(t, a + 1.7, a + 2.3), l4 = seg(t, a + 2.2, a + 3.0);
+  // positions per framing
+  let P;
+  if (F.kind === 'portrait')       P = { bx: W / 2, by: 620, br: 150, bpx: 200, tx: W / 2, y1: 960, y2: 1090, ty: 1230, dy: 1400, px: 92, tpx: 44, align: 'center' };
+  else if (F.kind === 'square')    P = { bx: W / 2, by: 250, br: 110, bpx: 150, tx: W / 2, y1: 520, y2: 630, ty: 740, dy: 880, px: 80, tpx: 38, align: 'center' };
+  else                             P = { bx: 640, by: H / 2, br: 170, bpx: 230, tx: 950, y1: H / 2 - 70, y2: H / 2 + 50, ty: H / 2 + 160, dy: H / 2 + 300, px: 92, tpx: 42, align: 'left' };
+  const bob = Math.sin(t * 2.2) * 12;
+  ctx.save(); ctx.translate(P.bx, P.by + bob); ctx.scale(u0, u0);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, P.br, 0, Math.PI * 2); ctx.fill();
+  text('?', 0, P.br * .08, { w: 700, px: P.bpx, color: BLUE, align: 'center', base: 'middle' });
   ctx.restore();
-  // two lines, staggered
-  const l1 = seg(t, a + .5, a + 1.1), l2 = seg(t, a + .85, a + 1.45);
-  text('มีของที่ต้องการซื้อ', W / 2, 960 + lerp(40, 0, l1), { w: 700, px: 92, color: '#fff', align: 'center', alpha: l1 });
-  text('แต่ไม่รู้ราคาตลาด?', W / 2, 1090 + lerp(40, 0, l2), { w: 700, px: 92, color: '#fff', align: 'center', alpha: l2 });
-  const l3 = seg(t, a + 1.7, a + 2.3);
-  text('ให้ผู้ขายเสนอราคามาหาคุณ ใน 4 ขั้นตอน', W / 2, 1230, { w: 500, px: 44, color: 'rgba(255,255,255,.85)', align: 'center', alpha: l3 });
-  // four small numbered dots previewing the steps
-  const l4 = seg(t, a + 2.2, a + 3.0);
+  text('มีของที่ต้องการซื้อ', P.tx, P.y1 + lerp(40, 0, l1), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l1 });
+  text('แต่ไม่รู้ราคาตลาด?', P.tx, P.y2 + lerp(40, 0, l2), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l2 });
+  text('ให้ผู้ขายเสนอราคามาหาคุณ ใน 4 ขั้นตอน', P.tx, P.ty, { w: 500, px: P.tpx, color: 'rgba(255,255,255,.85)', align: P.align, alpha: l3 });
+  const dx0 = P.align === 'center' ? P.tx : P.tx + 3 * 75 + 54;
   for (let i = 0; i < 4; i++) {
     const uu = seg(t, a + 2.2 + i * .15, a + 2.7 + i * .15, outBack);
-    const x = W / 2 + (i - 1.5) * 150, y = 1400;
-    ctx.save(); ctx.globalAlpha = clamp(uu, 0, 1); ctx.translate(x, y); ctx.scale(uu, uu);
+    const x = dx0 + (i - 1.5) * 150, y = P.dy;
+    ctx.save(); ctx.globalAlpha *= clamp(uu, 0, 1); ctx.translate(x, y); ctx.scale(uu, uu);
     ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
     text(String(i + 1), 0, 2, { w: 700, px: 46, color: '#fff', align: 'center', base: 'middle' });
     ctx.restore();
-    if (i < 3) { ctx.save(); ctx.globalAlpha = l4 * .6; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 62, y); ctx.lineTo(x + 88, y); ctx.stroke(); ctx.restore(); }
+    if (i < 3) { ctx.save(); ctx.globalAlpha *= l4 * .6; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 62, y); ctx.lineTo(x + 88, y); ctx.stroke(); ctx.restore(); }
   }
   ctx.restore();
 }
@@ -252,62 +315,54 @@ function sceneHook(t) {
 function scene1(t) {
   const [a, b] = T.s1;
   paper();
-  const fade = fadeInOut(t, a, b, .4);
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader(1, 'ลงรายการที่ต้องการซื้อ', t, a + .1);
-  // phone slides up
+  stepHeader(1, 'ลงรายการ|ที่ต้องการซื้อ', 'บอกสิ่งที่ต้องการ ใส่จังหวัด แนบรูป แล้วโพสต์', t, a + .1);
   const pu = seg(t, a + .3, a + 1.0);
-  const box = phone(140, 430 + lerp(120, 0, pu), 800, 1180);
-  ctx.save(); ctx.globalAlpha *= pu;
-  // form
-  const fx = box.x + 40, fy = box.y + 50, fw = box.w - 80;
-  text('โพสต์ประกาศ', fx, fy + 30, { w: 700, px: 44 });
-  text('บอกสิ่งที่ต้องการ แล้วให้ผู้ขายเสนอราคามาหาคุณ', fx, fy + 86, { w: 400, px: 27, color: INK_SOFT });
-  // title field, typing
-  text('หัวข้อ', fx, fy + 170, { w: 600, px: 28 });
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = t < a + 4.6 ? BLUE : LINE; ctx.lineWidth = 3; rr(fx, fy + 190, fw, 92, 18); ctx.fill(); ctx.stroke();
-  const tu = seg(t, a + 1.3, a + 3.6, u => clamp(u, 0, 1));
-  const shown = ITEM.slice(0, Math.round(ITEM.length * tu));
-  text(shown, fx + 28, fy + 248, { w: 500, px: 34 });
-  if (t < a + 4.6 && Math.floor(t * 2.5) % 2 === 0) { const cw = measure(shown, 500, 34); ctx.fillStyle = BLUE; ctx.fillRect(fx + 30 + cw, fy + 214, 3, 50); }
-  // province + deadline chips
-  const cu = seg(t, a + 3.7, a + 4.3);
-  ctx.save(); ctx.globalAlpha *= cu;
-  text('จังหวัดของงาน', fx, fy + 350, { w: 600, px: 28 });
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = LINE; rr(fx, fy + 370, fw, 84, 18); ctx.fill(); ctx.stroke();
-  text('📍 เชียงใหม่', fx + 28, fy + 424, { w: 500, px: 32 });
-  ctx.restore();
-  // photo tiles
-  const iu = seg(t, a + 4.2, a + 4.9, outBack);
-  text('รูปประกอบ', fx, fy + 530, { w: 600, px: 28, alpha: clamp(iu, 0, 1) });
-  for (let i = 0; i < 3; i++) {
-    const uu = seg(t, a + 4.2 + i * .12, a + 4.8 + i * .12, outBack);
-    const tx = fx + i * (fw / 3), tw = fw / 3 - 16;
-    ctx.save(); ctx.globalAlpha *= clamp(uu, 0, 1); ctx.translate(tx + tw / 2, fy + 640); ctx.scale(uu, uu);
-    ctx.fillStyle = i === 0 ? BLUE_SOFT : '#f1f3f8'; rr(-tw / 2, -90, tw, 180, 20); ctx.fill();
-    ctx.strokeStyle = i === 0 ? BLUE : LINE; ctx.lineWidth = 3; ctx.setLineDash(i === 0 ? [] : [12, 10]); rr(-tw / 2, -90, tw, 180, 20); ctx.stroke();
-    if (i === 0) { ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(-60, 50); ctx.lineTo(-20, -10); ctx.lineTo(10, 25); ctx.lineTo(35, 0); ctx.lineTo(70, 50); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(40, -35, 14, 0, Math.PI * 2); ctx.fill(); }
-    else text('+', 0, 4, { w: 400, px: 70, color: '#aeb6c8', align: 'center', base: 'middle' });
+  body(() => {
+    ctx.globalAlpha *= pu;
+    const box = phone(30, 30 + lerp(120, 0, pu), 800, 1180);
+    const fx = box.x + 40, fy = box.y + 50, fw = box.w - 80;
+    text('โพสต์ประกาศ', fx, fy + 30, { w: 700, px: 44 });
+    text('บอกสิ่งที่ต้องการ แล้วให้ผู้ขายเสนอราคามาหาคุณ', fx, fy + 86, { w: 400, px: 27, color: INK_SOFT });
+    text('หัวข้อ', fx, fy + 170, { w: 600, px: 28 });
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = t < a + 4.6 ? BLUE : LINE; ctx.lineWidth = 3; rr(fx, fy + 190, fw, 92, 18); ctx.fill(); ctx.stroke();
+    const tu = seg(t, a + 1.3, a + 3.6, u => clamp(u, 0, 1));
+    const shown = ITEM.slice(0, Math.round(ITEM.length * tu));
+    text(shown, fx + 28, fy + 248, { w: 500, px: 34 });
+    if (t < a + 4.6 && Math.floor(t * 2.5) % 2 === 0) { const cw = measure(shown, 500, 34); ctx.fillStyle = BLUE; ctx.fillRect(fx + 30 + cw, fy + 214, 3, 50); }
+    const cu = seg(t, a + 3.7, a + 4.3);
+    ctx.save(); ctx.globalAlpha *= cu;
+    text('จังหวัดของงาน', fx, fy + 350, { w: 600, px: 28 });
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = LINE; rr(fx, fy + 370, fw, 84, 18); ctx.fill(); ctx.stroke();
+    text('📍 เชียงใหม่', fx + 28, fy + 424, { w: 500, px: 32 });
     ctx.restore();
-  }
-  // publish button, pressed at the end
-  const bu = seg(t, a + 4.9, a + 5.4);
-  const press = t > a + 5.9 && t < a + 6.2 ? 1 - Math.abs((t - a - 6.05) / .15) : 0;
-  const bs = 1 - press * .06;
-  ctx.save(); ctx.globalAlpha *= bu; ctx.translate(fx + fw / 2, fy + 860); ctx.scale(bs, bs);
-  ctx.fillStyle = press ? BLUE_DEEP : BLUE; rr(-fw / 2, -50, fw, 100, 50); ctx.fill();
-  text('＋ โพสต์ประกาศ', 0, 3, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
-  ctx.restore();
-  // "โพสต์แล้ว" toast after press
-  const ku = seg(t, a + 6.2, a + 6.6, outBack);
-  if (ku > 0) {
-    ctx.save(); ctx.globalAlpha *= clamp(ku, 0, 1); ctx.translate(fx + fw / 2, fy + 990); ctx.scale(ku, ku);
-    ctx.fillStyle = GREEN_SOFT; rr(-200, -40, 400, 80, 40); ctx.fill();
-    text('✓ โพสต์ประกาศแล้ว', 0, 3, { w: 600, px: 30, color: GREEN, align: 'center', base: 'middle' });
+    const iu = seg(t, a + 4.2, a + 4.9, outBack);
+    text('รูปประกอบ', fx, fy + 530, { w: 600, px: 28, alpha: iu });
+    for (let i = 0; i < 3; i++) {
+      const uu = seg(t, a + 4.2 + i * .12, a + 4.8 + i * .12, outBack);
+      const tx = fx + i * (fw / 3), tw = fw / 3 - 16;
+      ctx.save(); ctx.globalAlpha *= clamp(uu, 0, 1); ctx.translate(tx + tw / 2, fy + 640); ctx.scale(uu, uu);
+      ctx.fillStyle = i === 0 ? BLUE_SOFT : '#f1f3f8'; rr(-tw / 2, -90, tw, 180, 20); ctx.fill();
+      ctx.strokeStyle = i === 0 ? BLUE : LINE; ctx.lineWidth = 3; ctx.setLineDash(i === 0 ? [] : [12, 10]); rr(-tw / 2, -90, tw, 180, 20); ctx.stroke();
+      if (i === 0) { ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(-60, 50); ctx.lineTo(-20, -10); ctx.lineTo(10, 25); ctx.lineTo(35, 0); ctx.lineTo(70, 50); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(40, -35, 14, 0, Math.PI * 2); ctx.fill(); }
+      else text('+', 0, 4, { w: 400, px: 70, color: '#aeb6c8', align: 'center', base: 'middle' });
+      ctx.restore();
+    }
+    const bu = seg(t, a + 4.9, a + 5.4);
+    const press = t > a + 5.9 && t < a + 6.2 ? 1 - Math.abs((t - a - 6.05) / .15) : 0;
+    ctx.save(); ctx.globalAlpha *= bu; ctx.translate(fx + fw / 2, fy + 860); ctx.scale(1 - press * .06, 1 - press * .06);
+    ctx.fillStyle = press ? BLUE_DEEP : BLUE; rr(-fw / 2, -50, fw, 100, 50); ctx.fill();
+    text('＋ โพสต์ประกาศ', 0, 3, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
     ctx.restore();
-  }
-  ctx.restore();
+    const ku = seg(t, a + 6.2, a + 6.6, outBack);
+    if (ku > 0) {
+      ctx.save(); ctx.globalAlpha *= clamp(ku, 0, 1); ctx.translate(fx + fw / 2, fy + 990); ctx.scale(ku, ku);
+      ctx.fillStyle = GREEN_SOFT; rr(-200, -40, 400, 80, 40); ctx.fill();
+      text('✓ โพสต์ประกาศแล้ว', 0, 3, { w: 600, px: 30, color: GREEN, align: 'center', base: 'middle' });
+      ctx.restore();
+    }
+  });
   dots(0);
   ctx.restore();
 }
@@ -315,109 +370,97 @@ function scene1(t) {
 function scene2(t) {
   const [a, b] = T.s2;
   paper();
-  const fade = fadeInOut(t, a, b, .4);
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader(2, 'รอผู้ขายเสนอราคา', t, a + .1);
-  // the post card
-  const cu = seg(t, a + .3, a + .9);
-  const cx = 110, cy = 400 + lerp(60, 0, cu), cw = W - 220;
-  ctx.save(); ctx.globalAlpha *= cu;
-  card(cx, cy, cw, 300, 28);
-  ctx.fillStyle = BLUE_SOFT; ctx.beginPath(); ctx.arc(cx + 70, cy + 70, 34, 0, Math.PI * 2); ctx.fill();
-  text('คุณ', cx + 70, cy + 73, { w: 700, px: 24, color: BLUE, align: 'center', base: 'middle' });
-  text('ประกาศของคุณ', cx + 124, cy + 62, { w: 700, px: 30 });
-  text('เชียงใหม่ · เพิ่งโพสต์', cx + 124, cy + 100, { w: 400, px: 26, color: INK_SOFT });
-  pill('ต้องการซื้อ', cx + cw - 34, cy + 40, { align: 'right', px: 24, bg: BLUE, color: '#fff' });
-  text(ITEM, cx + 34, cy + 175, { w: 600, px: 38 });
-  // offer counter chip that counts up
-  const n = Math.min(3, Math.max(0, Math.floor((t - a - 1.6) / 1.5) + 1));
-  const bump = (() => { const k = (t - a - 1.6) % 1.5; return k > 0 && k < .3 ? 1 - k / .3 : 0; })();
-  ctx.save(); ctx.translate(cx + 34, cy + 220); ctx.scale(1 + bump * .08, 1 + bump * .08);
-  pill('ข้อเสนอ ' + n, 0, 0, { px: 28, bg: n ? BLUE_SOFT : '#f1f3f8', color: n ? BLUE : INK_SOFT });
-  ctx.restore();
-  ctx.restore();
-  // waiting hint before the first offer
-  const wu = fadeInOut(t, a + .8, a + 2.2, .3);
-  if (wu > 0) {
-    const dotN = Math.floor(t * 3) % 4;
-    text('ผู้ขายในสายงานนี้กำลังเห็นประกาศของคุณ' + '.'.repeat(dotN), W / 2, 820, { w: 500, px: 34, color: INK_SOFT, align: 'center', alpha: wu });
-  }
-  // notifications sliding in, one every 1.5s
-  for (let i = 0; i < 3; i++) {
-    const s0 = a + 1.6 + i * 1.5;
-    const u = seg(t, s0, s0 + .6, outBack);
-    if (u <= 0) continue;
-    const y = 840 + i * 205;
-    const x = lerp(W + 40, 110, clamp(u, 0, 1));
-    ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
-    card(x, y, W - 220, 150, 26);
-    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(x + 72, y + 75, 38, 0, Math.PI * 2); ctx.fill();
-    text('🔔', x + 72, y + 79, { px: 36, align: 'center', base: 'middle' });
-    text(SELLERS[i].name, x + 134, y + 62, { w: 700, px: 32 });
-    text('ส่งข้อเสนอราคามาแล้ว', x + 134, y + 108, { w: 400, px: 28, color: INK_SOFT });
-    text('เมื่อสักครู่', x + W - 220 - 34, y + 62, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+  stepHeader(2, 'รอผู้ขาย|เสนอราคา', 'ผู้ขายในสายงานนี้เห็นประกาศของคุณ และส่งข้อเสนอเข้ามาเอง', t, a + .1);
+  body(() => {
+    const cu = seg(t, a + .3, a + .9);
+    const cx = 0, cy = 0 + lerp(60, 0, cu), cw = BODY_W;
+    ctx.save(); ctx.globalAlpha *= cu;
+    card(cx, cy, cw, 300, 28);
+    ctx.fillStyle = BLUE_SOFT; ctx.beginPath(); ctx.arc(cx + 70, cy + 70, 34, 0, Math.PI * 2); ctx.fill();
+    text('คุณ', cx + 70, cy + 73, { w: 700, px: 24, color: BLUE, align: 'center', base: 'middle' });
+    text('ประกาศของคุณ', cx + 124, cy + 62, { w: 700, px: 30 });
+    text('เชียงใหม่ · เพิ่งโพสต์', cx + 124, cy + 100, { w: 400, px: 26, color: INK_SOFT });
+    pill('ต้องการซื้อ', cx + cw - 34, cy + 40, { align: 'right', px: 24, bg: BLUE, color: '#fff' });
+    text(ITEM, cx + 34, cy + 175, { w: 600, px: 38 });
+    const n = Math.min(3, Math.max(0, Math.floor((t - a - 1.6) / 1.5) + 1));
+    const bump = (() => { const k = (t - a - 1.6) % 1.5; return k > 0 && k < .3 ? 1 - k / .3 : 0; })();
+    ctx.save(); ctx.translate(cx + 34, cy + 220); ctx.scale(1 + bump * .08, 1 + bump * .08);
+    pill('ข้อเสนอ ' + n, 0, 0, { px: 28, bg: n ? BLUE_SOFT : '#f1f3f8', color: n ? BLUE : INK_SOFT });
     ctx.restore();
-  }
-  // sealed note
-  const su = seg(t, a + 5.2, a + 5.8);
-  if (su > 0) {
-    ctx.save(); ctx.globalAlpha *= su;
-    pill('🔒 ราคาปิดผนึก — ผู้ขายมองไม่เห็นราคากันเอง', W / 2, 1500, { align: 'center', px: 28, bg: '#fff', color: INK_SOFT, border: LINE });
     ctx.restore();
-  }
+    const wu = fadeInOut(t, a + .8, a + 2.2, .3);
+    if (wu > 0) {
+      const dotN = Math.floor(t * 3) % 4;
+      text('กำลังรอข้อเสนอ' + '.'.repeat(dotN), BODY_W / 2, 420, { w: 500, px: 34, color: INK_SOFT, align: 'center', alpha: wu });
+    }
+    for (let i = 0; i < 3; i++) {
+      const s0 = a + 1.6 + i * 1.5;
+      const u = seg(t, s0, s0 + .6, outBack);
+      if (u <= 0) continue;
+      const y = 440 + i * 205;
+      const x = lerp(BODY_W + 300, 0, clamp(u, 0, 1));
+      ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
+      card(x, y, BODY_W, 150, 26);
+      ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(x + 72, y + 75, 38, 0, Math.PI * 2); ctx.fill();
+      text('🔔', x + 72, y + 79, { px: 36, align: 'center', base: 'middle' });
+      text(SELLERS[i].name, x + 134, y + 62, { w: 700, px: 32 });
+      text('ส่งข้อเสนอราคามาแล้ว', x + 134, y + 108, { w: 400, px: 28, color: INK_SOFT });
+      text('เมื่อสักครู่', x + BODY_W - 34, y + 62, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+      ctx.restore();
+    }
+    const su = seg(t, a + 5.2, a + 5.8);
+    if (su > 0) pill('🔒 ราคาปิดผนึก — ผู้ขายมองไม่เห็นราคากันเอง', BODY_W / 2, 1100, { align: 'center', px: 28, bg: '#fff', color: INK_SOFT, border: LINE, alpha: su });
+  });
   dots(1);
   ctx.restore();
+}
+
+function offerRow(s, x, y, w, i, price, low, hl) {
+  const rowH = 250;
+  card(x, y, w, rowH, 28);
+  if (low && hl > 0) { ctx.save(); ctx.globalAlpha *= hl; ctx.strokeStyle = GREEN; ctx.lineWidth = 5; rr(x, y, w, rowH, 28); ctx.stroke(); ctx.restore(); }
+  ctx.fillStyle = ['#dbe7ff', '#e6f6ea', '#fff1d6'][i]; ctx.beginPath(); ctx.arc(x + 74, y + 74, 40, 0, Math.PI * 2); ctx.fill();
+  text(s.name.replace(/^(บจก\. |ร้าน)/, '').charAt(0), x + 74, y + 78, { w: 700, px: 34, color: INK, align: 'center', base: 'middle' });
+  text(s.name, x + 136, y + 66, { w: 700, px: 32 });
+  for (let k = 0; k < 5; k++) star(x + 150 + k * 32, y + 106, 12, k < Math.round(s.stars) ? AMBER : '#e2e6ef');
+  text(s.stars.toFixed(1), x + 316, y + 114, { w: 500, px: 24, color: INK_SOFT });
+  text(baht(price), x + w - 34, y + 84, { w: 700, px: 52, color: low && hl > 0 ? GREEN : INK, align: 'right' });
+  text('รวมค่าส่ง', x + w - 34, y + 122, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+  ctx.fillStyle = LINE; ctx.fillRect(x + 34, y + 152, w - 68, 2);
+  pill('🚚 ส่งใน ' + s.days + ' วัน', x + 34, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
+  pill('📎 แนบใบเสนอราคา', x + 260, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
+  if (low && hl > 0) pill('ราคาต่ำสุด', x + w - 34, y + 176, { align: 'right', px: 24, bg: GREEN_SOFT, color: GREEN, alpha: hl });
 }
 
 function scene3(t) {
   const [a, b] = T.s3;
   paper();
-  const fade = fadeInOut(t, a, b, .4);
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader(3, 'เปรียบเทียบข้อเสนอ', t, a + .1);
-  text('เห็นราคาและเงื่อนไขของทุกรายในหน้าเดียว', 110, 380, { w: 400, px: 32, color: INK_SOFT, alpha: seg(t, a + .4, a + .9) });
-  const rows = [0, 1, 2].map(i => SELLERS[i]);
-  const rowH = 250, gap = 26, top = 440;
-  for (let i = 0; i < 3; i++) {
-    const s = rows[i];
-    const u = seg(t, a + .5 + i * .35, a + 1.1 + i * .35);
-    if (u <= 0) continue;
-    const y = top + i * (rowH + gap) + lerp(40, 0, u);
-    const x = 110, w = W - 220;
-    const low = i === LOWEST;
-    const hl = seg(t, a + 3.2, a + 3.8);          // the lowest is highlighted
-    ctx.save(); ctx.globalAlpha *= u;
-    card(x, y, w, rowH, 28);
-    if (low && hl > 0) { ctx.save(); ctx.globalAlpha *= hl; ctx.strokeStyle = GREEN; ctx.lineWidth = 5; rr(x, y, w, rowH, 28); ctx.stroke(); ctx.restore(); }
-    // avatar + name + stars
-    ctx.fillStyle = ['#dbe7ff', '#e6f6ea', '#fff1d6'][i]; ctx.beginPath(); ctx.arc(x + 74, y + 74, 40, 0, Math.PI * 2); ctx.fill();
-    text(s.name.replace(/^(บจก\. |ร้าน)/, '').charAt(0), x + 74, y + 78, { w: 700, px: 34, color: INK, align: 'center', base: 'middle' });
-    text(s.name, x + 136, y + 66, { w: 700, px: 32 });
-    for (let k = 0; k < 5; k++) star(x + 150 + k * 32, y + 106, 12, k < Math.round(s.stars) ? AMBER : '#e2e6ef');
-    text(s.stars.toFixed(1), x + 316, y + 114, { w: 500, px: 24, color: INK_SOFT });
-    // price, counting up
-    const pu = seg(t, a + 1.2 + i * .35, a + 2.2 + i * .35, inOutCubic);
-    const price = Math.round(s.price * pu / 100) * 100;
-    text(baht(price), x + w - 34, y + 84, { w: 700, px: 52, color: low && hl > 0 ? GREEN : INK, align: 'right' });
-    text('รวมค่าส่ง', x + w - 34, y + 122, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
-    // meta line
-    ctx.fillStyle = LINE; ctx.fillRect(x + 34, y + 152, w - 68, 2);
-    pill('🚚 ส่งใน ' + s.days + ' วัน', x + 34, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
-    pill('📎 แนบใบเสนอราคา', x + 260, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
-    if (low && hl > 0) { ctx.save(); ctx.globalAlpha *= hl; pill('ราคาต่ำสุด', x + w - 34, y + 176, { align: 'right', px: 24, bg: GREEN_SOFT, color: GREEN }); ctx.restore(); }
-    ctx.restore();
-  }
-  // difference callout
-  const du = seg(t, a + 4.2, a + 4.8, outBack);
-  if (du > 0) {
-    const diff = SELLERS[0].price - SELLERS[LOWEST].price;
-    ctx.save(); ctx.globalAlpha *= clamp(du, 0, 1); ctx.translate(W / 2, 1380); ctx.scale(du, du);
-    ctx.fillStyle = BLUE; rr(-400, -70, 800, 140, 36); ctx.fill();
-    text('ต่างกันถึง ' + baht(diff) + ' ในงานเดียวกัน', 0, 4, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
-    ctx.restore();
-  }
+  stepHeader(3, 'เปรียบเทียบ|ข้อเสนอ', 'เห็นราคาและเงื่อนไขของทุกรายในหน้าเดียว', t, a + .1);
+  body(() => {
+    const rowH = 250, gap = 26, top = 40;
+    const hl = seg(t, a + 3.2, a + 3.8);
+    for (let i = 0; i < 3; i++) {
+      const u = seg(t, a + .5 + i * .35, a + 1.1 + i * .35);
+      if (u <= 0) continue;
+      const y = top + i * (rowH + gap) + lerp(40, 0, u);
+      const pu = seg(t, a + 1.2 + i * .35, a + 2.2 + i * .35, inOutCubic);
+      ctx.save(); ctx.globalAlpha *= u;
+      offerRow(SELLERS[i], 0, y, BODY_W, i, Math.round(SELLERS[i].price * pu / 100) * 100, i === LOWEST, hl);
+      ctx.restore();
+    }
+    const du = seg(t, a + 4.2, a + 4.8, outBack);
+    if (du > 0) {
+      const diff = SELLERS[0].price - SELLERS[LOWEST].price;
+      ctx.save(); ctx.globalAlpha *= clamp(du, 0, 1); ctx.translate(BODY_W / 2, 980); ctx.scale(du, du);
+      ctx.fillStyle = BLUE; rr(-400, -70, 800, 140, 36); ctx.fill();
+      text('ต่างกันถึง ' + baht(diff) + ' ในงานเดียวกัน', 0, 4, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
+      ctx.restore();
+    }
+  });
   dots(2);
   ctx.restore();
 }
@@ -425,44 +468,33 @@ function scene3(t) {
 function scene4(t) {
   const [a, b] = T.s4;
   paper();
-  const fade = fadeInOut(t, a, b, .4);
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader(4, 'ค่อยตัดสินใจ', t, a + .1);
-  // the chosen row, centred
-  const u = seg(t, a + .3, a + .9);
-  const s = SELLERS[LOWEST];
-  const x = 110, w = W - 220, y = 520 + lerp(40, 0, u), h = 250;
-  ctx.save(); ctx.globalAlpha *= u;
-  card(x, y, w, h, 28);
-  ctx.fillStyle = '#e6f6ea'; ctx.beginPath(); ctx.arc(x + 74, y + 74, 40, 0, Math.PI * 2); ctx.fill();
-  text('ช', x + 74, y + 78, { w: 700, px: 34, align: 'center', base: 'middle' });
-  text(s.name, x + 136, y + 66, { w: 700, px: 32 });
-  for (let k = 0; k < 5; k++) star(x + 150 + k * 32, y + 106, 12, k < Math.round(s.stars) ? AMBER : '#e2e6ef');
-  text(baht(s.price), x + w - 34, y + 84, { w: 700, px: 52, color: GREEN, align: 'right' });
-  text('รวมค่าส่ง', x + w - 34, y + 122, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
-  ctx.fillStyle = LINE; ctx.fillRect(x + 34, y + 152, w - 68, 2);
-  pill('🚚 ส่งใน ' + s.days + ' วัน', x + 34, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
-  pill('ราคาต่ำสุด', x + w - 34, y + 176, { align: 'right', px: 24, bg: GREEN_SOFT, color: GREEN });
-  ctx.restore();
-  // button press → check
-  const bu = seg(t, a + .8, a + 1.2);
-  const press = t > a + 1.6 && t < a + 1.9 ? 1 - Math.abs((t - a - 1.75) / .15) : 0;
-  const done = t > a + 1.9;
-  ctx.save(); ctx.globalAlpha *= bu; ctx.translate(W / 2, y + h + 110); ctx.scale(1 - press * .06, 1 - press * .06);
-  ctx.fillStyle = done ? GREEN : BLUE; rr(-330, -54, 660, 108, 54); ctx.fill();
-  text(done ? '✓ เลือกข้อเสนอนี้แล้ว' : 'เลือกข้อเสนอนี้', 0, 4, { w: 700, px: 38, color: '#fff', align: 'center', base: 'middle' });
-  ctx.restore();
-  const ku = seg(t, a + 1.9, a + 3.0, u => clamp(u, 0, 1));
-  if (ku > 0) {
-    ctx.save(); ctx.globalAlpha *= clamp(ku * 2, 0, 1);
-    ctx.fillStyle = GREEN_SOFT; ctx.beginPath(); ctx.arc(W / 2, 1300, 150, 0, Math.PI * 2); ctx.fill();
-    check(W / 2, 1300, 105, ku, GREEN, 16);
+  stepHeader(4, 'ค่อยตัดสินใจ', 'ไม่ต้องรีบ — ดูข้อเสนอทั้งหมดก่อน แล้วค่อยเลือกรายที่ใช่', t, a + .1);
+  body(() => {
+    const u = seg(t, a + .3, a + .9);
+    const s = SELLERS[LOWEST];
+    const y = 120 + lerp(40, 0, u), h = 250;
+    ctx.save(); ctx.globalAlpha *= u;
+    offerRow(s, 0, y, BODY_W, LOWEST, s.price, true, 1);
     ctx.restore();
-  }
-  const mu = seg(t, a + 2.6, a + 3.2);
-  text('ไม่ต้องรีบ — เลือกเมื่อพร้อม', W / 2, 1560, { w: 700, px: 46, align: 'center', alpha: mu });
-  text('ดูข้อเสนอทั้งหมดก่อน แล้วค่อยเลือกรายที่ใช่', W / 2, 1625, { w: 400, px: 32, color: INK_SOFT, align: 'center', alpha: mu });
+    const bu = seg(t, a + .8, a + 1.2);
+    const press = t > a + 1.6 && t < a + 1.9 ? 1 - Math.abs((t - a - 1.75) / .15) : 0;
+    const done = t > a + 1.9;
+    ctx.save(); ctx.globalAlpha *= bu; ctx.translate(BODY_W / 2, y + h + 110); ctx.scale(1 - press * .06, 1 - press * .06);
+    ctx.fillStyle = done ? GREEN : BLUE; rr(-330, -54, 660, 108, 54); ctx.fill();
+    text(done ? '✓ เลือกข้อเสนอนี้แล้ว' : 'เลือกข้อเสนอนี้', 0, 4, { w: 700, px: 38, color: '#fff', align: 'center', base: 'middle' });
+    ctx.restore();
+    const ku = seg(t, a + 1.9, a + 3.0, u => clamp(u, 0, 1));
+    if (ku > 0) {
+      ctx.save(); ctx.globalAlpha *= clamp(ku * 2, 0, 1);
+      ctx.fillStyle = GREEN_SOFT; ctx.beginPath(); ctx.arc(BODY_W / 2, 820, 150, 0, Math.PI * 2); ctx.fill();
+      check(BODY_W / 2, 820, 105, ku, GREEN, 16);
+      ctx.restore();
+    }
+    const mu = seg(t, a + 2.6, a + 3.2);
+    text('เลือกเมื่อพร้อม', BODY_W / 2, 1080, { w: 700, px: 46, align: 'center', alpha: mu });
+  });
   dots(3);
   ctx.restore();
 }
@@ -470,34 +502,30 @@ function scene4(t) {
 function sceneOutro(t) {
   const [a, b] = T.outro;
   blueGround(t);
-  const fade = Math.min(seg(t, a, a + .5), 1 - seg(t, b - .6, b, u => clamp(u, 0, 1)));
-  ctx.save(); ctx.globalAlpha = fade;
+  ctx.save(); ctx.globalAlpha = Math.min(seg(t, a, a + .5), 1 - seg(t, b - .6, b, u => clamp(u, 0, 1)));
+  let P;
+  if (F.kind === 'portrait')    P = { my: 760, mh: 260, wy: 1010, wpx: 120, sy: 1150, spx: 58, py: 1290, ppx: 44, ny: 1470, npx: 32 };
+  else if (F.kind === 'square') P = { my: 300, mh: 200, wy: 500, wpx: 104, sy: 615, spx: 50, py: 720, ppx: 40, ny: 870, npx: 30 };
+  else                          P = { my: 270, mh: 220, wy: 500, wpx: 120, sy: 640, spx: 58, py: 760, ppx: 44, ny: 930, npx: 32 };
   const u = seg(t, a + .1, a + .9, outBack);
-  ctx.save(); ctx.translate(W / 2, 760); ctx.scale(u, u);
-  const mh = 260; const im = IMG.markWhite; const mw = mh * im.width / im.height;
-  ctx.drawImage(im, -mw / 2, -mh / 2, mw, mh);
+  ctx.save(); ctx.translate(W / 2, P.my); ctx.scale(u, u);
+  const im = IMG.markWhite; const mw = P.mh * im.width / im.height;
+  ctx.drawImage(im, -mw / 2, -P.mh / 2, mw, P.mh);
   ctx.restore();
   const wu = seg(t, a + .6, a + 1.2);
-  ctx.save(); ctx.globalAlpha *= wu; ctx.textAlign = 'center';
-  ctx.font = font(700, 120); ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
-  const w1 = ctx.measureText('Qube').width; ctx.font = font(500, 120); const w2 = ctx.measureText('Quote').width;
-  const x0 = W / 2 - (w1 + w2) / 2;
-  ctx.textAlign = 'left'; ctx.font = font(700, 120); ctx.fillText('Qube', x0, 1010); ctx.font = font(500, 120); ctx.fillText('Quote', x0 + w1, 1010);
+  ctx.save(); ctx.globalAlpha *= wu;
+  wordmark(W / 2 - wordmarkWidth(P.wpx) / 2, P.wy, P.wpx, true);
   ctx.restore();
   const su = seg(t, a + 1.1, a + 1.7);
-  text('ให้ผู้ขายเสนอราคามาหาคุณ', W / 2, 1150 + lerp(30, 0, su), { w: 600, px: 58, color: '#fff', align: 'center', alpha: su });
-  const cu = seg(t, a + 1.7, a + 2.3);
-  ctx.save(); ctx.globalAlpha *= cu;
-  pill('qubequote.com', W / 2, 1290, { align: 'center', px: 44, padX: 48, bg: '#fff', color: BLUE });
-  ctx.restore();
-  text('ดูประกาศได้ทันที · สมัครฟรีเมื่อพร้อมเสนอราคา', W / 2, 1470, { w: 400, px: 32, color: 'rgba(255,255,255,.85)', align: 'center', alpha: seg(t, a + 2.2, a + 2.8) });
+  text('ให้ผู้ขายเสนอราคามาหาคุณ', W / 2, P.sy + lerp(30, 0, su), { w: 600, px: P.spx, color: '#fff', align: 'center', alpha: su });
+  pill('qubequote.com', W / 2, P.py, { align: 'center', px: P.ppx, padX: 48, bg: '#fff', color: BLUE, alpha: seg(t, a + 1.7, a + 2.3) });
+  text('ดูประกาศได้ทันที · สมัครฟรีเมื่อพร้อมเสนอราคา', W / 2, P.ny, { w: 400, px: P.npx, color: 'rgba(255,255,255,.85)', align: 'center', alpha: seg(t, a + 2.2, a + 2.8) });
   ctx.restore();
 }
 
-/* Scenes cross-fade by each drawing its own ground and fading its content;
-   the ground of the next scene shows through the previous one's fade-out. */
 function draw(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, W, H);
   if (t < T.hook[1]) sceneHook(t);
   else if (t < T.s1[1]) scene1(t);
@@ -507,7 +535,86 @@ function draw(t) {
   else sceneOutro(Math.min(t, DURATION - 1e-3));
 }
 
-/* ====================== SETUP / ENCODE ====================== */
+/* ====================== MUSIC ====================== */
+/* A light, unhurried bed: a soft pad under a plucked arpeggio, a round bass
+   on the strong beats, a quiet kick and shaker for pace. Four chords over
+   nine and a half seconds, repeated; rendered offline so it is the same on
+   every run. Written here rather than licensed: a track nobody has to clear. */
+async function music(seconds) {
+  const sr = 48000;
+  const ac = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr);
+  const master = ac.createGain();
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = .01; comp.release.value = .25;
+  master.connect(comp); comp.connect(ac.destination);
+  master.gain.setValueAtTime(0, 0);
+  master.gain.linearRampToValueAtTime(1.3, 1.2);
+  master.gain.setValueAtTime(1.3, seconds - 2.8);
+  master.gain.linearRampToValueAtTime(0, seconds - .15);
+
+  const bpm = 100, beat = 60 / bpm, bar = beat * 4;
+  const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+  // Cmaj7 · G · Am7 · Fmaj7, as MIDI notes around C4
+  const CHORDS = [[60, 64, 67, 71], [55, 59, 62, 67], [57, 60, 64, 67], [53, 57, 60, 64]];
+  const ROOTS = [48, 43, 45, 41];
+  const bars = Math.ceil(seconds / bar);
+
+  function osc(type, freq, t0, t1, gain, dest, detune) {
+    const o = ac.createOscillator(); o.type = type; o.frequency.value = freq; if (detune) o.detune.value = detune;
+    const g = ac.createGain(); g.gain.value = gain;
+    o.connect(g); g.connect(dest || master); o.start(t0); o.stop(t1);
+    return g;
+  }
+  // pad through a gentle low-pass
+  const padLp = ac.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = .5; padLp.connect(master);
+  for (let b = 0; b < bars; b++) {
+    const t0 = b * bar, t1 = t0 + bar + .6, ch = CHORDS[b % 4];
+    ch.forEach(n => {
+      [-7, 7].forEach(d => {
+        const g = osc('sawtooth', midi(n), t0, t1, 0, padLp, d);
+        g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.028, t0 + .5);
+        g.gain.setValueAtTime(.028, t1 - .6); g.gain.linearRampToValueAtTime(0, t1);
+      });
+    });
+    // bass on 1 and 3
+    [0, 2].forEach(k => {
+      const s = t0 + k * beat;
+      const g = osc('sine', midi(ROOTS[b % 4]), s, s + beat * 1.6, 0);
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(.16, s + .02); g.gain.exponentialRampToValueAtTime(.001, s + beat * 1.5);
+    });
+    // plucked arpeggio, 8th notes, up an octave
+    const pattern = [0, 2, 1, 3, 2, 3, 1, 2];
+    for (let k = 0; k < 8; k++) {
+      const s = t0 + k * beat / 2;
+      const n = ch[pattern[k]] + 12;
+      const vel = .11 * (k % 2 ? .75 : 1);
+      const g = osc('triangle', midi(n), s, s + .5, 0);
+      g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(vel, s + .008); g.gain.exponentialRampToValueAtTime(.0005, s + .42);
+      const g2 = osc('sine', midi(n + 12), s, s + .3, 0);
+      g2.gain.setValueAtTime(0, s); g2.gain.linearRampToValueAtTime(vel * .25, s + .005); g2.gain.exponentialRampToValueAtTime(.0005, s + .22);
+    }
+    // soft kick on every beat from the second bar, shaker on the off-beats
+    for (let k = 0; k < 4; k++) {
+      const s = t0 + k * beat;
+      if (b >= 1) {
+        const o = ac.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(140, s); o.frequency.exponentialRampToValueAtTime(45, s + .12);
+        const g = ac.createGain(); g.gain.setValueAtTime(.32, s); g.gain.exponentialRampToValueAtTime(.001, s + .28);
+        o.connect(g); g.connect(master); o.start(s); o.stop(s + .3);
+      }
+      const sh = s + beat / 2;
+      const len = .06, buf = ac.createBuffer(1, Math.ceil(len * sr), sr), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
+      const g = ac.createGain(); g.gain.value = .045;
+      src.connect(hp); hp.connect(g); g.connect(master); src.start(sh);
+    }
+  }
+  return ac.startRendering();
+}
+
+/* ====================== ENCODE ====================== */
 const log = m => { document.getElementById('log').textContent += m + '\n'; console.log(m); };
 
 async function ready() {
@@ -515,38 +622,54 @@ async function ready() {
     loadImg('mark', '/assets/img/qubequote-mark.svg'),
     loadImg('markWhite', '/assets/img/qubequote-mark-white.svg')
   ]);
-  // every weight the frames use, with Thai text so the Thai subsets are the ones fetched
   await Promise.all([400, 500, 600, 700].map(w => document.fonts.load(`${w} 40px "IBM Plex Sans Thai"`, 'เสนอราคา')));
   await Promise.all([400, 500, 700].map(w => document.fonts.load(`${w} 40px "IBM Plex Sans"`, 'QubeQuote 12345')));
   await document.fonts.ready;
 }
 
 async function encode() {
-  const codec = 'avc1.64002a';                       // H.264 High 4.2 — 1080x1920 at 30 fps is within level 4.2
-  const cfg = { codec, width: W, height: H, bitrate: 9_000_000, framerate: FPS, avc: { format: 'avc' } };
-  const sup = await VideoEncoder.isConfigSupported(cfg);
-  if (!sup.supported) throw new Error('ไม่รองรับ ' + codec + ' — ' + JSON.stringify(sup));
+  const vcodec = 'avc1.64002a';                     // H.264 High 4.2: 1080p/1920x1080/1080x1920 at 30 fps all fit
+  const vcfg = { codec: vcodec, width: W, height: H, bitrate: 9_000_000, framerate: FPS, avc: { format: 'avc' } };
+  const vs = await VideoEncoder.isConfigSupported(vcfg);
+  if (!vs.supported) throw new Error('ไม่รองรับ ' + vcodec);
+  const acfg = { codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 };
+  const as = await AudioEncoder.isConfigSupported(acfg);
+  if (!as.supported) throw new Error('ไม่รองรับ AAC');
+
   const muxer = new Mp4Muxer.Muxer({
     target: new Mp4Muxer.ArrayBufferTarget(),
     video: { codec: 'avc', width: W, height: H, frameRate: FPS },
+    audio: { codec: 'aac', sampleRate: 48000, numberOfChannels: 2 },
     fastStart: 'in-memory'
   });
-  const encoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-    error: e => { throw e; }
-  });
-  encoder.configure(cfg);
+
+  log('กำลังสร้างดนตรี…');
+  const abuf = await music(DURATION);
+  const aenc = new AudioEncoder({ output: (ch, meta) => muxer.addAudioChunk(ch, meta), error: e => { throw e; } });
+  aenc.configure(acfg);
+  const CH = 2, STEP = 1024, N = abuf.length;
+  const planes = [abuf.getChannelData(0), abuf.getChannelData(1)];
+  for (let i = 0; i < N; i += STEP) {
+    const n = Math.min(STEP, N - i);
+    const data = new Float32Array(n * CH);
+    for (let ch = 0; ch < CH; ch++) data.set(planes[ch].subarray(i, i + n), ch * n);
+    const ad = new AudioData({ format: 'f32-planar', sampleRate: 48000, numberOfFrames: n, numberOfChannels: CH, timestamp: Math.round(i * 1e6 / 48000), data });
+    aenc.encode(ad); ad.close();
+  }
+  await aenc.flush(); aenc.close();
+
+  const venc = new VideoEncoder({ output: (ch, meta) => muxer.addVideoChunk(ch, meta), error: e => { throw e; } });
+  venc.configure(vcfg);
   const total = Math.round(DURATION * FPS);
   for (let i = 0; i < total; i++) {
     draw(i / FPS);
     const frame = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
-    encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
+    venc.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
     frame.close();
-    while (encoder.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
-    if (i % 60 === 0) log('เฟรม ' + i + '/' + total);
+    while (venc.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
+    if (i % 90 === 0) log('เฟรม ' + i + '/' + total);
   }
-  await encoder.flush();
-  encoder.close();
+  await venc.flush(); venc.close();
   muxer.finalize();
   return new Blob([muxer.target.buffer], { type: 'video/mp4' });
 }
@@ -560,10 +683,10 @@ async function encode() {
       (function loop() { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();
       return;
     }
-    log('เริ่มเข้ารหัส ' + Math.round(DURATION * FPS) + ' เฟรม');
+    log('เริ่มเข้ารหัส ' + W + 'x' + H + ' ' + Math.round(DURATION * FPS) + ' เฟรม');
     const blob = await encode();
     log('ได้ไฟล์ ' + (blob.size / 1e6).toFixed(1) + ' MB — กำลังส่ง');
-    const r = await fetch('/save', { method: 'POST', headers: { 'Content-Type': 'video/mp4' }, body: blob });
+    const r = await fetch('/save', { method: 'POST', headers: { 'Content-Type': 'video/mp4', 'X-Name': q.get('name') || (W + 'x' + H) }, body: blob });
     log(r.ok ? 'บันทึกแล้ว' : 'บันทึกไม่สำเร็จ ' + r.status);
     document.title = r.ok ? 'saved' : 'failed';
   } catch (e) {

@@ -1,8 +1,12 @@
 /* ============================================================================
- * ออกคลิปอธิบาย 4 ขั้นตอน (MP4, 1080x1920, ~34 วินาที)
+ * ออกคลิปอธิบาย 4 ขั้นตอน (MP4 + เพลง, ~34 วินาที) สามกรอบภาพ
  * ============================================================================
- * Run from the project root:   node tools/build-clip.js
- * Writes marketing/qubequote-4-steps-9x16.mp4
+ * Run from the project root:   node tools/build-clip.js [9x16|16x9|1x1|all]
+ * Writes marketing/qubequote-4-steps-<framing>.mp4   (default: all three)
+ *
+ *   9x16  1080x1920  Reels / TikTok / Shorts / LINE
+ *   16x9  1920x1080  YouTube, Facebook video
+ *   1x1   1080x1080  Facebook feed
  *
  * The clip is drawn and encoded entirely inside Chrome — tools/clip/clip.html
  * paints every frame on a canvas, the browser's own H.264 encoder (WebCodecs)
@@ -29,8 +33,11 @@ const { spawn } = require('child_process');
 
 const ROOT = process.cwd();
 const OUT_DIR = path.join(ROOT, 'marketing');
-const OUT = path.join(OUT_DIR, 'qubequote-4-steps-9x16.mp4');
 const PORT = 8899;
+const FRAMINGS = { '9x16': [1080, 1920], '16x9': [1920, 1080], '1x1': [1080, 1080] };
+const want = process.argv[2] && process.argv[2] !== 'all' ? [process.argv[2]] : Object.keys(FRAMINGS);
+for (const f of want) if (!FRAMINGS[f]) { console.error('ไม่รู้จักกรอบ ' + f + ' — ใช้ ' + Object.keys(FRAMINGS).join(', ')); process.exit(1); }
+const outFor = f => path.join(OUT_DIR, 'qubequote-4-steps-' + f + '.mp4');
 
 function findChrome() {
   const candidates = [
@@ -63,13 +70,31 @@ fs.writeFileSync(path.join(ROOT, 'tools', 'clip', 'clip.preview.html'), pageSrc)
 const MIME = { '.html': 'text/html; charset=utf-8', '.svg': 'image/svg+xml', '.woff2': 'font/woff2',
                '.png': 'image/png', '.jpg': 'image/jpeg', '.js': 'text/javascript', '.css': 'text/css' };
 
-let chrome = null, finished = false;
+let chrome = null, finished = false, queue = want.slice(), current = null, failed = 0;
 function finish(code, msg) {
   if (finished) return; finished = true;
   if (msg) console[code ? 'error' : 'log'](msg);
   if (chrome) try { chrome.kill(); } catch (e) {}
   server.close(() => process.exit(code));
   setTimeout(() => process.exit(code), 1500).unref();
+}
+// one Chrome per framing, in turn; the page reports back through /save
+function next() {
+  if (chrome) { try { chrome.kill(); } catch (e) {} chrome = null; }
+  current = queue.shift();
+  if (!current) return finish(failed ? 1 : 0, failed ? failed + ' กรอบไม่สำเร็จ' : 'ครบทั้ง ' + want.length + ' กรอบ');
+  const [w, h] = FRAMINGS[current];
+  const exe = findChrome();
+  const profile = path.join(require('os').tmpdir(), 'kx-clip-profile');
+  console.log('กำลังเรนเดอร์ ' + current + ' (' + w + 'x' + h + ') ใน ' + path.basename(exe) + ' …');
+  const mine = chrome = spawn(exe, [
+    '--headless=new', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',
+    '--user-data-dir=' + profile,
+    // the encoder must run at its own pace; a virtual-time budget would starve it
+    '--window-size=' + (w + 120) + ',' + (h + 280),
+    'http://127.0.0.1:' + PORT + '/clip?w=' + w + '&h=' + h + '&name=' + current
+  ], { stdio: 'ignore' });
+  mine.on('exit', code => { if (chrome === mine && !finished) { console.error(current + ': Chrome ปิดก่อนส่งไฟล์ (code ' + code + ')'); failed++; next(); } });
 }
 
 const server = http.createServer((req, res) => {
@@ -78,11 +103,13 @@ const server = http.createServer((req, res) => {
     req.on('data', d => chunks.push(d));
     req.on('end', () => {
       const body = Buffer.concat(chunks);
-      if (req.headers['x-error']) { res.writeHead(200); res.end(); finish(1, 'หน้าเรนเดอร์รายงานข้อผิดพลาด:\n' + body.toString('utf8')); return; }
-      fs.mkdirSync(OUT_DIR, { recursive: true });
-      fs.writeFileSync(OUT, body);
       res.writeHead(200); res.end('ok');
-      finish(0, 'เขียน ' + path.relative(ROOT, OUT) + ' (' + (body.length / 1e6).toFixed(1) + ' MB)');
+      if (req.headers['x-error']) { console.error(current + ': หน้าเรนเดอร์รายงานข้อผิดพลาด:\n' + body.toString('utf8')); failed++; return next(); }
+      fs.mkdirSync(OUT_DIR, { recursive: true });
+      const out = outFor(current);
+      fs.writeFileSync(out, body);
+      console.log('เขียน ' + path.relative(ROOT, out) + ' (' + (body.length / 1e6).toFixed(1) + ' MB)');
+      next();
     });
     return;
   }
@@ -95,16 +122,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  const exe = findChrome();
-  const profile = path.join(require('os').tmpdir(), 'kx-clip-profile');
-  console.log('กำลังเรนเดอร์ใน ' + path.basename(exe) + ' …');
-  chrome = spawn(exe, [
-    '--headless=new', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',
-    '--user-data-dir=' + profile,
-    // the encoder must run at its own pace; a virtual-time budget would starve it
-    '--window-size=1200,2200',
-    'http://127.0.0.1:' + PORT + '/clip'
-  ], { stdio: 'ignore' });
-  chrome.on('exit', code => { if (!finished) finish(1, 'Chrome ปิดก่อนส่งไฟล์ (code ' + code + ')'); });
-  setTimeout(() => finish(1, 'หมดเวลา 10 นาที — ไม่ได้รับไฟล์'), 10 * 60 * 1000).unref();
+  next();
+  setTimeout(() => finish(1, 'หมดเวลา 20 นาที'), 20 * 60 * 1000).unref();
 });
