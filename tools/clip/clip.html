@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>QubeQuote — คลิปอธิบาย 4 ขั้นตอน</title>
+<!-- FONTS -->
+<style>
+  html, body { margin: 0; background: #111; }
+  canvas { display: block; width: 360px; height: 640px; margin: 20px auto; }
+  #log { color: #ccc; font: 13px monospace; white-space: pre; margin: 0 20px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<div id="log"></div>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.5/build/mp4-muxer.min.js"></script>
+<script>
+/* ============================================================================
+ * QubeQuote explainer, ~34 seconds, 1080x1920, drawn frame by frame on a canvas.
+ *
+ * Everything is a pure function of time — draw(t) — so a frame can be looked
+ * at, re-rendered, or encoded without the animation having to run at real
+ * speed. The encoder is the browser's own (WebCodecs, H.264) and the file is
+ * assembled by mp4-muxer; tools/build-clip.js opens this page headless and
+ * receives the finished MP4.
+ *
+ * Open it in a browser with ?play=1 to watch it loop; ?t=12.5 to freeze one
+ * frame. Nothing in here touches the app.
+ * ========================================================================== */
+'use strict';
+
+const W = 1080, H = 1920, FPS = 30;
+const c = document.getElementById('c'), ctx = c.getContext('2d');
+const q = new URLSearchParams(location.search);
+
+/* ---- brand ---- */
+const BLUE = '#0056fd', BLUE_DEEP = '#0036a8', BLUE_SOFT = '#eef3ff', INK = '#1c1a18', INK_SOFT = '#565b6e';
+const BG = '#f6f8fc', CARD = '#ffffff', LINE = '#e3e7f0', GREEN = '#16a34a', GREEN_SOFT = '#e8f7ec', AMBER = '#f59e0b';
+const TH = '"IBM Plex Sans Thai", "IBM Plex Sans", sans-serif';
+const font = (w, px) => `${w} ${px}px ${TH}`;
+
+/* ---- copy. Every name here is invented; no real account appears. ---- */
+const ITEM = 'เครื่องดูดเศษวัสดุในเครื่อง CNC';
+const SELLERS = [
+  { name: 'บจก. เอ-พลัส แมชชีน', price: 48500, days: 5,  stars: 4.8 },
+  { name: 'ร้านช่างโต อุตสาหกรรม', price: 42000, days: 7,  stars: 4.6 },
+  { name: 'บจก. ซี.เอ็น.ซี. โปร',  price: 45900, days: 4,  stars: 4.9 }
+];
+const LOWEST = 1;
+
+/* ---- timeline (seconds) ---- */
+const T = {
+  hook: [0, 4.6],
+  s1:   [4.6, 11.4],
+  s2:   [11.4, 18.4],
+  s3:   [18.4, 25.4],
+  s4:   [25.4, 29.6],
+  outro:[29.6, 34.0]
+};
+const DURATION = T.outro[1];
+
+/* ---- easing ---- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, u) => a + (b - a) * u;
+const outCubic = u => 1 - Math.pow(1 - clamp(u, 0, 1), 3);
+const inOutCubic = u => { u = clamp(u, 0, 1); return u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; };
+const outBack = u => { u = clamp(u, 0, 1); const s = 1.70158; return 1 + (s + 1) * Math.pow(u - 1, 3) + s * Math.pow(u - 1, 2); };
+// 0→1 over [a,b]
+const seg = (t, a, b, ease) => (ease || outCubic)((t - a) / (b - a));
+const fadeInOut = (t, a, b, f) => Math.min(seg(t, a, a + f), 1 - seg(t, b - f, b, u => clamp(u, 0, 1)));
+
+/* ---- drawing helpers ---- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function card(x, y, w, h, r, shadow) {
+  ctx.save();
+  if (shadow !== false) { ctx.shadowColor = 'rgba(12,63,115,.10)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14; }
+  ctx.fillStyle = CARD; rr(x, y, w, h, r); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = LINE; ctx.lineWidth = 2; rr(x, y, w, h, r); ctx.stroke();
+}
+function text(s, x, y, o) {
+  o = o || {};
+  ctx.save();
+  ctx.font = font(o.w || 500, o.px || 40);
+  ctx.fillStyle = o.color || INK;
+  ctx.textAlign = o.align || 'left';
+  ctx.textBaseline = o.base || 'alphabetic';
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.fillText(s, x, y);
+  ctx.restore();
+}
+function measure(s, w, px) { ctx.font = font(w, px); return ctx.measureText(s).width; }
+function pill(label, x, y, o) {
+  o = o || {};
+  const px = o.px || 30, padX = o.padX || 26, h = o.h || px * 1.9;
+  const w = measure(label, 600, px) + padX * 2;
+  const left = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x;
+  ctx.save();
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  ctx.fillStyle = o.bg || BLUE_SOFT; rr(left, y, w, h, h / 2); ctx.fill();
+  if (o.border) { ctx.strokeStyle = o.border; ctx.lineWidth = 2; rr(left, y, w, h, h / 2); ctx.stroke(); }
+  text(label, left + w / 2, y + h / 2 + 1, { w: 600, px, color: o.color || BLUE, align: 'center', base: 'middle' });
+  ctx.restore();
+  return w;
+}
+function baht(n) { return '฿' + n.toLocaleString('en-US'); }
+function star(x, y, r, fill) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * .45 : r;
+    ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+  }
+  ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+}
+function check(x, y, r, u, color, width) {
+  // circle sweep then tick
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width || 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const cu = clamp(u / .55, 0, 1), tu = clamp((u - .5) / .5, 0, 1);
+  ctx.beginPath(); ctx.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * outCubic(cu)); ctx.stroke();
+  if (tu > 0) {
+    const p = [[x - r * .42, y + r * .02], [x - r * .1, y + r * .36], [x + r * .46, y - r * .3]];
+    ctx.beginPath(); ctx.moveTo(p[0][0], p[0][1]);
+    const e = outCubic(tu);
+    if (e < .45) { const k = e / .45; ctx.lineTo(lerp(p[0][0], p[1][0], k), lerp(p[0][1], p[1][1], k)); }
+    else { const k = (e - .45) / .55; ctx.lineTo(p[1][0], p[1][1]); ctx.lineTo(lerp(p[1][0], p[2][0], k), lerp(p[1][1], p[2][1], k)); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* ---- assets ---- */
+const IMG = {};
+function loadImg(key, src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => { IMG[key] = im; res(); }; im.onerror = rej; im.src = src; });
+}
+function mark(x, y, h, white) {
+  const im = white ? IMG.markWhite : IMG.mark;
+  if (!im) return;
+  const w = h * im.width / im.height;
+  ctx.drawImage(im, x, y, w, h);
+  return w;
+}
+function wordmark(x, y, px, white) {
+  // "Qube" bold + "Quote" regular, like the top bar
+  ctx.save();
+  ctx.textBaseline = 'middle';
+  ctx.font = font(700, px); ctx.fillStyle = white ? '#fff' : BLUE; ctx.fillText('Qube', x, y);
+  const w1 = ctx.measureText('Qube').width;
+  ctx.font = font(500, px); ctx.fillStyle = white ? '#fff' : INK; ctx.fillText('Quote', x + w1, y);
+  ctx.restore();
+}
+
+/* ---- backgrounds ---- */
+function paper() { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); }
+function blueGround(t) {
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#0a5cff'); g.addColorStop(1, '#0036a8');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // slow drifting soft circles
+  ctx.save(); ctx.globalAlpha = .07; ctx.fillStyle = '#fff';
+  for (let i = 0; i < 5; i++) {
+    const a = t * .15 + i * 1.3;
+    ctx.beginPath(); ctx.arc(W * (.2 + .6 * (.5 + .5 * Math.sin(a))), H * (.15 + .7 * (.5 + .5 * Math.cos(a * .8 + i))), 160 + 60 * i, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* Step header: number badge + title, shared by scenes 1–4. */
+function stepHeader(n, title, t, a) {
+  const u = seg(t, a, a + .55, outBack);
+  const y = 250;
+  ctx.save(); ctx.globalAlpha = clamp(u, 0, 1);
+  // badge
+  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(120, y, 56 * u, 0, Math.PI * 2); ctx.fill();
+  text(String(n), 120, y + 2, { w: 700, px: 56, color: '#fff', align: 'center', base: 'middle' });
+  const dx = lerp(40, 0, u);
+  text(title, 210 + dx, y + 2, { w: 700, px: 66, base: 'middle' });
+  ctx.restore();
+}
+// small progress dots at the bottom
+function dots(step) {
+  const y = H - 130, gap = 44;
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i === step ? BLUE : '#c9d3ea';
+    ctx.beginPath(); ctx.arc(W / 2 + (i - 1.5) * gap, y, i === step ? 10 : 7, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function topBrand(white) {
+  const h = 62;
+  const w = mark(70, 76, h, white) || 56;
+  wordmark(70 + w + 18, 76 + h / 2, 44, white);
+}
+
+/* Phone frame with the app's top bar, returns the content box. */
+function phone(x, y, w, h) {
+  ctx.save();
+  ctx.shadowColor = 'rgba(12,63,115,.18)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24;
+  ctx.fillStyle = '#0f172a'; rr(x, y, w, h, 64); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = BG; rr(x + 16, y + 16, w - 32, h - 32, 50); ctx.fill();
+  // top bar
+  ctx.save(); rr(x + 16, y + 16, w - 32, h - 32, 50); ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(x + 16, y + 16, w - 32, 110);
+  ctx.fillStyle = LINE; ctx.fillRect(x + 16, y + 126, w - 32, 2);
+  const mh = 46; const mw = mark(x + 56, y + 48, mh) || 40;
+  wordmark(x + 56 + mw + 12, y + 48 + mh / 2, 32);
+  ctx.restore();
+  return { x: x + 16, y: y + 128, w: w - 32, h: h - 32 - 112 };
+}
+
+/* ====================== SCENES ====================== */
+
+function sceneHook(t) {
+  const [a, b] = T.hook;
+  blueGround(t);
+  const fade = fadeInOut(t, a, b, .5);
+  ctx.save(); ctx.globalAlpha = fade;
+  topBrand(true);
+  // question badge bobbing
+  const u0 = seg(t, a + .1, a + .8, outBack);
+  const by = 620 + Math.sin(t * 2.2) * 14;
+  ctx.save(); ctx.translate(W / 2, by); ctx.scale(u0, u0);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 150, 0, Math.PI * 2); ctx.fill();
+  text('?', 0, 12, { w: 700, px: 200, color: BLUE, align: 'center', base: 'middle' });
+  ctx.restore();
+  // two lines, staggered
+  const l1 = seg(t, a + .5, a + 1.1), l2 = seg(t, a + .85, a + 1.45);
+  text('มีของที่ต้องการซื้อ', W / 2, 960 + lerp(40, 0, l1), { w: 700, px: 92, color: '#fff', align: 'center', alpha: l1 });
+  text('แต่ไม่รู้ราคาตลาด?', W / 2, 1090 + lerp(40, 0, l2), { w: 700, px: 92, color: '#fff', align: 'center', alpha: l2 });
+  const l3 = seg(t, a + 1.7, a + 2.3);
+  text('ให้ผู้ขายเสนอราคามาหาคุณ ใน 4 ขั้นตอน', W / 2, 1230, { w: 500, px: 44, color: 'rgba(255,255,255,.85)', align: 'center', alpha: l3 });
+  // four small numbered dots previewing the steps
+  const l4 = seg(t, a + 2.2, a + 3.0);
+  for (let i = 0; i < 4; i++) {
+    const uu = seg(t, a + 2.2 + i * .15, a + 2.7 + i * .15, outBack);
+    const x = W / 2 + (i - 1.5) * 150, y = 1400;
+    ctx.save(); ctx.globalAlpha = clamp(uu, 0, 1); ctx.translate(x, y); ctx.scale(uu, uu);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(0, 0, 54, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+    text(String(i + 1), 0, 2, { w: 700, px: 46, color: '#fff', align: 'center', base: 'middle' });
+    ctx.restore();
+    if (i < 3) { ctx.save(); ctx.globalAlpha = l4 * .6; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 62, y); ctx.lineTo(x + 88, y); ctx.stroke(); ctx.restore(); }
+  }
+  ctx.restore();
+}
+
+function scene1(t) {
+  const [a, b] = T.s1;
+  paper();
+  const fade = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = fade;
+  topBrand(false);
+  stepHeader(1, 'ลงรายการที่ต้องการซื้อ', t, a + .1);
+  // phone slides up
+  const pu = seg(t, a + .3, a + 1.0);
+  const box = phone(140, 430 + lerp(120, 0, pu), 800, 1180);
+  ctx.save(); ctx.globalAlpha *= pu;
+  // form
+  const fx = box.x + 40, fy = box.y + 50, fw = box.w - 80;
+  text('โพสต์ประกาศ', fx, fy + 30, { w: 700, px: 44 });
+  text('บอกสิ่งที่ต้องการ แล้วให้ผู้ขายเสนอราคามาหาคุณ', fx, fy + 86, { w: 400, px: 27, color: INK_SOFT });
+  // title field, typing
+  text('หัวข้อ', fx, fy + 170, { w: 600, px: 28 });
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = t < a + 4.6 ? BLUE : LINE; ctx.lineWidth = 3; rr(fx, fy + 190, fw, 92, 18); ctx.fill(); ctx.stroke();
+  const tu = seg(t, a + 1.3, a + 3.6, u => clamp(u, 0, 1));
+  const shown = ITEM.slice(0, Math.round(ITEM.length * tu));
+  text(shown, fx + 28, fy + 248, { w: 500, px: 34 });
+  if (t < a + 4.6 && Math.floor(t * 2.5) % 2 === 0) { const cw = measure(shown, 500, 34); ctx.fillStyle = BLUE; ctx.fillRect(fx + 30 + cw, fy + 214, 3, 50); }
+  // province + deadline chips
+  const cu = seg(t, a + 3.7, a + 4.3);
+  ctx.save(); ctx.globalAlpha *= cu;
+  text('จังหวัดของงาน', fx, fy + 350, { w: 600, px: 28 });
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = LINE; rr(fx, fy + 370, fw, 84, 18); ctx.fill(); ctx.stroke();
+  text('📍 เชียงใหม่', fx + 28, fy + 424, { w: 500, px: 32 });
+  ctx.restore();
+  // photo tiles
+  const iu = seg(t, a + 4.2, a + 4.9, outBack);
+  text('รูปประกอบ', fx, fy + 530, { w: 600, px: 28, alpha: clamp(iu, 0, 1) });
+  for (let i = 0; i < 3; i++) {
+    const uu = seg(t, a + 4.2 + i * .12, a + 4.8 + i * .12, outBack);
+    const tx = fx + i * (fw / 3), tw = fw / 3 - 16;
+    ctx.save(); ctx.globalAlpha *= clamp(uu, 0, 1); ctx.translate(tx + tw / 2, fy + 640); ctx.scale(uu, uu);
+    ctx.fillStyle = i === 0 ? BLUE_SOFT : '#f1f3f8'; rr(-tw / 2, -90, tw, 180, 20); ctx.fill();
+    ctx.strokeStyle = i === 0 ? BLUE : LINE; ctx.lineWidth = 3; ctx.setLineDash(i === 0 ? [] : [12, 10]); rr(-tw / 2, -90, tw, 180, 20); ctx.stroke();
+    if (i === 0) { ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(-60, 50); ctx.lineTo(-20, -10); ctx.lineTo(10, 25); ctx.lineTo(35, 0); ctx.lineTo(70, 50); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(40, -35, 14, 0, Math.PI * 2); ctx.fill(); }
+    else text('+', 0, 4, { w: 400, px: 70, color: '#aeb6c8', align: 'center', base: 'middle' });
+    ctx.restore();
+  }
+  // publish button, pressed at the end
+  const bu = seg(t, a + 4.9, a + 5.4);
+  const press = t > a + 5.9 && t < a + 6.2 ? 1 - Math.abs((t - a - 6.05) / .15) : 0;
+  const bs = 1 - press * .06;
+  ctx.save(); ctx.globalAlpha *= bu; ctx.translate(fx + fw / 2, fy + 860); ctx.scale(bs, bs);
+  ctx.fillStyle = press ? BLUE_DEEP : BLUE; rr(-fw / 2, -50, fw, 100, 50); ctx.fill();
+  text('＋ โพสต์ประกาศ', 0, 3, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
+  ctx.restore();
+  // "โพสต์แล้ว" toast after press
+  const ku = seg(t, a + 6.2, a + 6.6, outBack);
+  if (ku > 0) {
+    ctx.save(); ctx.globalAlpha *= clamp(ku, 0, 1); ctx.translate(fx + fw / 2, fy + 990); ctx.scale(ku, ku);
+    ctx.fillStyle = GREEN_SOFT; rr(-200, -40, 400, 80, 40); ctx.fill();
+    text('✓ โพสต์ประกาศแล้ว', 0, 3, { w: 600, px: 30, color: GREEN, align: 'center', base: 'middle' });
+    ctx.restore();
+  }
+  ctx.restore();
+  dots(0);
+  ctx.restore();
+}
+
+function scene2(t) {
+  const [a, b] = T.s2;
+  paper();
+  const fade = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = fade;
+  topBrand(false);
+  stepHeader(2, 'รอผู้ขายเสนอราคา', t, a + .1);
+  // the post card
+  const cu = seg(t, a + .3, a + .9);
+  const cx = 110, cy = 400 + lerp(60, 0, cu), cw = W - 220;
+  ctx.save(); ctx.globalAlpha *= cu;
+  card(cx, cy, cw, 300, 28);
+  ctx.fillStyle = BLUE_SOFT; ctx.beginPath(); ctx.arc(cx + 70, cy + 70, 34, 0, Math.PI * 2); ctx.fill();
+  text('คุณ', cx + 70, cy + 73, { w: 700, px: 24, color: BLUE, align: 'center', base: 'middle' });
+  text('ประกาศของคุณ', cx + 124, cy + 62, { w: 700, px: 30 });
+  text('เชียงใหม่ · เพิ่งโพสต์', cx + 124, cy + 100, { w: 400, px: 26, color: INK_SOFT });
+  pill('ต้องการซื้อ', cx + cw - 34, cy + 40, { align: 'right', px: 24, bg: BLUE, color: '#fff' });
+  text(ITEM, cx + 34, cy + 175, { w: 600, px: 38 });
+  // offer counter chip that counts up
+  const n = Math.min(3, Math.max(0, Math.floor((t - a - 1.6) / 1.5) + 1));
+  const bump = (() => { const k = (t - a - 1.6) % 1.5; return k > 0 && k < .3 ? 1 - k / .3 : 0; })();
+  ctx.save(); ctx.translate(cx + 34, cy + 220); ctx.scale(1 + bump * .08, 1 + bump * .08);
+  pill('ข้อเสนอ ' + n, 0, 0, { px: 28, bg: n ? BLUE_SOFT : '#f1f3f8', color: n ? BLUE : INK_SOFT });
+  ctx.restore();
+  ctx.restore();
+  // waiting hint before the first offer
+  const wu = fadeInOut(t, a + .8, a + 2.2, .3);
+  if (wu > 0) {
+    const dotN = Math.floor(t * 3) % 4;
+    text('ผู้ขายในสายงานนี้กำลังเห็นประกาศของคุณ' + '.'.repeat(dotN), W / 2, 820, { w: 500, px: 34, color: INK_SOFT, align: 'center', alpha: wu });
+  }
+  // notifications sliding in, one every 1.5s
+  for (let i = 0; i < 3; i++) {
+    const s0 = a + 1.6 + i * 1.5;
+    const u = seg(t, s0, s0 + .6, outBack);
+    if (u <= 0) continue;
+    const y = 840 + i * 205;
+    const x = lerp(W + 40, 110, clamp(u, 0, 1));
+    ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
+    card(x, y, W - 220, 150, 26);
+    ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(x + 72, y + 75, 38, 0, Math.PI * 2); ctx.fill();
+    text('🔔', x + 72, y + 79, { px: 36, align: 'center', base: 'middle' });
+    text(SELLERS[i].name, x + 134, y + 62, { w: 700, px: 32 });
+    text('ส่งข้อเสนอราคามาแล้ว', x + 134, y + 108, { w: 400, px: 28, color: INK_SOFT });
+    text('เมื่อสักครู่', x + W - 220 - 34, y + 62, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+    ctx.restore();
+  }
+  // sealed note
+  const su = seg(t, a + 5.2, a + 5.8);
+  if (su > 0) {
+    ctx.save(); ctx.globalAlpha *= su;
+    pill('🔒 ราคาปิดผนึก — ผู้ขายมองไม่เห็นราคากันเอง', W / 2, 1500, { align: 'center', px: 28, bg: '#fff', color: INK_SOFT, border: LINE });
+    ctx.restore();
+  }
+  dots(1);
+  ctx.restore();
+}
+
+function scene3(t) {
+  const [a, b] = T.s3;
+  paper();
+  const fade = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = fade;
+  topBrand(false);
+  stepHeader(3, 'เปรียบเทียบข้อเสนอ', t, a + .1);
+  text('เห็นราคาและเงื่อนไขของทุกรายในหน้าเดียว', 110, 380, { w: 400, px: 32, color: INK_SOFT, alpha: seg(t, a + .4, a + .9) });
+  const rows = [0, 1, 2].map(i => SELLERS[i]);
+  const rowH = 250, gap = 26, top = 440;
+  for (let i = 0; i < 3; i++) {
+    const s = rows[i];
+    const u = seg(t, a + .5 + i * .35, a + 1.1 + i * .35);
+    if (u <= 0) continue;
+    const y = top + i * (rowH + gap) + lerp(40, 0, u);
+    const x = 110, w = W - 220;
+    const low = i === LOWEST;
+    const hl = seg(t, a + 3.2, a + 3.8);          // the lowest is highlighted
+    ctx.save(); ctx.globalAlpha *= u;
+    card(x, y, w, rowH, 28);
+    if (low && hl > 0) { ctx.save(); ctx.globalAlpha *= hl; ctx.strokeStyle = GREEN; ctx.lineWidth = 5; rr(x, y, w, rowH, 28); ctx.stroke(); ctx.restore(); }
+    // avatar + name + stars
+    ctx.fillStyle = ['#dbe7ff', '#e6f6ea', '#fff1d6'][i]; ctx.beginPath(); ctx.arc(x + 74, y + 74, 40, 0, Math.PI * 2); ctx.fill();
+    text(s.name.replace(/^(บจก\. |ร้าน)/, '').charAt(0), x + 74, y + 78, { w: 700, px: 34, color: INK, align: 'center', base: 'middle' });
+    text(s.name, x + 136, y + 66, { w: 700, px: 32 });
+    for (let k = 0; k < 5; k++) star(x + 150 + k * 32, y + 106, 12, k < Math.round(s.stars) ? AMBER : '#e2e6ef');
+    text(s.stars.toFixed(1), x + 316, y + 114, { w: 500, px: 24, color: INK_SOFT });
+    // price, counting up
+    const pu = seg(t, a + 1.2 + i * .35, a + 2.2 + i * .35, inOutCubic);
+    const price = Math.round(s.price * pu / 100) * 100;
+    text(baht(price), x + w - 34, y + 84, { w: 700, px: 52, color: low && hl > 0 ? GREEN : INK, align: 'right' });
+    text('รวมค่าส่ง', x + w - 34, y + 122, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+    // meta line
+    ctx.fillStyle = LINE; ctx.fillRect(x + 34, y + 152, w - 68, 2);
+    pill('🚚 ส่งใน ' + s.days + ' วัน', x + 34, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
+    pill('📎 แนบใบเสนอราคา', x + 260, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
+    if (low && hl > 0) { ctx.save(); ctx.globalAlpha *= hl; pill('ราคาต่ำสุด', x + w - 34, y + 176, { align: 'right', px: 24, bg: GREEN_SOFT, color: GREEN }); ctx.restore(); }
+    ctx.restore();
+  }
+  // difference callout
+  const du = seg(t, a + 4.2, a + 4.8, outBack);
+  if (du > 0) {
+    const diff = SELLERS[0].price - SELLERS[LOWEST].price;
+    ctx.save(); ctx.globalAlpha *= clamp(du, 0, 1); ctx.translate(W / 2, 1380); ctx.scale(du, du);
+    ctx.fillStyle = BLUE; rr(-400, -70, 800, 140, 36); ctx.fill();
+    text('ต่างกันถึง ' + baht(diff) + ' ในงานเดียวกัน', 0, 4, { w: 700, px: 36, color: '#fff', align: 'center', base: 'middle' });
+    ctx.restore();
+  }
+  dots(2);
+  ctx.restore();
+}
+
+function scene4(t) {
+  const [a, b] = T.s4;
+  paper();
+  const fade = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = fade;
+  topBrand(false);
+  stepHeader(4, 'ค่อยตัดสินใจ', t, a + .1);
+  // the chosen row, centred
+  const u = seg(t, a + .3, a + .9);
+  const s = SELLERS[LOWEST];
+  const x = 110, w = W - 220, y = 520 + lerp(40, 0, u), h = 250;
+  ctx.save(); ctx.globalAlpha *= u;
+  card(x, y, w, h, 28);
+  ctx.fillStyle = '#e6f6ea'; ctx.beginPath(); ctx.arc(x + 74, y + 74, 40, 0, Math.PI * 2); ctx.fill();
+  text('ช', x + 74, y + 78, { w: 700, px: 34, align: 'center', base: 'middle' });
+  text(s.name, x + 136, y + 66, { w: 700, px: 32 });
+  for (let k = 0; k < 5; k++) star(x + 150 + k * 32, y + 106, 12, k < Math.round(s.stars) ? AMBER : '#e2e6ef');
+  text(baht(s.price), x + w - 34, y + 84, { w: 700, px: 52, color: GREEN, align: 'right' });
+  text('รวมค่าส่ง', x + w - 34, y + 122, { w: 400, px: 24, color: INK_SOFT, align: 'right' });
+  ctx.fillStyle = LINE; ctx.fillRect(x + 34, y + 152, w - 68, 2);
+  pill('🚚 ส่งใน ' + s.days + ' วัน', x + 34, y + 176, { px: 24, bg: '#f1f3f8', color: INK_SOFT });
+  pill('ราคาต่ำสุด', x + w - 34, y + 176, { align: 'right', px: 24, bg: GREEN_SOFT, color: GREEN });
+  ctx.restore();
+  // button press → check
+  const bu = seg(t, a + .8, a + 1.2);
+  const press = t > a + 1.6 && t < a + 1.9 ? 1 - Math.abs((t - a - 1.75) / .15) : 0;
+  const done = t > a + 1.9;
+  ctx.save(); ctx.globalAlpha *= bu; ctx.translate(W / 2, y + h + 110); ctx.scale(1 - press * .06, 1 - press * .06);
+  ctx.fillStyle = done ? GREEN : BLUE; rr(-330, -54, 660, 108, 54); ctx.fill();
+  text(done ? '✓ เลือกข้อเสนอนี้แล้ว' : 'เลือกข้อเสนอนี้', 0, 4, { w: 700, px: 38, color: '#fff', align: 'center', base: 'middle' });
+  ctx.restore();
+  const ku = seg(t, a + 1.9, a + 3.0, u => clamp(u, 0, 1));
+  if (ku > 0) {
+    ctx.save(); ctx.globalAlpha *= clamp(ku * 2, 0, 1);
+    ctx.fillStyle = GREEN_SOFT; ctx.beginPath(); ctx.arc(W / 2, 1300, 150, 0, Math.PI * 2); ctx.fill();
+    check(W / 2, 1300, 105, ku, GREEN, 16);
+    ctx.restore();
+  }
+  const mu = seg(t, a + 2.6, a + 3.2);
+  text('ไม่ต้องรีบ — เลือกเมื่อพร้อม', W / 2, 1560, { w: 700, px: 46, align: 'center', alpha: mu });
+  text('ดูข้อเสนอทั้งหมดก่อน แล้วค่อยเลือกรายที่ใช่', W / 2, 1625, { w: 400, px: 32, color: INK_SOFT, align: 'center', alpha: mu });
+  dots(3);
+  ctx.restore();
+}
+
+function sceneOutro(t) {
+  const [a, b] = T.outro;
+  blueGround(t);
+  const fade = Math.min(seg(t, a, a + .5), 1 - seg(t, b - .6, b, u => clamp(u, 0, 1)));
+  ctx.save(); ctx.globalAlpha = fade;
+  const u = seg(t, a + .1, a + .9, outBack);
+  ctx.save(); ctx.translate(W / 2, 760); ctx.scale(u, u);
+  const mh = 260; const im = IMG.markWhite; const mw = mh * im.width / im.height;
+  ctx.drawImage(im, -mw / 2, -mh / 2, mw, mh);
+  ctx.restore();
+  const wu = seg(t, a + .6, a + 1.2);
+  ctx.save(); ctx.globalAlpha *= wu; ctx.textAlign = 'center';
+  ctx.font = font(700, 120); ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+  const w1 = ctx.measureText('Qube').width; ctx.font = font(500, 120); const w2 = ctx.measureText('Quote').width;
+  const x0 = W / 2 - (w1 + w2) / 2;
+  ctx.textAlign = 'left'; ctx.font = font(700, 120); ctx.fillText('Qube', x0, 1010); ctx.font = font(500, 120); ctx.fillText('Quote', x0 + w1, 1010);
+  ctx.restore();
+  const su = seg(t, a + 1.1, a + 1.7);
+  text('ให้ผู้ขายเสนอราคามาหาคุณ', W / 2, 1150 + lerp(30, 0, su), { w: 600, px: 58, color: '#fff', align: 'center', alpha: su });
+  const cu = seg(t, a + 1.7, a + 2.3);
+  ctx.save(); ctx.globalAlpha *= cu;
+  pill('qubequote.com', W / 2, 1290, { align: 'center', px: 44, padX: 48, bg: '#fff', color: BLUE });
+  ctx.restore();
+  text('ดูประกาศได้ทันที · สมัครฟรีเมื่อพร้อมเสนอราคา', W / 2, 1470, { w: 400, px: 32, color: 'rgba(255,255,255,.85)', align: 'center', alpha: seg(t, a + 2.2, a + 2.8) });
+  ctx.restore();
+}
+
+/* Scenes cross-fade by each drawing its own ground and fading its content;
+   the ground of the next scene shows through the previous one's fade-out. */
+function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  if (t < T.hook[1]) sceneHook(t);
+  else if (t < T.s1[1]) scene1(t);
+  else if (t < T.s2[1]) scene2(t);
+  else if (t < T.s3[1]) scene3(t);
+  else if (t < T.s4[1]) scene4(t);
+  else sceneOutro(Math.min(t, DURATION - 1e-3));
+}
+
+/* ====================== SETUP / ENCODE ====================== */
+const log = m => { document.getElementById('log').textContent += m + '\n'; console.log(m); };
+
+async function ready() {
+  await Promise.all([
+    loadImg('mark', '/assets/img/qubequote-mark.svg'),
+    loadImg('markWhite', '/assets/img/qubequote-mark-white.svg')
+  ]);
+  // every weight the frames use, with Thai text so the Thai subsets are the ones fetched
+  await Promise.all([400, 500, 600, 700].map(w => document.fonts.load(`${w} 40px "IBM Plex Sans Thai"`, 'เสนอราคา')));
+  await Promise.all([400, 500, 700].map(w => document.fonts.load(`${w} 40px "IBM Plex Sans"`, 'QubeQuote 12345')));
+  await document.fonts.ready;
+}
+
+async function encode() {
+  const codec = 'avc1.64002a';                       // H.264 High 4.2 — 1080x1920 at 30 fps is within level 4.2
+  const cfg = { codec, width: W, height: H, bitrate: 9_000_000, framerate: FPS, avc: { format: 'avc' } };
+  const sup = await VideoEncoder.isConfigSupported(cfg);
+  if (!sup.supported) throw new Error('ไม่รองรับ ' + codec + ' — ' + JSON.stringify(sup));
+  const muxer = new Mp4Muxer.Muxer({
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: 'avc', width: W, height: H, frameRate: FPS },
+    fastStart: 'in-memory'
+  });
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: e => { throw e; }
+  });
+  encoder.configure(cfg);
+  const total = Math.round(DURATION * FPS);
+  for (let i = 0; i < total; i++) {
+    draw(i / FPS);
+    const frame = new VideoFrame(c, { timestamp: Math.round(i * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
+    encoder.encode(frame, { keyFrame: i % (FPS * 2) === 0 });
+    frame.close();
+    while (encoder.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
+    if (i % 60 === 0) log('เฟรม ' + i + '/' + total);
+  }
+  await encoder.flush();
+  encoder.close();
+  muxer.finalize();
+  return new Blob([muxer.target.buffer], { type: 'video/mp4' });
+}
+
+(async () => {
+  try {
+    await ready();
+    if (q.has('t')) { draw(parseFloat(q.get('t'))); document.title = 'frame'; return; }
+    if (q.has('play')) {
+      const t0 = performance.now();
+      (function loop() { draw(((performance.now() - t0) / 1000) % DURATION); requestAnimationFrame(loop); })();
+      return;
+    }
+    log('เริ่มเข้ารหัส ' + Math.round(DURATION * FPS) + ' เฟรม');
+    const blob = await encode();
+    log('ได้ไฟล์ ' + (blob.size / 1e6).toFixed(1) + ' MB — กำลังส่ง');
+    const r = await fetch('/save', { method: 'POST', headers: { 'Content-Type': 'video/mp4' }, body: blob });
+    log(r.ok ? 'บันทึกแล้ว' : 'บันทึกไม่สำเร็จ ' + r.status);
+    document.title = r.ok ? 'saved' : 'failed';
+  } catch (e) {
+    log('ผิดพลาด: ' + (e && e.message || e));
+    document.title = 'failed';
+    fetch('/save', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Error': '1' }, body: String(e && e.stack || e) }).catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

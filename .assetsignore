@@ -12,3 +12,5 @@ tests/
 worker/
 # build scripts for the PDFs and the share card; they run here, never in a browser
 tools/
+# marketing renders are not part of the site
+marketing/
