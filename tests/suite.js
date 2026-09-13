@@ -2881,11 +2881,48 @@
         function (c) { return c.dataset.type; });
       expect(types).toEqual(['buy', 'sell', 'buy', 'sell'], 'interleaved exactly as posted');
     });
-    it('hides a post whose deadline has passed', function (w) {
+    /* The owner's call (2026-09-13): with the feed this short, an expired
+       listing still earns its place — kept, marked, and moved after the
+       open ones. KX_FEED_KEEP_EXPIRED=false restores the old behaviour. */
+    it('keeps a post whose deadline has passed, marked, after the open ones', function (w) {
       var list = seed(w, SPECS);
-      list.firstChild.setAttribute('data-deadline', '0');
+      var one = Array.prototype.filter.call(list.querySelectorAll('.post-card'),
+        function (c) { return c.querySelector('.post-title').textContent === '1'; })[0];   // the newest
+      one.setAttribute('data-deadline', '0');
+      w.setFeedSort('recent', fakeOpt(w), 'ล่าสุด');
+      expect(one.style.display).toBe('', 'still on the page');
+      expect(one.classList.contains('pc-expired')).toBe(true, 'and says so');
+      expect(titles(w)).toEqual(['2', '3', '4', '1'], 'open ones first in the chosen order, then the expired');
+      // back to open: the mark goes and it takes its place again
+      one.setAttribute('data-deadline', '5');
       w.kxRankFeed();
-      expect(list.firstChild.style.display).toBe('none', 'a job past its deadline is not a job');
+      expect(one.classList.contains('pc-expired')).toBe(false);
+      expect(titles(w)).toEqual(['1', '2', '3', '4']);
+    });
+    it('can be switched back to hiding them', function (w) {
+      var list = seed(w, SPECS);
+      var one = list.querySelector('.post-card');
+      one.setAttribute('data-deadline', '0');
+      w.KX_FEED_KEEP_EXPIRED = false;
+      try { w.kxRankFeed(); } finally { delete w.KX_FEED_KEEP_EXPIRED; }
+      expect(one.style.display).toBe('none');
+      w.kxRankFeed();
+      expect(one.style.display).toBe('', 'and the default keeps them');
+    });
+    it('an expired card reads ดูรายละเอียด and carries the chip', function (w) {
+      var had = w.kxSession; w.kxSession = { user: { id: ME } };
+      var d = w.document.createElement('div');
+      var base = { id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', kind: 'rfq', status: 'open', title: 't', description: 'x',
+        province: 'เชียงใหม่', created_at: '2026-09-01T00:00:00Z', owner_id: OTHER, quote_count: 0, post_images: [], profiles: { company_name: 'p' } };
+      d.innerHTML = w.kxPostCardHTML(Object.assign({}, base, { deadline: '2000-01-01T00:00:00Z' }));
+      var past = d.firstElementChild;
+      d.innerHTML = w.kxPostCardHTML(Object.assign({}, base, { deadline: '2999-01-01T00:00:00Z' }));
+      var open = d.firstElementChild;
+      w.kxSession = had;
+      expect(past.querySelector('.pc-expired-chip').textContent).toContain('หมดเขต');
+      expect(past.querySelector('.pc-act.primary').textContent).toContain('ดูรายละเอียด');
+      expect(open.querySelector('.pc-expired-chip')).toBeFalsy();
+      expect(open.querySelector('.pc-act.primary').textContent).toContain('เสนอราคา');
     });
     // setFeedSort wants an element to mark active; any option node in the menu will do
     function fakeOpt(w) {

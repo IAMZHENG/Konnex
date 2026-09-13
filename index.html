@@ -7252,6 +7252,10 @@ html, body{
    later rule that sizes the description would otherwise put it back. */
 #page-company-profile .kx-wall .post-chips{ display:none !important; }
 #page-company-profile .kx-wall .post-desc{ display:none !important; }
+/* ประกาศที่หมดเขตแล้ว — ยังอยู่บนฟีด แต่บอกให้รู้ */
+.post-card.pc-expired{opacity:.72}
+.post-card.pc-expired:hover{opacity:1}
+.pc-expired-chip{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:#fff1f0;color:#b42318;font-size:12px;font-weight:600;vertical-align:1px;white-space:nowrap}
 #page-rfq-offers .rfq-chips{ display:none !important; }
 #page-my-offers .offer-tags{ display:none !important; }
 #page-rfq-detail .offer-features{ display:none !important; }
@@ -21616,16 +21620,28 @@ body.kx-guest #load-more-offers { display: none !important; }
     var all = [].slice.call(list.querySelectorAll('.post-card'));
     if(!all.length) return;
 
-    // a job whose deadline has passed is not a job
+    /* A job whose deadline has passed used to be dropped from the page here.
+       The owner's call (2026-09-13): while the platform is young and the
+       feed is short, an expired listing is still worth seeing — it shows a
+       visitor what gets asked for here. So they stay, marked as expired and
+       sorted after everything still open, in whatever order the chip chose.
+       KX_FEED_KEEP_EXPIRED is the one switch to flip when volume no longer
+       needs the help. */
     var live = [], expired = [];
     all.forEach(function(c){
       var d = +(c.getAttribute('data-deadline') || 14);
       if(d <= 0){ expired.push(c); } else { live.push(c); }
     });
-    expired.forEach(function(c){ c.dataset.kxExpired = '1'; c.style.display = 'none'; });
-    live.forEach(function(c){ if(c.dataset.kxExpired){ delete c.dataset.kxExpired; c.style.display = ''; } });
+    var keep = window.KX_FEED_KEEP_EXPIRED !== false;
+    expired.forEach(function(c){
+      c.dataset.kxExpired = '1';
+      c.classList.add('pc-expired');
+      c.style.display = keep ? '' : 'none';
+    });
+    live.forEach(function(c){ if(c.dataset.kxExpired){ delete c.dataset.kxExpired; c.classList.remove('pc-expired'); c.style.display = ''; } });
+    var expiredTail = keep ? expired.slice() : [];
 
-    live.forEach(function(c){ c.__s = score(c); });
+    all.forEach(function(c){ c.__s = score(c); });   // the expired too: paint() and the mix count read from it
     live.sort(function(a,b){ return b.__s - a.__s; });
 
     /* The sort chip decides the order, and its default is ล่าสุด — so the
@@ -21684,6 +21700,10 @@ body.kx-guest #load-more-offers { display: none !important; }
       });
       cards = spread.concat(held);
     }
+    // the expired ones follow, newest first — the order chip is about the
+    // open work; what is past is only kept, not competed
+    expiredTail.sort(function(a,b){ return when(b) - when(a); });
+    cards = cards.concat(expiredTail);
     cards.forEach(function(c){ list.appendChild(c); paint(c); });
     window.kxFeedMix = cards.reduce(function(a,c){ a[bucketOf(c)]=(a[bucketOf(c)]||0)+1; return a; }, {});
   }
@@ -22094,8 +22114,9 @@ body.kx-guest #load-more-offers { display: none !important; }
     // The action reads from the viewer's side, not the post's: on someone
     // else's Offer you are asking them for a quote, and on their RFQ you are
     // giving one. Only the owner is the one reviewing what came in.
+    var expired = !!post.deadline && new Date(post.deadline).getTime() < Date.now();
     var actionLabel = isRfq
-      ? (mine ? 'ดูข้อเสนอ' : 'เสนอราคา')
+      ? (mine ? 'ดูข้อเสนอ' : (expired ? 'ดูรายละเอียด' : 'เสนอราคา'))
       : (mine ? 'ดูคำขอใบเสนอราคา' : 'ขอใบเสนอราคา');
     var askCount = (post.post_questions || []).filter(function(q){ return !q.parent_id; }).length;
     return '<div class="post-card" data-type="' + (isRfq ? 'buy' : 'sell') + '"' +
@@ -22113,7 +22134,8 @@ body.kx-guest #load-more-offers { display: none !important; }
         '<span class="pc-who"><span class="pc-nameline"><span class="pp-name" style="cursor:pointer" title="ดูโปรไฟล์"' +
           ' onclick="event.stopPropagation();kxViewProfile(\'' + post.owner_id + '\')">' + esc(ownerName) + '</span></span>' +
           '<span class="pc-sub">' + (isRfq ? 'ผู้ซื้อ' : 'ผู้ขาย') + (loc ? ' · ' + esc(loc) : '') +
-            ' · ' + relTime(post.created_at) + '</span></span>' +
+            ' · ' + relTime(post.created_at) +
+            (expired ? ' <span class="pc-expired-chip">หมดเขตรับข้อเสนอแล้ว</span>' : '') + '</span></span>' +
         /* The icon is drawn here rather than left as an emoji for a later pass
            to convert. The pass that does that runs before the feed has any cards,
            so the emoji survived — and an emoji is at the mercy of the system font:
