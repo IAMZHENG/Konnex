@@ -18,7 +18,8 @@ const c = document.getElementById('c'), ctx = c.getContext('2d');
 c.width = W; c.height = H;
 
 /* ---- brand ---- */
-const BLUE = '#0056fd', BLUE_DEEP = '#0036a8', BLUE_SOFT = '#eef3ff', INK = '#1c1a18', INK_SOFT = '#565b6e';
+// --blue-600 in the app; the mark's SVG is this exact value
+const BLUE = '#0a5bff', BLUE_DEEP = '#0036a8', BLUE_SOFT = '#eef3ff', INK = '#1c1a18', INK_SOFT = '#565b6e';
 const BG = '#f6f8fc', CARD = '#ffffff', LINE = '#e3e7f0', GREEN = '#16a34a', GREEN_SOFT = '#e8f7ec', AMBER = '#f59e0b';
 const TH = '"IBM Plex Sans Thai", "IBM Plex Sans", sans-serif';
 const font = (w, px) => `${w} ${px}px ${TH}`;
@@ -149,12 +150,14 @@ function mark(x, y, h, white) {
   ctx.drawImage(im, x, y, w, h);
   return w;
 }
+/* As .brand-word in the app: the whole word in the mark's blue, Qube heavier. */
 function wordmark(x, y, px, white) {
   ctx.save();
   ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-  ctx.font = font(700, px); ctx.fillStyle = white ? '#fff' : BLUE; ctx.fillText('Qube', x, y);
+  ctx.fillStyle = white ? '#fff' : BLUE;
+  ctx.font = font(700, px); ctx.fillText('Qube', x, y);
   const w1 = ctx.measureText('Qube').width;
-  ctx.font = font(500, px); ctx.fillStyle = white ? '#fff' : INK; ctx.fillText('Quote', x + w1, y);
+  ctx.font = font(500, px); ctx.fillText('Quote', x + w1, y);
   ctx.restore();
   return w1 + measure('Quote', 500, px);
 }

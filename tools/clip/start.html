@@ -39,10 +39,12 @@ const SELLERS = [
   { name: 'บจก. ทีเค เมทัล ซัพพลาย', price: 41200, days: 5,  stars: 4.9 }
 ];
 const LOWEST = 1;
+// every listing is a ต้องการซื้อ — ประกาศขาย is switched off in the app
+// (KX_OFFERS_ENABLED), so the clip shows neither the kind filter nor a sell card
 const FEED = [
-  { kind: 'buy',  title: 'ชั้นวางสินค้าเหล็ก 20 ชุด',            meta: '📍 ชลบุรี · ข้อเสนอ 3' },
-  { kind: 'sell', title: 'บริการตัดเลเซอร์แผ่นเหล็ก',            meta: '📍 สมุทรปราการ · พร้อมส่งใบเสนอราคา' },
-  { kind: 'buy',  title: 'จ้างขนส่งเครื่องจักร 5 ตัน ไประยอง',   meta: '📍 กรุงเทพฯ · ข้อเสนอ 5' }
+  { title: 'ชั้นวางสินค้าเหล็ก 20 ชุด',              meta: '📍 ชลบุรี · 💬 3 ข้อเสนอ',       when: '2 ชม. ที่แล้ว' },
+  { title: 'ตัดเลเซอร์แผ่นเหล็ก 2 มม. 300 ชิ้น',     meta: '📍 สมุทรปราการ · 💬 2 ข้อเสนอ', when: 'เมื่อวาน' },
+  { title: 'จ้างขนส่งเครื่องจักร 5 ตัน ไประยอง',     meta: '📍 กรุงเทพฯ · 💬 5 ข้อเสนอ',     when: 'เมื่อวาน' }
 ];
 
 /* ---- timeline (seconds) ---- */
@@ -185,22 +187,20 @@ function scene1(t) {
     ctx.globalAlpha *= fu;
     const fx = box.x + 40, fy = box.y + 40, fw = box.w - 80;
     text('ประกาศ', fx, fy + 36, { w: 700, px: 44 });
-    text('เรียกดูงานที่ต้องการซื้อ หรือบริการที่มีคนเสนอขาย', fx, fy + 86, { w: 400, px: 25, color: INK_SOFT });
-    // filter tabs, as in the app
-    let tx = fx;
-    [['ทั้งหมด', true], ['🛒 ต้องการซื้อ', false], ['📦 ประกาศขาย', false]].forEach(([l, on]) => {
-      tx += pill(l, tx, fy + 120, { px: 25, h: 54, padX: 22, bg: on ? BLUE : '#fff', color: on ? '#fff' : INK_SOFT, border: on ? null : LINE }) + 14;
-    });
+    text('งานที่ผู้ซื้อกำลังมองหาผู้ขายอยู่ตอนนี้', fx, fy + 86, { w: 400, px: 25, color: INK_SOFT });
+    text('📍 สถานที่ ⌄', fx, fy + 150, { w: 500, px: 25, color: INK_SOFT });
+    text('ล่าสุด ⌄', fx + 190, fy + 150, { w: 500, px: 25, color: INK_SOFT });
     FEED.forEach((it, i) => {
       const u = seg(t, a + 3.6 + i * .3, a + 4.2 + i * .3);
       if (u <= 0) return;
-      const y = fy + 210 + i * 220 + lerp(50, 0, u);
+      const y = fy + 190 + i * 230 + lerp(50, 0, u);
       ctx.save(); ctx.globalAlpha *= u;
-      card(fx, y, fw, 196, 24);
-      const buy = it.kind === 'buy';
-      pill(buy ? 'ต้องการซื้อ' : 'ประกาศขาย', fx + 28, y + 24, { px: 22, h: 40, padX: 16, bg: buy ? BLUE_SOFT : '#fff3e0', color: buy ? BLUE : '#c2410c' });
-      text(it.title, fx + 28, y + 112, { w: 700, px: 30 });
-      text(it.meta, fx + 28, y + 160, { w: 400, px: 25, color: INK_SOFT });
+      card(fx, y, fw, 206, 24);
+      ctx.fillStyle = BLUE_SOFT; rr(fx + 28, y + 28, 150, 150, 18); ctx.fill();
+      ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(fx + 48, y + 150); ctx.lineTo(fx + 90, y + 92); ctx.lineTo(fx + 118, y + 124); ctx.lineTo(fx + 136, y + 104); ctx.lineTo(fx + 160, y + 150); ctx.closePath(); ctx.fill();
+      text(it.title, fx + 206, y + 74, { w: 700, px: 30 });
+      text(it.meta, fx + 206, y + 122, { w: 400, px: 25, color: INK_SOFT });
+      text(it.when, fx + 206, y + 166, { w: 400, px: 23, color: '#8a90a3' });
       ctx.restore();
     });
     const su = seg(t, a + 6.0, a + 6.6, outBack);
@@ -289,43 +289,39 @@ function scene3(t) {
   paper();
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false); clockChip(t);
-  stepHeader(3, 'โพสต์|สิ่งที่ต้องการ', 'เลือกประเภท ตั้งชื่อเรื่อง ใส่จังหวัด แล้วกดโพสต์ — เท่านี้เอง', t, a + .1);
+  stepHeader(3, 'โพสต์|สิ่งที่ต้องการ', 'ตั้งชื่อเรื่อง ใส่จังหวัด แนบรูป แล้วกดโพสต์ — เท่านี้เอง', t, a + .1);
   const pu = seg(t, a + .3, a + 1.0);
   body(() => {
     ctx.globalAlpha *= pu;
     const box = phone(30, 30 + lerp(120, 0, pu), 800, 1180);
     const fx = box.x + 40, fy = box.y + 40, fw = box.w - 80;
     text('โพสต์ประกาศ', fx, fy + 36, { w: 700, px: 44 });
-    text('คุณต้องการโพสต์งานประเภทใด?', fx, fy + 92, { w: 600, px: 27, color: INK_SOFT });
-    // the two post types, as the app offers them
-    const picked = t >= a + 1.4;
-    [['ขอใบเสนอราคา (RFQ)', 'ต้องการสินค้า บริการ หรือผู้รับเหมามาเสนอราคาให้คุณ', '🧾', BLUE, picked],
-     ['เสนอสินค้า / บริการ (Offer)', 'มีสินค้า บริการพร้อมขาย และต้องการหาลูกค้า', '🛒', '#f97316', false]].forEach(([tt, ss, ic, col, on], i) => {
-      const y = fy + 120 + i * 132;
-      ctx.fillStyle = on ? BLUE_SOFT : '#fff'; ctx.strokeStyle = on ? BLUE : LINE; ctx.lineWidth = 3; rr(fx, y, fw, 116, 20); ctx.fill(); ctx.stroke();
-      text(ic, fx + 26, y + 62, { px: 40, base: 'middle' });
-      text(tt, fx + 90, y + 48, { w: 700, px: 28 });
-      text(ss, fx + 90, y + 88, { w: 400, px: 22, color: INK_SOFT });
-      if (on) { ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(fx + fw - 34, y + 30, 14, 0, Math.PI * 2); ctx.fill(); text('✓', fx + fw - 34, y + 31, { w: 700, px: 18, color: '#fff', align: 'center', base: 'middle' }); }
-    });
-    tap(fx + fw / 2, fy + 178, t, a + 1.3);
-    const typing = t >= a + 2.2 && t < a + 4.8;
-    let y = field('ชื่อเรื่อง', fx, fy + 420, fw, typed(ITEM, t, a + 2.4, a + 4.4), 'บอกสิ่งที่ต้องการสั้น ๆ', { focus: typing, caret: typing, t });
-    const cu = seg(t, a + 5.0, a + 5.5);
+    // one kind of listing in the app today, so no type to choose — the form starts at the title
+    text('โพสต์สิ่งที่คุณต้องการซื้อ แล้วให้ผู้ขายเข้ามาเสนอราคา', fx, fy + 90, { w: 400, px: 25, color: INK_SOFT });
+    const typing = t >= a + 1.2 && t < a + 4.0;
+    tap(fx + fw / 2, fy + 200, t, a + 1.0);
+    let y = field('ชื่อเรื่อง', fx, fy + 150, fw, typed(ITEM, t, a + 1.4, a + 3.6), 'บอกสิ่งที่ต้องการสั้น ๆ', { focus: typing, caret: typing, t });
+    const cu = seg(t, a + 4.2, a + 4.7);
     ctx.save(); ctx.globalAlpha *= cu;
     y = field('จังหวัดของงานนี้', fx, y + 52, fw, '📍 ' + PROVINCE, '');
     ctx.restore();
-    const bu = seg(t, a + 5.6, a + 6.1);
-    const press = pressAt(t, a + 7.0);
-    button('＋ โพสต์ประกาศ', fx + fw / 2, y + 90, fw, 100, { alpha: bu, press });
-    tap(fx + fw / 2, y + 90, t, a + 6.9);
-    toast('✓ โพสต์ประกาศแล้ว', fx + fw / 2, y + 220, seg(t, a + 7.3, a + 7.7, outBack));
-    const hu = seg(t, a + 9.0, a + 9.6, outBack);
-    if (hu > 0) {
-      ctx.save(); ctx.globalAlpha *= clamp(hu, 0, 1); ctx.translate(box.x + box.w / 2, box.y + box.h - 90); ctx.scale(hu, hu);
-      pill('📦 มีของขาย? เลือก เสนอสินค้า / บริการ แทน', 0, -36, { align: 'center', px: 26, bg: INK, color: '#fff' });
+    const iu = seg(t, a + 5.2, a + 5.8, outBack);
+    text('รูปประกอบ', fx, y + 52, { w: 600, px: 28, alpha: iu });
+    for (let i = 0; i < 3; i++) {
+      const uu = seg(t, a + 5.2 + i * .12, a + 5.8 + i * .12, outBack);
+      const tx = fx + i * (fw / 3), tw = fw / 3 - 16;
+      ctx.save(); ctx.globalAlpha *= clamp(uu, 0, 1); ctx.translate(tx + tw / 2, y + 150); ctx.scale(uu, uu);
+      ctx.fillStyle = i === 0 ? BLUE_SOFT : '#f1f3f8'; rr(-tw / 2, -70, tw, 140, 20); ctx.fill();
+      ctx.strokeStyle = i === 0 ? BLUE : LINE; ctx.lineWidth = 3; ctx.setLineDash(i === 0 ? [] : [12, 10]); rr(-tw / 2, -70, tw, 140, 20); ctx.stroke();
+      if (i === 0) { ctx.fillStyle = BLUE; ctx.beginPath(); ctx.moveTo(-60, 40); ctx.lineTo(-20, -15); ctx.lineTo(10, 18); ctx.lineTo(35, -5); ctx.lineTo(70, 40); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.arc(40, -32, 12, 0, Math.PI * 2); ctx.fill(); }
+      else text('+', 0, 4, { w: 400, px: 60, color: '#aeb6c8', align: 'center', base: 'middle' });
       ctx.restore();
     }
+    const bu = seg(t, a + 6.2, a + 6.7);
+    const press = pressAt(t, a + 7.6);
+    button('＋ โพสต์ประกาศ', fx + fw / 2, y + 290, fw, 100, { alpha: bu, press });
+    tap(fx + fw / 2, y + 290, t, a + 7.5);
+    toast('✓ โพสต์ประกาศแล้ว', fx + fw / 2, y + 400, seg(t, a + 7.9, a + 8.3, outBack));
   });
   dots(2, STEPS);
   ctx.restore();
