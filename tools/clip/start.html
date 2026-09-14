@@ -63,20 +63,6 @@ const CLOCK_START = T.s1[0], CLOCK_STOP = T.outro[0];
 
 /* ---- clip-specific helpers ---- */
 const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
-const typed = (s, t, a, b) => s.slice(0, Math.round(s.length * clamp((t - a) / (b - a), 0, 1)));
-const blink = t => Math.floor(t * 2.5) % 2 === 0;
-const pressAt = (t, t0) => t > t0 && t < t0 + .3 ? 1 - Math.abs((t - t0 - .15) / .15) : 0;
-
-/* A fingertip ripple where the viewer should look — the tutorial's pointer. */
-function tap(x, y, t, t0) {
-  const u = (t - t0) / .55;
-  if (u <= 0 || u >= 1) return;
-  ctx.save();
-  ctx.globalAlpha *= (1 - u) * .7;
-  ctx.fillStyle = 'rgba(0,86,253,.25)'; ctx.beginPath(); ctx.arc(x, y, lerp(22, 80, outCubic(u)), 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = BLUE; ctx.lineWidth = 4; ctx.stroke();
-  ctx.restore();
-}
 /* The running clock in the corner during the steps. */
 function clockChip(t) {
   const el = clamp(t - CLOCK_START, 0, CLOCK_STOP - CLOCK_START);
@@ -110,36 +96,6 @@ function stopwatch(x, y, r, frac, label, sub) {
   if (sub) text(sub, 0, r * .42 + r * .28, { w: 500, px: r * .13, color: 'rgba(255,255,255,.8)', align: 'center', base: 'middle' });
   ctx.restore();
 }
-/* A form field with a label; `value` typed, `ph` shown grey when empty. */
-function field(label, x, y, w, value, ph, o) {
-  o = o || {};
-  text(label, x, y, { w: 600, px: 28 });
-  ctx.fillStyle = '#fff'; ctx.strokeStyle = o.focus ? BLUE : LINE; ctx.lineWidth = 3; rr(x, y + 20, w, 88, 18); ctx.fill(); ctx.stroke();
-  if (value) text(value, x + 28, y + 76, { w: 500, px: 32 });
-  else if (ph) text(ph, x + 28, y + 76, { w: 400, px: 30, color: '#aeb6c8' });
-  if (o.caret && blink(o.t)) { const cw = measure(value, 500, 32); ctx.fillStyle = BLUE; ctx.fillRect(x + 30 + cw, y + 44, 3, 44); }
-  return y + 108;
-}
-function button(label, cx, cy, w, h, o) {
-  o = o || {};
-  const press = o.press || 0;
-  ctx.save();
-  if (o.alpha != null) ctx.globalAlpha *= clamp(o.alpha, 0, 1);
-  ctx.translate(cx, cy); ctx.scale(1 - press * .06, 1 - press * .06);
-  ctx.fillStyle = o.bg || (press ? BLUE_DEEP : BLUE); rr(-w / 2, -h / 2, w, h, h / 2); ctx.fill();
-  if (o.border) { ctx.strokeStyle = o.border; ctx.lineWidth = 3; rr(-w / 2, -h / 2, w, h, h / 2); ctx.stroke(); }
-  text(label, 0, 3, { w: 700, px: o.px || 36, color: o.color || '#fff', align: 'center', base: 'middle' });
-  ctx.restore();
-}
-function toast(label, cx, cy, u) {
-  if (u <= 0) return;
-  ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1); ctx.translate(cx, cy); ctx.scale(u, u);
-  const w = measure(label, 600, 30) + 90;
-  ctx.fillStyle = GREEN_SOFT; rr(-w / 2, -40, w, 80, 40); ctx.fill();
-  text(label, 0, 3, { w: 600, px: 30, color: GREEN, align: 'center', base: 'middle' });
-  ctx.restore();
-}
-
 /* ====================== SCENES ====================== */
 
 function sceneHook(t) {
