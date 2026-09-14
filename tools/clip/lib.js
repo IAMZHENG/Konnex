@@ -235,7 +235,8 @@ function stepHeader(n, title, sub, t, a) {
   const u = seg(t, a, a + .55, outBack);
   ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
   ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(h.x, h.y, h.badge * u, 0, Math.PI * 2); ctx.fill();
-  text(String(n), h.x, h.y + 2, { w: 700, px: h.badge, color: '#fff', align: 'center', base: 'middle' });
+  // n is usually a step number; a clip without steps passes an emoji instead
+  text(String(n), h.x, h.y + 2, { w: 700, px: typeof n === 'number' ? h.badge : h.badge * .9, color: '#fff', align: 'center', base: 'middle' });
   const dx = lerp(40, 0, u);
   // a '|' in the title marks where the narrow left column of the square
   // framing breaks it; the other two have room for one line

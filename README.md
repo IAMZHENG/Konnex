@@ -3486,23 +3486,26 @@ watchdog's own budget is deliberately generous for the same reason: it is a net 
 promise that never settles, not a performance budget, and a tighter one reports a
 throttled tab as a hang.
 
-## คลิปการตลาด: 4 ขั้นตอน, เริ่มต้นใช้งานใน 1 นาที และ เสนอราคา (ฝั่งผู้ขาย)
+## คลิปการตลาด: QubeQuote คืออะไร, 4 ขั้นตอน, เริ่มต้นใช้งานใน 1 นาที และ เสนอราคา (ฝั่งผู้ขาย)
 
-Three short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
+Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
+the site. `intro` (~46 s) is for people who have never heard of it: the old way (ring
+every supplier), the idea as a diagram (one post, offers coming up to it), what each side
+gets, why it is easy, and the site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
 offers, chat with the seller — with a stopwatch in the corner that is still under a minute
 when the outro freezes it. `sell` (~60 s) is the seller's side, through the pages as they
 are: pick a listing off the feed, read its detail page (spec, pictures, attachments,
 budget, deadline), ask under ❓ คำถามเกี่ยวกับงานนี้, send a price through
 เสนอราคาสำหรับงานนี้ with a quotation and other files attached, then find it again on
-ใบเสนอราคา ที่ส่ง — what was quoted, to whom, for how much.
+ใบเสนอราคา ที่ส่ง — what was quoted, to whom, for how much. The Facebook copy that goes with each clip is
+`marketing/facebook-posts.md`, written from what the app actually does today.
 
 None is a screen recording. `tools/clip/lib.js` is a shared drawing kit — framing,
 brand colours and the app's own fonts, phone frame, cards, an offer row, a synthesised
-music bed, and a WebCodecs + mp4-muxer encoder — and each clip page (`clip.html`,
+music bed, and a WebCodecs + mp4-muxer encoder — and each clip page (`intro.html`, `clip.html`,
 `start.html`, `sell.html`) is only its story: a `draw(t)` that is a pure function of time. Headless
 Chrome encodes the frames to H.264 and the music to AAC and posts the MP4 back to the
 build script; no ffmpeg anywhere. `--frame 12.5,30 --out <dir>` writes those moments as

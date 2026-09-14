@@ -2,9 +2,10 @@
  * ออกคลิปการตลาด (MP4 + เพลง) สามกรอบภาพ
  * ============================================================================
  * Run from the project root:
- *   node tools/build-clip.js [4-steps|start|sell] [9x16|16x9|1x1|all]
+ *   node tools/build-clip.js [intro|4-steps|start|sell] [9x16|16x9|1x1|all]
  * Writes marketing/qubequote-<clip>-<framing>.mp4   (default: all three)
  *
+ *   intro    QubeQuote คืออะไร ~46 วินาที                tools/clip/intro.html
  *   4-steps  คลิปอธิบาย 4 ขั้นตอน ~34 วินาที          tools/clip/clip.html
  *   start    เริ่มต้นใช้งานใน 1 นาที ~60 วินาที        tools/clip/start.html
  *   sell     เสนอราคาใน QubeQuote (ฝั่งผู้ขาย) ~60 วินาที   tools/clip/sell.html
@@ -45,7 +46,7 @@ const ROOT = process.cwd();
 const OUT_DIR = path.join(ROOT, 'marketing');
 const PORT = 8899;
 const FRAMINGS = { '9x16': [1080, 1920], '16x9': [1920, 1080], '1x1': [1080, 1080] };
-const CLIPS = { '4-steps': 'clip.html', 'start': 'start.html', 'sell': 'sell.html' };
+const CLIPS = { 'intro': 'intro.html', '4-steps': 'clip.html', 'start': 'start.html', 'sell': 'sell.html' };
 
 const args = process.argv.slice(2), flags = {};
 for (let i = 0; i < args.length; i++) if (args[i].startsWith('--')) { flags[args[i].slice(2)] = args[i + 1]; args.splice(i, 2); i--; }
