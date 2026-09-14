@@ -1762,6 +1762,40 @@
     });
   });
 
+  /* The dropdown under the avatar had แก้ไขโปรไฟล์, ตั้งค่า and ออกจากระบบ —
+     and no way to simply look at your own profile, the page the picture
+     stands for. The owner asked for it (2026-09-14); it goes first. */
+  describe('เมนูใต้รูปโปรไฟล์', function () {
+    function items(w) {
+      return Array.prototype.map.call(w.document.querySelectorAll('#avMenu .av-menu-item'), function (el) {
+        return { label: el.textContent.trim(), onclick: el.getAttribute('onclick') || '', hidden: w.getComputedStyle(el).display === 'none' };
+      }).filter(function (it) { return !it.hidden; });
+    }
+    it('opens your own profile, as the first entry', function (w) {
+      var list = items(w);
+      expect(list[0].label).toBe('โปรไฟล์ของฉัน');
+      expect(list[0].onclick).toContain("navigateTo('page-company-profile')");
+      expect(list[0].onclick).toContain('closeAvMenu()');
+    });
+    it('keeps the rest in order', function (w) {
+      expect(items(w).map(function (it) { return it.label; }))
+        .toEqual(['โปรไฟล์ของฉัน', 'แก้ไขโปรไฟล์', 'ตั้งค่า', 'ออกจากระบบ']);
+    });
+    /* A plain navigateTo to the profile page, with no kxViewProfile intent,
+       is the "show me myself" path — the hook fills it from the session. */
+    it('the page it opens is filled with the account signed in', async function (w) {
+      var sb = plan(w, { profiles: { _: { data: { id: ME, company_name: 'บริษัทของฉัน', province: 'เชียงใหม่' }, error: null } } });
+      signIn(w);
+      w.navigateTo('page-company-profile', true);
+      await new Promise(function (r) { setTimeout(r, 60); });
+      restore(w);
+      var call = sb._calls.filter(function (c) { return c.table === 'profiles'; })[0];
+      expect(!!call).toBe(true, 'the profile row is fetched');
+      expect(call.filters.join(' ')).toContain('eq(id,' + ME + ')', 'and it is yours');
+      expect(w.kxProfileViewingId).toBe(ME);
+    });
+  });
+
   /* The top bar is shipped once per page — twenty copies — and each page's own
      stylesheet touches it, so the same icon drew at 30px on the feed and 20px
      on the profile, and the avatar chip was 55px wide on two pages and 34 on
