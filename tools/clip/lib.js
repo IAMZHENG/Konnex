@@ -240,14 +240,21 @@ function stepHeader(n, title, sub, t, a) {
   const dx = lerp(40, 0, u);
   // a '|' in the title marks where the narrow left column of the square
   // framing breaks it; the other two have room for one line
-  const lines = h.twoLine ? title.split('|') : [title.replace('|', '')];
+  // the square framing always breaks there; the others only when one line
+  // would run into the body column (or off the right edge)
+  const left = h.x + h.badge + 34;
+  const maxW = (F.twoCol ? F.body.x - 40 : W - 40) - left;
+  const twoLine = title.includes('|') && (h.twoLine || measure(title.replace('|', ''), 700, h.px) > maxW);
+  const lines = twoLine ? title.split('|') : [title.replace('|', '')];
   if (lines.length === 1) text(lines[0], h.x + h.badge + 34 + dx, h.y + 2, { w: 700, px: h.px, base: 'middle' });
   else lines.forEach((ln, i) => text(ln.trim(), h.x + h.badge + 34 + dx, h.y + 2 + (i - .5) * h.px * 1.3, { w: 700, px: h.px, base: 'middle' }));
   ctx.restore();
   if (sub) {
     const su = seg(t, a + .4, a + .9);
     const lines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
-    lines.forEach((ln, i) => text(ln, h.x - h.badge, h.sub.y + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
+    // a title that broke onto two lines in a framing laid out for one pushes the caption down
+    const shift = twoLine && !h.twoLine ? h.px * 1.3 : 0;
+    lines.forEach((ln, i) => text(ln, h.x - h.badge, h.sub.y + shift + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
   }
 }
 function dots(step, n) {
