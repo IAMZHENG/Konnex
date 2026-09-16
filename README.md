@@ -3491,8 +3491,8 @@ throttled tab as a hang.
 Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `intro` (~85 s, narrated) is for people who have never heard of it: the old way (ring
-every supplier, crossed out), the idea as a diagram (one post, offers coming up to it), what
+the site. `intro` (~85 s, narrated) is for people who have never heard of it: the old ways (ring, e-mail, LINE each supplier, or not know where to look — all crossed out — and
+never be sure the price you got is the market's), the idea as a diagram (one post, offers coming up to it), what
 each side gets, why it is easy, a scene of the real app inside a phone frame (the feed scrolling, a listing, the sign-in
 page), and the buyer and seller scenes each pair their three points with the page that point
 is about (โพสต์ประกาศ and เปรียบเทียบข้อเสนอ for the buyer; the listing, the quote form and

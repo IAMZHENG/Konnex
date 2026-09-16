@@ -63,7 +63,7 @@ const EASY_POINTS = [
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 6.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
+const BASE = { hook: 8.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
 const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's4', 's5', 'outro'];
 
 /* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
@@ -152,13 +152,27 @@ function pointList(points, t, a) {
     points.forEach((p, i) => pointCard(p, 0, 80 + i * 330, BODY_W, seg(t, a + .4 + i * .45, a + 1.0 + i * .45)));
   });
 }
-/* A phone handset drawn with strokes, so it can shake and be crossed out. */
-function handset(x, y, s, wobble, crossed) {
+/* The old ways, drawn with strokes so they can shake and be crossed out:
+   a call, an e-mail, a LINE message, and not knowing where to look at all. */
+function oldWay(kind, x, y, s, wobble, crossed) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(wobble); ctx.scale(s, s);
   ctx.fillStyle = 'rgba(255,255,255,.16)'; ctx.beginPath(); ctx.arc(0, 0, 100, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = '#fff'; ctx.lineWidth = 14; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.beginPath(); ctx.moveTo(-42, -40); ctx.quadraticCurveTo(-52, 30, 10, 48); ctx.quadraticCurveTo(40, 52, 46, 38);
-  ctx.lineTo(30, 12); ctx.lineTo(10, 22); ctx.quadraticCurveTo(-20, 4, -16, -26); ctx.lineTo(-6, -36); ctx.lineTo(-24, -58); ctx.closePath(); ctx.stroke();
+  if (kind === 'phone') {
+    ctx.beginPath(); ctx.moveTo(-42, -40); ctx.quadraticCurveTo(-52, 30, 10, 48); ctx.quadraticCurveTo(40, 52, 46, 38);
+    ctx.lineTo(30, 12); ctx.lineTo(10, 22); ctx.quadraticCurveTo(-20, 4, -16, -26); ctx.lineTo(-6, -36); ctx.lineTo(-24, -58); ctx.closePath(); ctx.stroke();
+  } else if (kind === 'mail') {
+    rr(-56, -38, 112, 76, 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-50, -30); ctx.lineTo(0, 8); ctx.lineTo(50, -30); ctx.stroke();
+  } else if (kind === 'line') {
+    ctx.beginPath(); ctx.moveTo(-40, -44); ctx.lineTo(40, -44); ctx.quadraticCurveTo(60, -44, 60, -24); ctx.lineTo(60, 14); ctx.quadraticCurveTo(60, 34, 40, 34);
+    ctx.lineTo(-10, 34); ctx.lineTo(-38, 56); ctx.lineTo(-34, 34); ctx.quadraticCurveTo(-60, 34, -60, 14); ctx.lineTo(-60, -24); ctx.quadraticCurveTo(-60, -44, -40, -44); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = font(700, 30); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('LINE', 0, -6);
+  } else {
+    ctx.beginPath(); ctx.arc(-10, -10, 42, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(22, 22); ctx.lineTo(56, 56); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = font(700, 54); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('?', -10, -8);
+  }
   if (crossed > 0) {
     ctx.strokeStyle = '#ff5a5a'; ctx.lineWidth = 16;
     const k1 = clamp(crossed * 2, 0, 1), k2 = clamp(crossed * 2 - 1, 0, 1);
@@ -177,23 +191,30 @@ function sceneHook(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
   topBrand(true);
   let P;
-  if (F.kind === 'portrait')    P = { hy: 560, hs: 1, gap: 300, tx: W / 2, y1: 900, y2: 1020, sy: 1200, px: 70, spx: 46, align: 'center', wrap: 940 };
-  else if (F.kind === 'square') P = { hy: 250, hs: .75, gap: 250, tx: W / 2, y1: 500, y2: 600, sy: 760, px: 60, spx: 40, align: 'center', wrap: 940 };
-  else                          P = { hy: H / 2 - 40, hs: .8, gap: 230, hx: 520, tx: 860, y1: H / 2 - 120, y2: H / 2 - 20, sy: H / 2 + 130, px: 62, spx: 42, align: 'left', wrap: 820 };
+  if (F.kind === 'portrait')    P = { hy: 520, hs: .9, gap: 240, lpx: 28, tx: W / 2, y1: 860, y2: 970, y3: 1080, sy: 1260, px: 68, mpx: 38, spx: 46, align: 'center', wrap: 960 };
+  else if (F.kind === 'square') P = { hy: 240, hs: .68, gap: 210, lpx: 24, tx: W / 2, y1: 490, y2: 580, y3: 660, sy: 800, px: 58, mpx: 32, spx: 40, align: 'center', wrap: 960 };
+  else                          P = { hy: H / 2 - 30, hs: .66, gap: 190, lpx: 24, hx: 400, tx: 760, y1: H / 2 - 150, y2: H / 2 - 60, y3: H / 2 + 30, sy: H / 2 + 200, px: 60, mpx: 32, spx: 42, align: 'left', wrap: 1040 };
   const cx = P.hx || W / 2;
-  for (let i = 0; i < 3; i++) {
-    const u = seg(t, a + .2 + i * .25, a + .8 + i * .25, outBack);
-    if (u <= 0) continue;
-    const ring = t > a + 1.0 ? Math.sin((t - a) * 22 + i) * .12 * fadeInOut(t, a + 1.0, a + 3.6, .3) : 0;
-    const crossed = seg(t, a + 3.7 + i * .15, a + 4.3 + i * .15, u => clamp(u, 0, 1));
-    const px = F.kind === 'landscape' ? cx : cx + (i - 1) * P.gap;
-    const py = F.kind === 'landscape' ? P.hy + (i - 1) * P.gap : P.hy;
-    handset(px, py, P.hs * u, ring, crossed);
-  }
-  const l1 = seg(t, a + 1.2, a + 1.8), l2 = seg(t, a + 1.6, a + 2.2), l3 = seg(t, a + 4.3, a + 4.9);
+  // the crossing-out and the answer sit late in the scene, wherever its narration puts the end
+  const L = b - a, X = a + L * .74;
+  const WAYS = [['phone', 'โทรถาม'], ['mail', 'ส่งอีเมล'], ['line', 'ส่งไลน์'], ['where', 'หาที่ไหน?']];
+  WAYS.forEach(([kind, label], i) => {
+    const u = seg(t, a + .2 + i * .22, a + .8 + i * .22, outBack);
+    if (u <= 0) return;
+    const ring = t > a + 1.0 ? Math.sin((t - a) * 22 + i) * .12 * fadeInOut(t, a + 1.0, X - .2, .3) : 0;
+    const crossed = seg(t, X + i * .15, X + .6 + i * .15, u => clamp(u, 0, 1));
+    const px = F.kind === 'landscape' ? cx : cx + (i - 1.5) * P.gap;
+    const py = F.kind === 'landscape' ? P.hy + (i - 1.5) * P.gap : P.hy;
+    oldWay(kind, px, py, P.hs * u, ring, crossed);
+    if (F.kind === 'landscape') text(label, px + 100 * P.hs + 24, py + 10, { w: 500, px: P.lpx, color: 'rgba(255,255,255,.85)', alpha: u });
+    else text(label, px, py + 100 * P.hs + 44, { w: 500, px: P.lpx, color: 'rgba(255,255,255,.85)', align: 'center', alpha: u });
+  });
+  const l1 = seg(t, a + 1.2, a + 1.8), l2 = seg(t, a + 1.6, a + 2.2), l3 = seg(t, a + L * .38, a + L * .38 + .6), l4 = seg(t, X + .7, X + 1.3);
   text('ซื้อของให้บริษัท', P.tx, P.y1 + lerp(40, 0, l1), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l1 });
-  text('ยังโทรถามราคาทีละเจ้าอยู่ไหม?', P.tx, P.y2 + lerp(40, 0, l2), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l2 });
-  text('มีวิธีที่ง่ายกว่านั้น', P.tx, P.sy, { w: 500, px: P.spx, color: 'rgba(255,255,255,.9)', align: P.align, alpha: l3 });
+  text('ยังไล่ถามราคาทีละเจ้าอยู่ไหม?', P.tx, P.y2 + lerp(40, 0, l2), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l2 });
+  wrapText('ไม่รู้จะหาผู้ขายจากที่ไหน — และราคาที่ได้มา ใช่ราคาตลาดจริงหรือเปล่า?', 500, P.mpx, P.wrap)
+    .forEach((ln, i) => text(ln, P.tx, P.y3 + i * P.mpx * 1.5, { w: 500, px: P.mpx, color: 'rgba(255,255,255,.85)', align: P.align, alpha: l3 }));
+  text('มีวิธีที่ง่ายกว่านั้น', P.tx, P.sy, { w: 700, px: P.spx, color: '#fff', align: P.align, alpha: l4 });
   ctx.restore();
 }
 
@@ -245,7 +266,7 @@ function scene1(t) {
     if (du > 0) {
       ctx.save(); ctx.globalAlpha *= clamp(du, 0, 1); ctx.translate(BODY_W / 2, 900); ctx.scale(du, du);
       ctx.fillStyle = BLUE; rr(-400, -60, 800, 120, 36); ctx.fill();
-      text('3 ข้อเสนอ ในที่เดียว — ไม่ต้องโทรสักสาย', 0, 4, { w: 700, px: 34, color: '#fff', align: 'center', base: 'middle' });
+      text('3 ราคาในที่เดียว — เห็นราคาตลาดจริง ไม่ต้องโทรสักสาย', 0, 4, { w: 700, px: 32, color: '#fff', align: 'center', base: 'middle' });
       ctx.restore();
     }
   });
