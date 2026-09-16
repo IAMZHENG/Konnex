@@ -521,6 +521,8 @@ let VOICE = null;
 async function boot() {
   try {
     await ready();
+    // a clip may load extra pictures (screenshots) before its first frame
+    if (typeof prepare === 'function') await prepare();
     VOICE = await loadVoiceManifest();
     if (typeof applyVoice === 'function') applyVoice(VOICE);
     // ?bare=1: the canvas at its true size in the top-left corner, for --frame screenshots

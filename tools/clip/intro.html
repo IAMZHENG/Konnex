@@ -63,20 +63,31 @@ const EASY_POINTS = [
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 6.0, s1: 10.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
-const ORDER = ['hook', 's1', 's2', 's3', 's4', 's5', 'outro'];
+const BASE = { hook: 6.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
+const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's4', 's5', 'outro'];
+
+/* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
+   Loaded before the first frame; if they are missing the scene is skipped
+   and the clip says so in its log. */
+let SHOTS = null;
+async function prepare() {
+  try {
+    await Promise.all([loadImg('feed', '/marketing/shots/feed.png'), loadImg('detail', '/marketing/shots/detail.png'), loadImg('auth', '/marketing/shots/auth.png')]);
+    SHOTS = { feed: IMG.feed, detail: IMG.detail, auth: IMG.auth };
+  } catch (e) { log('ไม่มีภาพหน้าเว็บ (marketing/shots) — ข้ามฉากหน้าเว็บจริง; รัน node tools/build-shots.js ก่อน'); }
+}
 let T = {}, DURATION = 0;
 (function lay() { let t = 0; for (const k of ORDER) { T[k] = [t, t + BASE[k]]; t += BASE[k]; } DURATION = t; })();
 
 /* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
 const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
-const LINE_OF = { hook: 'hook', s1: 'idea', s2: 'buyer', s3: 'seller', s4: 'easy', s5: 'trust', outro: 'outro' };
+const LINE_OF = { hook: 'hook', s1: 'idea', s1b: 'shots', s2: 'buyer', s3: 'seller', s4: 'easy', s5: 'trust', outro: 'outro' };
 function applyVoice(m) {
   const LEAD = .6, TAIL = .7;     // a beat of picture before the voice starts, and after it stops
   let t = 0;
   for (const k of ORDER) {
     const ln = m && m.lines.find(l => l.id === LINE_OF[k]);
-    const len = Math.max(BASE[k], ln ? LEAD + ln.duration + TAIL : 0);
+    const len = k === 's1b' && !SHOTS ? 0 : Math.max(BASE[k], ln ? LEAD + ln.duration + TAIL : 0);
     T[k] = [t, t + len];
     if (ln) ln.at = t + LEAD;
     t += len;
@@ -206,6 +217,54 @@ function scene1(t) {
   ctx.restore();
 }
 
+/* A screenshot inside the phone, cropped to the screen and scrolled by `scroll` source pixels. */
+function screen(img, box, scroll, alpha) {
+  const sh = img.width * box.h / box.w;
+  const sy = clamp(scroll, 0, Math.max(0, img.height - sh));
+  ctx.save(); ctx.globalAlpha *= clamp(alpha == null ? 1 : alpha, 0, 1);
+  rr(box.x, box.y, box.w, box.h, 50); ctx.clip();
+  ctx.drawImage(img, 0, sy, img.width, sh, box.x, box.y, box.w, box.h);
+  ctx.restore();
+}
+/* The real site, as it is today: the feed, a listing, the sign-in page. */
+function scene1b(t) {
+  const [a, b] = T.s1b;
+  paper();
+  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
+  topBrand(false);
+  stepHeader('📱', 'หน้าเว็บจริง| เป็นแบบนี้', 'ภาพจากเว็บจริง — ฟีดประกาศ หน้ารายละเอียด และหน้าเข้าสู่ระบบ', t, a + .1);
+  const pu = seg(t, a + .3, a + 1.0);
+  const L = b - a, u = (t - a) / L;                 // beats as fractions of the scene, so a stretched scene keeps its shape
+  const B = [0, .40, .72, 1];
+  body(() => {
+    ctx.globalAlpha *= pu;
+    const box = phone(30, 30 + lerp(120, 0, pu), 800, 1180, { blank: true });
+    // feed: scroll down through the listings
+    if (u < B[1] + .06) {
+      const k = clamp((u - .05) / (B[1] - .12), 0, 1);
+      screen(SHOTS.feed, box, inOutCubic(k) * 1900, 1 - clamp((u - B[1]) / .06, 0, 1));
+    }
+    // listing: slides in, scrolls a little
+    if (u >= B[1] && u < B[2] + .06) {
+      const k = clamp((u - B[1]) / (B[2] - B[1]), 0, 1);
+      ctx.save(); ctx.translate(lerp(box.w, 0, outCubic(clamp(k * 4, 0, 1))), 0);
+      screen(SHOTS.detail, box, inOutCubic(clamp((k - .3) / .7, 0, 1)) * 900, 1 - clamp((u - B[2]) / .06, 0, 1));
+      ctx.restore();
+    }
+    // sign-in: fades in
+    if (u >= B[2]) {
+      const k = clamp((u - B[2]) / (1 - B[2]), 0, 1);
+      screen(SHOTS.auth, box, 330, clamp(k * 5, 0, 1));
+    }
+    const cap = u < B[1] ? '👀 ฟีดประกาศ — ดูได้โดยไม่ต้องสมัคร' : u < B[2] ? '📄 หน้ารายละเอียด — สเปก ไฟล์แนบ ถาม-ตอบ' : '🔑 เข้าสู่ระบบด้วย Google หรือ LINE';
+    const cu = Math.min(seg(t, a + .8, a + 1.3), 1);
+    ctx.save(); ctx.globalAlpha *= cu; ctx.translate(box.x + box.w / 2, box.y + box.h - 70);
+    pill(cap, 0, -36, { align: 'center', px: 27, bg: INK, color: '#fff' });
+    ctx.restore();
+  });
+  ctx.restore();
+}
+
 function scene2(t) {
   const [a, b] = T.s2;
   paper();
@@ -279,6 +338,7 @@ function draw(t) {
   ctx.clearRect(0, 0, W, H);
   if (t < T.hook[1]) sceneHook(t);
   else if (t < T.s1[1]) scene1(t);
+  else if (t < T.s1b[1]) scene1b(t);
   else if (t < T.s2[1]) scene2(t);
   else if (t < T.s3[1]) scene3(t);
   else if (t < T.s4[1]) scene4(t);

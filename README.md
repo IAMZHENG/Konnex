@@ -3491,10 +3491,13 @@ throttled tab as a hang.
 Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `intro` (~70 s, narrated) is for people who have never heard of it: the old way (ring
+the site. `intro` (~85 s, narrated) is for people who have never heard of it: the old way (ring
 every supplier, crossed out), the idea as a diagram (one post, offers coming up to it), what
-each side gets, why it is easy, the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ — and the
-site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
+each side gets, why it is easy, a scene of the real site inside a phone frame (the feed scrolling, a listing,
+the sign-in page — `node tools/build-shots.js` captures them from the live Workers
+deployment as a signed-out visitor, 480 CSS px wide at 2x, into `marketing/shots/`; the
+scene is skipped if they are absent), the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ —
+and the site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
 offers, chat with the seller — with a stopwatch in the corner that is still under a minute
 when the outro freezes it. `sell` (~60 s) is the seller's side, through the pages as they
