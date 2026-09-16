@@ -72,8 +72,9 @@ const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's4', 's5', 'outro'];
 let SHOTS = null;
 async function prepare() {
   try {
-    await Promise.all([loadImg('feed', '/marketing/shots/feed.png'), loadImg('detail', '/marketing/shots/detail.png'), loadImg('auth', '/marketing/shots/auth.png')]);
-    SHOTS = { feed: IMG.feed, detail: IMG.detail, auth: IMG.auth };
+    const names = ['feed', 'detail', 'auth', 'compose', 'compare', 'quote', 'mybids'];
+    await Promise.all(names.map(n => loadImg('shot_' + n, '/marketing/shots/' + n + '.png')));
+    SHOTS = {}; names.forEach(n => { SHOTS[n] = IMG['shot_' + n]; });
   } catch (e) { log('ไม่มีภาพหน้าเว็บ (marketing/shots) — ข้ามฉากหน้าเว็บจริง; รัน node tools/build-shots.js ก่อน'); }
 }
 let T = {}, DURATION = 0;
@@ -111,6 +112,40 @@ function pointCard(p, x, y, w, u) {
   const lines = wrapText(p[2], 400, 27, w - 264);
   lines.forEach((ln, i) => text(ln, x + 230, y + 168 + i * 40, { w: 400, px: 27, color: INK_SOFT }));
   ctx.restore();
+}
+/* Three points in a compact stack, the phone under them showing the page each
+   one is about; the point being shown is outlined. Beats are thirds of the
+   scene, so a scene stretched for its narration keeps the same shape. */
+function pointsWithPhone(points, beats, t, a, b) {
+  const L = b - a, u = clamp((t - a) / L, 0, 1);
+  const beat = Math.min(2, Math.floor(u * 3)), bu = u * 3 - beat;
+  body(() => {
+    points.forEach((p, i) => {
+      const cu = seg(t, a + .4 + i * .35, a + 1.0 + i * .35);
+      if (cu <= 0) return;
+      const y = 10 + i * 162;
+      ctx.save(); ctx.globalAlpha *= cu; ctx.translate(lerp(40, 0, cu), 0);
+      card(0, y, BODY_W, 148, 24);
+      if (i === beat) { ctx.strokeStyle = BLUE; ctx.lineWidth = 5; rr(0, y, BODY_W, 148, 24); ctx.stroke(); }
+      ctx.fillStyle = BLUE_SOFT; rr(24, y + 26, 96, 96, 24); ctx.fill();
+      text(p[0], 72, y + 76, { px: 50, align: 'center', base: 'middle' });
+      text(p[1], 148, y + 64, { w: 700, px: 31 });
+      text(p[2], 148, y + 110, { w: 400, px: 24, color: INK_SOFT });
+      ctx.restore();
+    });
+    const pu = seg(t, a + .3, a + 1.0);
+    ctx.save(); ctx.globalAlpha *= pu;
+    ctx.translate((BODY_W - 800 * .62) / 2, 520 + lerp(80, 0, pu)); ctx.scale(.62, .62);
+    const box = phone(0, 0, 800, 1180, { blank: true });
+    // the previous page fades out under the new one
+    const cur = beats[beat], prev = beats[beat - 1];
+    if (prev && bu < .15) screen(SHOTS[prev.img], box, prev.to, 1);
+    const slide = beat > 0 ? lerp(box.w, 0, outCubic(clamp(bu * 4, 0, 1))) : 0;
+    ctx.save(); ctx.translate(slide, 0);
+    screen(SHOTS[cur.img], box, lerp(cur.from, cur.to, inOutCubic(clamp((bu - .2) / .7, 0, 1))), 1);
+    ctx.restore();
+    ctx.restore();
+  });
 }
 function pointList(points, t, a) {
   body(() => {
@@ -271,7 +306,8 @@ function scene2(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
   stepHeader('🛒', 'สำหรับ| ผู้ซื้อ', 'โรงงาน บริษัท ร้านค้า หรือใครก็ตามที่ต้องหาของ หาผู้รับเหมา', t, a + .1);
-  pointList(BUYER_POINTS, t, a);
+  if (SHOTS) pointsWithPhone(BUYER_POINTS, [{ img: 'compose', from: 0, to: 700 }, { img: 'compare', from: 2500, to: 3100 }, { img: 'compare', from: 3300, to: 3900 }], t, a, b);
+  else pointList(BUYER_POINTS, t, a);
   ctx.restore();
 }
 
@@ -281,7 +317,8 @@ function scene3(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
   stepHeader('🏭', 'สำหรับ| ผู้ขาย', 'ผู้ผลิต ผู้จัดจำหน่าย ผู้รับเหมา ช่าง และผู้ให้บริการ', t, a + .1);
-  pointList(SELLER_POINTS, t, a);
+  if (SHOTS) pointsWithPhone(SELLER_POINTS, [{ img: 'detail', from: 0, to: 700 }, { img: 'quote', from: 900, to: 1400 }, { img: 'mybids', from: 0, to: 600 }], t, a, b);
+  else pointList(SELLER_POINTS, t, a);
   ctx.restore();
 }
 

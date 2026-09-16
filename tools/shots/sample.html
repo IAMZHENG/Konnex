@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>QubeQuote — หน้าตัวอย่างสำหรับคลิป</title>
+<style>
+  html, body { margin: 0; background: #f6f8fc; }
+  iframe { display: block; width: 480px; height: 100vh; border: 0; }
+</style>
+</head>
+<body>
+<iframe id="app" src="/index.html"></iframe>
+<script src="/tests/harness.js"></script>
+<script>
+/* ============================================================================
+ * The real app, on sample data, for the clips.
+ *
+ * index.html runs in the iframe exactly as deployed; once it has booted, the
+ * Supabase client is swapped for the test suite's fake (tests/harness.js,
+ * KX.makeSb) loaded with the listings, offers, questions and quotes below,
+ * and a fake session is set, so every page draws itself the way it really
+ * does — only the data is invented. Nothing is written anywhere: the fake
+ * records writes and answers reads. Every company here is made up, and no
+ * profile has a photo.
+ *
+ * tools/build-shots.js opens this page in headless Chrome with ?page=<name>
+ * and screenshots it; the names are the keys of PAGES at the bottom.
+ * ========================================================================== */
+'use strict';
+
+const q = new URLSearchParams(location.search);
+const PAGE = q.get('page') || 'feed';
+
+/* ---- ids. Valid uuids, since some code paths check the shape. ---- */
+const BUYER  = 'a1000000-0000-4000-8000-000000000001';   // บจก. ตะวันออก คลังสินค้า
+const SELLER = 'b2000000-0000-4000-8000-000000000002';   // บจก. สยาม สตีล แร็ค (the viewer, on seller pages)
+const S2     = 'b2000000-0000-4000-8000-000000000003';
+const S3     = 'b2000000-0000-4000-8000-000000000004';
+const P1 = 'c3000000-0000-4000-8000-000000000011', P2 = 'c3000000-0000-4000-8000-000000000012';
+const P3 = 'c3000000-0000-4000-8000-000000000013', P4 = 'c3000000-0000-4000-8000-000000000014';
+
+/* ---- pictures: drawn here, so no photo of anyone or anything real is used ---- */
+function pic(emoji, a, b, w, h) {
+  const c = document.createElement('canvas'); c.width = w || 640; c.height = h || 480;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, c.width, c.height); g.addColorStop(0, a); g.addColorStop(1, b);
+  x.fillStyle = g; x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = 'rgba(255,255,255,.14)';
+  for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(c.width * (.15 + i * .17), c.height * (i % 2 ? .25 : .75), 70 + i * 12, 0, Math.PI * 2); x.fill(); }
+  x.font = Math.round(c.height * .42) + 'px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  x.fillStyle = '#1c1a18';   // the circles above left a 14% white; the glyph must be opaque
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(emoji, c.width / 2, c.height / 2 + c.height * .03);
+  return c.toDataURL('image/jpeg', .85);
+}
+const IMG = {
+  shelf1: pic('🗄️', '#dbe7ff', '#9dbbff'), shelf2: pic('📦', '#e6f6ea', '#9ad6ab'),
+  laser: pic('⚙️', '#fff1d6', '#f6c66b'), truck: pic('🚚', '#e8ecf3', '#b6c0d4'),
+  power: pic('⚡', '#fff7d6', '#f7dd6b'), sample: pic('🏗️', '#e6f6ea', '#8fd1a3')
+};
+
+const days = n => new Date(Date.now() + n * 864e5).toISOString();
+const ago  = h => new Date(Date.now() - h * 36e5).toISOString();
+
+/* ---- the sample world ---- */
+const profiles = {
+  [BUYER]:  { id: BUYER,  company_name: 'บจก. ตะวันออก คลังสินค้า', avatar_url: null, province: 'ชลบุรี', is_verified: false, rating_avg: 4.6, rating_count: 12 },
+  [SELLER]: { id: SELLER, company_name: 'บจก. สยาม สตีล แร็ค',    avatar_url: null, province: 'สมุทรปราการ', is_verified: false, rating_avg: 4.7, rating_count: 18 },
+  [S2]:     { id: S2,     company_name: 'ร้านช่างเหล็กบางนา',     avatar_url: null, province: 'กรุงเทพฯ', is_verified: false, rating_avg: 4.5, rating_count: 9 },
+  [S3]:     { id: S3,     company_name: 'บจก. ทีเค เมทัล ซัพพลาย', avatar_url: null, province: 'ระยอง', is_verified: false, rating_avg: 4.9, rating_count: 31 }
+};
+const owner = id => ({ company_name: profiles[id].company_name, avatar_url: null });
+const pdf = name => ({ file_name: name, file_url: '/docs/placeholder.pdf', file_kind: 'pdf', file_size: 240 * 1024 });
+
+const quotesP1 = [
+  { id: 'q1', price: 39800, note: 'รวมติดตั้งหน้างาน ส่งภายใน 7 วัน รับประกัน 1 ปี', status: 'pending', created_at: ago(5),  bidder_id: SELLER, quote_attachments: [pdf('ใบเสนอราคา-ชั้นวาง.pdf'), pdf('แคตตาล็อกสินค้า.pdf')], profiles: profiles[SELLER] },
+  { id: 'q2', price: 36500, note: 'ส่งภายใน 10 วัน ไม่รวมติดตั้ง',            status: 'pending', created_at: ago(3),  bidder_id: S2,     quote_attachments: [pdf('ใบเสนอราคา.pdf')], profiles: profiles[S2] },
+  { id: 'q3', price: 41200, note: 'เหล็กหนา 2 มม. พ่นสีฝุ่น ส่งใน 5 วัน',       status: 'pending', created_at: ago(1),  bidder_id: S3,     quote_attachments: [pdf('ใบเสนอราคา-TK.pdf')], profiles: profiles[S3] }
+];
+const questionsP1 = [
+  { id: 'qa1', parent_id: null, asker_id: S2, body: 'มีแบบ CAD ให้ไหมครับ?', answer: 'มีครับ อยู่ในไฟล์แนบของประกาศ', answered_at: ago(4), created_at: ago(6), profiles: { id: S2, company_name: profiles[S2].company_name } },
+  { id: 'qa2', parent_id: null, asker_id: SELLER, body: 'รับติดตั้งหน้างานด้วยไหมครับ?', answer: 'ต้องการให้ติดตั้งด้วยครับ รวมในราคาได้เลย', answered_at: ago(2), created_at: ago(3), profiles: { id: SELLER, company_name: profiles[SELLER].company_name } }
+];
+const posts = [
+  { id: P1, kind: 'rfq', status: 'open', owner_id: BUYER, title: 'ชั้นวางสินค้าเหล็ก 20 ชุด',
+    description: 'ชั้นวางเหล็ก 4 ชั้น ขนาด 200×60×200 ซม. รับน้ำหนักชั้นละ 300 กก. ใช้ในคลังสินค้าใหม่ ต้องการพร้อมติดตั้งหน้างาน',
+    province: 'ชลบุรี', category_id: 'mfg', created_at: ago(2), deadline: days(14), price_low: null, price_high: 40000,
+    quote_count: 3, request_count: 0, quote_avg: 39167, view_count: 128,
+    profiles: owner(BUYER), post_images: [{ url: IMG.shelf1, sort: 0 }, { url: IMG.shelf2, sort: 1 }],
+    post_attachments: [pdf('แบบชั้นวาง.pdf')], quotes: quotesP1, post_questions: questionsP1 },
+  { id: P2, kind: 'rfq', status: 'open', owner_id: 'a1000000-0000-4000-8000-000000000005', title: 'ตัดเลเซอร์แผ่นเหล็ก 2 มม. 300 ชิ้น',
+    description: 'ตัดตามแบบ DXF ที่แนบ เหล็ก SS400 หนา 2 มม. จำนวน 300 ชิ้น', province: 'สมุทรปราการ', category_id: 'mfg',
+    created_at: ago(26), deadline: days(9), price_low: null, price_high: 30000, quote_count: 2, request_count: 0, quote_avg: 27500,
+    profiles: { company_name: 'หจก. พีเอส พรีซิชั่น', avatar_url: null }, post_images: [{ url: IMG.laser, sort: 0 }], post_attachments: [pdf('แบบชิ้นงาน.dxf')], quotes: [], post_questions: [] },
+  { id: P3, kind: 'rfq', status: 'open', owner_id: 'a1000000-0000-4000-8000-000000000006', title: 'จ้างขนส่งเครื่องจักร 5 ตัน กรุงเทพฯ → ระยอง',
+    description: 'เครื่อง CNC 1 เครื่อง น้ำหนัก 5 ตัน ต้องการรถเครนยกขึ้น-ลง', province: 'กรุงเทพฯ', category_id: 'logistics',
+    created_at: ago(30), deadline: days(6), price_low: null, price_high: null, quote_count: 5, request_count: 0, quote_avg: 18400,
+    profiles: { company_name: 'บจก. ไทยแมชชีน มูฟเวอร์', avatar_url: null }, post_images: [{ url: IMG.truck, sort: 0 }], post_attachments: [], quotes: [], post_questions: [] },
+  { id: P4, kind: 'rfq', status: 'open', owner_id: 'a1000000-0000-4000-8000-000000000007', title: 'ติดตั้งระบบไฟฟ้าโรงงาน 3 เฟส',
+    description: 'ตู้ MDB พร้อมเดินสายเมนถึงเครื่องจักร 8 จุด', province: 'ระยอง', category_id: 'construction',
+    created_at: ago(50), deadline: days(20), price_low: null, price_high: 250000, quote_count: 1, request_count: 0, quote_avg: null,
+    profiles: { company_name: 'บจก. เกษตรรุ่งเรือง ฟาร์ม', avatar_url: null }, post_images: [{ url: IMG.power, sort: 0 }], post_attachments: [], quotes: [], post_questions: [] }
+];
+// what the seller has sent, for ใบเสนอราคา ที่ส่ง
+const myBids = [
+  { id: 'q1', price: 39800, note: 'รวมติดตั้งหน้างาน ส่งภายใน 7 วัน รับประกัน 1 ปี', status: 'pending', created_at: ago(5),
+    quote_attachments: [pdf('ใบเสนอราคา-ชั้นวาง.pdf'), pdf('แคตตาล็อกสินค้า.pdf'), { file_name: 'ตัวอย่างงานติดตั้ง.jpg', file_url: IMG.sample, file_kind: 'image', file_size: 620 * 1024 }],
+    posts: { id: P1, title: posts[0].title, province: 'ชลบุรี', status: 'open', deadline: posts[0].deadline, post_images: posts[0].post_images, profiles: owner(BUYER) } },
+  { id: 'q9', price: 27500, note: 'ส่งภายใน 12 วัน', status: 'pending', created_at: ago(60),
+    quote_attachments: [pdf('ใบเสนอราคา.pdf')],
+    posts: { id: P2, title: posts[1].title, province: 'สมุทรปราการ', status: 'open', deadline: posts[1].deadline, post_images: posts[1].post_images, profiles: posts[1].profiles } },
+  { id: 'q8', price: 485000, note: 'รวมวัสดุและค่าแรง', status: 'pending', created_at: ago(400),
+    quote_attachments: [pdf('ใบเสนอราคา-โครงหลังคา.pdf'), pdf('แบบโครงสร้าง.pdf')],
+    posts: { id: 'c3000000-0000-4000-8000-000000000019', title: 'โครงเหล็กหลังคาโกดัง 12×30 ม.', province: 'ระยอง', status: 'closed', deadline: days(-10), post_images: [{ url: IMG.sample, sort: 0 }], profiles: { company_name: 'บจก. เกษตรรุ่งเรือง ฟาร์ม', avatar_url: null } } }
+];
+
+/* `one`: the detail loader ends its query with maybeSingle() and reads a row,
+   the feed reads a list — the fake answers both from the same slot. */
+function planFor(viewer, one) {
+  const me = profiles[viewer];
+  return {
+    _session: { user: { id: viewer } },
+    posts: { _: { data: one ? posts.find(p => p.id === one) : posts, error: null } },
+    profiles: { _: { data: me, error: null } },
+    quotes: { _: { data: myBids, error: null } },
+    quote_requests: { _: { data: [], error: null } },
+    notifications: { _: { data: [], error: null } },
+    conversations: { _: { data: [], error: null } },
+    saved_posts: { _: { data: [], error: null } },
+    view_history: { _: { data: [], error: null } },
+    _rpc: {}
+  };
+}
+
+/* ---- the pages ---- */
+const PAGES = {
+  // signed out: the feed as a visitor sees it
+  feed:         { as: null,   run: async w => { w.navigateTo('page-feed', true); await w.kxLoadFeed(); } },
+  // the buyer, writing a listing
+  compose:      { as: BUYER,  run: async w => { w.newPost(); } },
+  // the buyer, on their own listing: the offers compared
+  compare:      { as: BUYER,  one: P1, run: async w => { await w.kxLoadPostDetail(P1, 'rfq'); w.navigateTo('page-rfq-detail', true); } },
+  // the seller, reading a listing
+  detail:       { as: SELLER, one: P1, run: async w => { await w.kxLoadPostDetail(P1, 'rfq'); w.navigateTo('page-rfq-detail', true); } },
+  // the seller, with the quote form open
+  quote:        { as: SELLER, one: P1, run: async w => { await w.kxLoadPostDetail(P1, 'rfq'); w.navigateTo('page-rfq-detail', true); w.openModal();
+                                               const p = w.document.getElementById('offerPrice'), n = w.document.getElementById('offerNote');
+                                               if (p) p.value = '39,800'; if (n) n.value = 'รวมติดตั้งหน้างาน ส่งภายใน 7 วัน รับประกัน 1 ปี'; } },
+  // the seller's sent quotes
+  mybids:       { as: SELLER, run: async w => { w.navigateTo('page-my-bids', true); await w.kxLoadMyBids(); } },
+  auth:         { as: null,   run: async w => { w.navigateTo('page-auth', true); } }
+};
+
+const frame = document.getElementById('app');
+frame.addEventListener('load', () => {
+  const w = frame.contentWindow;
+  setTimeout(async () => {
+    try {
+      const page = PAGES[PAGE];
+      if (!page) throw new Error('ไม่รู้จักหน้า ' + PAGE);
+      const plan = planFor(page.as || SELLER, page.one);
+      if (!page.as) plan._session = null;
+      w.sb = KX.makeSb(plan);
+      if (w.kxChatPollStop) w.kxChatPollStop();
+      if (page.as) {
+        w.kxSession = { fake: true, user: { id: page.as } };
+        w.kxCurrentUser = profiles[page.as];
+        if (w.kxApplyAvatars) w.kxApplyAvatars();
+      } else {
+        w.kxSession = null; w.kxCurrentUser = null;
+      }
+      await page.run(w);
+      w.scrollTo(0, 0);
+      document.title = 'ready:' + PAGE;
+    } catch (e) {
+      document.title = 'failed:' + (e && e.message || e);
+      console.error(e);
+    }
+  }, 1500);
+});
+</script>
+</body>
+</html>

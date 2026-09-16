@@ -3493,10 +3493,15 @@ Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for Y
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
 the site. `intro` (~85 s, narrated) is for people who have never heard of it: the old way (ring
 every supplier, crossed out), the idea as a diagram (one post, offers coming up to it), what
-each side gets, why it is easy, a scene of the real site inside a phone frame (the feed scrolling, a listing,
-the sign-in page — `node tools/build-shots.js` captures them from the live Workers
-deployment as a signed-out visitor, 480 CSS px wide at 2x, into `marketing/shots/`; the
-scene is skipped if they are absent), the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ —
+each side gets, why it is easy, a scene of the real app inside a phone frame (the feed scrolling, a listing, the sign-in
+page), and the buyer and seller scenes each pair their three points with the page that point
+is about (โพสต์ประกาศ and เปรียบเทียบข้อเสนอ for the buyer; the listing, the quote form and
+ใบเสนอราคา ที่ส่ง for the seller). Those pages are `marketing/shots/*.png` from
+`node tools/build-shots.js`, which is `tools/shots/sample.html`: index.html in an iframe with
+its Supabase client swapped for the test suite's fake and a fake session, drawing invented
+listings, offers and questions — so signed-in pages can be shot without an account and
+nobody real appears (no profile has a photo; the live feed showed the owner's own name and
+face, which is why it is not used). The scene is skipped if the shots are absent, the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ —
 and the site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
 offers, chat with the seller — with a stopwatch in the corner that is still under a minute
