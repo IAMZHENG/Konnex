@@ -39,7 +39,9 @@ const S3     = 'b2000000-0000-4000-8000-000000000004';
 const P1 = 'c3000000-0000-4000-8000-000000000011', P2 = 'c3000000-0000-4000-8000-000000000012';
 const P3 = 'c3000000-0000-4000-8000-000000000013', P4 = 'c3000000-0000-4000-8000-000000000014';
 
-/* ---- pictures: drawn here, so no photo of anyone or anything real is used ---- */
+/* ---- pictures: stock photographs in marketing/photos (Unsplash, see credits.md
+   there), served by build-shots.js. Drawn tiles are the fallback if a photo is
+   missing, so the pages still render. No photo shows a person. ---- */
 function pic(emoji, a, b, w, h) {
   const c = document.createElement('canvas'); c.width = w || 640; c.height = h || 480;
   const x = c.getContext('2d');
@@ -52,35 +54,44 @@ function pic(emoji, a, b, w, h) {
   x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(emoji, c.width / 2, c.height / 2 + c.height * .03);
   return c.toDataURL('image/jpeg', .85);
 }
-const IMG = {
-  shelf1: pic('🗄️', '#dbe7ff', '#9dbbff'), shelf2: pic('📦', '#e6f6ea', '#9ad6ab'),
-  laser: pic('⚙️', '#fff1d6', '#f6c66b'), truck: pic('🚚', '#e8ecf3', '#b6c0d4'),
-  power: pic('⚡', '#fff7d6', '#f7dd6b'), sample: pic('🏗️', '#e6f6ea', '#8fd1a3')
+const FALLBACK = {
+  shelf1: ['🗄️', '#dbe7ff', '#9dbbff'], shelf2: ['📦', '#e6f6ea', '#9ad6ab'],
+  laser: ['⚙️', '#fff1d6', '#f6c66b'], truck: ['🚚', '#e8ecf3', '#b6c0d4'],
+  power: ['⚡', '#fff7d6', '#f7dd6b'], sample: ['🏗️', '#e6f6ea', '#8fd1a3']
 };
+const IMG = {};
+async function loadPictures() {
+  await Promise.all(Object.keys(FALLBACK).map(async k => {
+    const url = '/marketing/photos/' + k + '.jpg';
+    try { const r = await fetch(url, { method: 'HEAD' }); IMG[k] = r.ok ? url : pic(...FALLBACK[k]); }
+    catch (e) { IMG[k] = pic(...FALLBACK[k]); }
+  }));
+}
 
 const days = n => new Date(Date.now() + n * 864e5).toISOString();
 const ago  = h => new Date(Date.now() - h * 36e5).toISOString();
 
-/* ---- the sample world ---- */
-const profiles = {
+/* ---- the sample world (built once the pictures are known) ---- */
+let profiles, quotesP1, questionsP1, posts, myBids;
+function buildWorld() {
+profiles = {
   [BUYER]:  { id: BUYER,  company_name: 'บจก. ตะวันออก คลังสินค้า', avatar_url: null, province: 'ชลบุรี', is_verified: false, rating_avg: 4.6, rating_count: 12 },
   [SELLER]: { id: SELLER, company_name: 'บจก. สยาม สตีล แร็ค',    avatar_url: null, province: 'สมุทรปราการ', is_verified: false, rating_avg: 4.7, rating_count: 18 },
   [S2]:     { id: S2,     company_name: 'ร้านช่างเหล็กบางนา',     avatar_url: null, province: 'กรุงเทพฯ', is_verified: false, rating_avg: 4.5, rating_count: 9 },
   [S3]:     { id: S3,     company_name: 'บจก. ทีเค เมทัล ซัพพลาย', avatar_url: null, province: 'ระยอง', is_verified: false, rating_avg: 4.9, rating_count: 31 }
 };
-const owner = id => ({ company_name: profiles[id].company_name, avatar_url: null });
 const pdf = name => ({ file_name: name, file_url: '/docs/placeholder.pdf', file_kind: 'pdf', file_size: 240 * 1024 });
 
-const quotesP1 = [
+quotesP1 = [
   { id: 'q1', price: 39800, note: 'รวมติดตั้งหน้างาน ส่งภายใน 7 วัน รับประกัน 1 ปี', status: 'pending', created_at: ago(5),  bidder_id: SELLER, quote_attachments: [pdf('ใบเสนอราคา-ชั้นวาง.pdf'), pdf('แคตตาล็อกสินค้า.pdf')], profiles: profiles[SELLER] },
   { id: 'q2', price: 36500, note: 'ส่งภายใน 10 วัน ไม่รวมติดตั้ง',            status: 'pending', created_at: ago(3),  bidder_id: S2,     quote_attachments: [pdf('ใบเสนอราคา.pdf')], profiles: profiles[S2] },
   { id: 'q3', price: 41200, note: 'เหล็กหนา 2 มม. พ่นสีฝุ่น ส่งใน 5 วัน',       status: 'pending', created_at: ago(1),  bidder_id: S3,     quote_attachments: [pdf('ใบเสนอราคา-TK.pdf')], profiles: profiles[S3] }
 ];
-const questionsP1 = [
+questionsP1 = [
   { id: 'qa1', parent_id: null, asker_id: S2, body: 'มีแบบ CAD ให้ไหมครับ?', answer: 'มีครับ อยู่ในไฟล์แนบของประกาศ', answered_at: ago(4), created_at: ago(6), profiles: { id: S2, company_name: profiles[S2].company_name } },
   { id: 'qa2', parent_id: null, asker_id: SELLER, body: 'รับติดตั้งหน้างานด้วยไหมครับ?', answer: 'ต้องการให้ติดตั้งด้วยครับ รวมในราคาได้เลย', answered_at: ago(2), created_at: ago(3), profiles: { id: SELLER, company_name: profiles[SELLER].company_name } }
 ];
-const posts = [
+posts = [
   { id: P1, kind: 'rfq', status: 'open', owner_id: BUYER, title: 'ชั้นวางสินค้าเหล็ก 20 ชุด',
     description: 'ชั้นวางเหล็ก 4 ชั้น ขนาด 200×60×200 ซม. รับน้ำหนักชั้นละ 300 กก. ใช้ในคลังสินค้าใหม่ ต้องการพร้อมติดตั้งหน้างาน',
     province: 'ชลบุรี', category_id: 'mfg', created_at: ago(2), deadline: days(14), price_low: null, price_high: 40000,
@@ -101,7 +112,7 @@ const posts = [
     profiles: { company_name: 'บจก. เกษตรรุ่งเรือง ฟาร์ม', avatar_url: null }, post_images: [{ url: IMG.power, sort: 0 }], post_attachments: [], quotes: [], post_questions: [] }
 ];
 // what the seller has sent, for ใบเสนอราคา ที่ส่ง
-const myBids = [
+myBids = [
   { id: 'q1', price: 39800, note: 'รวมติดตั้งหน้างาน ส่งภายใน 7 วัน รับประกัน 1 ปี', status: 'pending', created_at: ago(5),
     quote_attachments: [pdf('ใบเสนอราคา-ชั้นวาง.pdf'), pdf('แคตตาล็อกสินค้า.pdf'), { file_name: 'ตัวอย่างงานติดตั้ง.jpg', file_url: IMG.sample, file_kind: 'image', file_size: 620 * 1024 }],
     posts: { id: P1, title: posts[0].title, province: 'ชลบุรี', status: 'open', deadline: posts[0].deadline, post_images: posts[0].post_images, profiles: owner(BUYER) } },
@@ -115,6 +126,9 @@ const myBids = [
 
 /* `one`: the detail loader ends its query with maybeSingle() and reads a row,
    the feed reads a list — the fake answers both from the same slot. */
+}
+const owner = id => ({ company_name: profiles[id].company_name, avatar_url: null });
+
 function planFor(viewer, one) {
   const me = profiles[viewer];
   return {
@@ -155,6 +169,7 @@ frame.addEventListener('load', () => {
   const w = frame.contentWindow;
   setTimeout(async () => {
     try {
+      await loadPictures(); buildWorld();
       const page = PAGES[PAGE];
       if (!page) throw new Error('ไม่รู้จักหน้า ' + PAGE);
       const plan = planFor(page.as || SELLER, page.one);

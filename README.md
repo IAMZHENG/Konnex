@@ -3500,7 +3500,8 @@ is about (โพสต์ประกาศ and เปรียบเทีย�
 `node tools/build-shots.js`, which is `tools/shots/sample.html`: index.html in an iframe with
 its Supabase client swapped for the test suite's fake and a fake session, drawing invented
 listings, offers and questions — so signed-in pages can be shot without an account and
-nobody real appears (no profile has a photo; the live feed showed the owner's own name and
+nobody real appears (the product pictures are Unsplash photographs in `marketing/photos/`,
+listed in `credits.md` there, with drawn tiles as the fallback; no profile has a photo; the live feed showed the owner's own name and
 face, which is why it is not used). The scene is skipped if the shots are absent, the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ —
 and the site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
