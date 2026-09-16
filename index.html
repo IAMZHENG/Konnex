@@ -757,6 +757,8 @@ h1, h2, h3, h4, h5, h6{ font-weight:600; }
 .navbar{ padding-top:calc(12px + env(safe-area-inset-top)) !important; }
 
 /* ===== Persistent mobile bottom navigation (shown on phones only) ===== */
+.mobile-bottom-nav .mbn-item{ position:relative; }
+.mobile-bottom-nav .mbn-badge{ position:absolute; top:4px; left:calc(50% + 6px); min-width:18px; height:18px; padding:0 5px; border-radius:9px; background:#e11d48; color:#fff; font-size:11px; font-weight:700; line-height:18px; text-align:center; }
 .mobile-bottom-nav{
   display:none;
 }
@@ -8858,13 +8860,25 @@ html, body{
   // window because renderSidebars rebuilds the rail and has to put it back.
   window.kxApplyChatBadges = updateUnreadBadges;
   function updateUnreadBadges(){
-    var n = CONVS.filter(function(c){ return c.unread; }).length;
+    /* The live poll (kxLiveCheck) knows the unread count from any page; the
+       conversation list only knows it once ข้อความ has been opened. Prefer
+       the live figure, fall back to the list. The rail is rebuilt on every
+       navigation and calls this again, so the count survives the rebuild. */
+    var n = window.kxMsgUnread != null ? window.kxMsgUnread
+          : CONVS.filter(function(c){ return c.unread; }).length;
     Array.prototype.forEach.call(document.querySelectorAll('.side-link'), function(l){
       if(l.textContent.indexOf('ข้อความ') < 0) return;
       var c = l.querySelector('.side-count');
       if(!c) return;
       c.textContent = n;
       c.style.display = n ? '' : 'none';
+    });
+    // the bottom bar on a phone, where the rail is behind the drawer
+    Array.prototype.forEach.call(document.querySelectorAll('.mobile-bottom-nav .mbn-item[data-page="page-messages"]'), function(btn){
+      var b = btn.querySelector('.mbn-badge');
+      if(!b){ b = document.createElement('span'); b.className = 'mbn-badge'; btn.appendChild(b); }
+      b.textContent = n;
+      b.style.display = n ? '' : 'none';
     });
   }
 
@@ -8968,6 +8982,14 @@ html, body{
     if(conv) conv.unread = false;
     renderList();
     updateUnreadBadges();
+    /* and reading the bell's copy of it: the new_message notification for
+       this sender (database/live_updates.sql) is about what was just read */
+    var otherId = conv && conv.other && conv.other.id;
+    if(otherId){
+      sb.from('notifications').update({ is_read: true })
+        .eq('profile_id', me).eq('kind', 'new_message').eq('actor_id', otherId).eq('is_read', false)
+        .then(function(){ if(window.kxLiveCheck) window.kxLiveCheck(); });
+    }
   };
 
   // ---------- starting a chat from a post ----------
@@ -9544,6 +9566,7 @@ html, body{
     question_answered:['amber', '💬'],
     connect_request:  ['blue',  '🤝'],
     connect_accepted: ['green', '🤝'],
+    new_message:      ['blue',  '💬'],
     verify_approved:  ['green', '🛡️'],
     verify_rejected:  ['orange','🛡️']
   };
@@ -9586,6 +9609,12 @@ html, body{
        backfill, or a kind that never sets it, still lands somewhere sensible. */
     if((n.kind === 'connect_request' || n.kind === 'connect_accepted') && n.actor_id){
       return "kxViewProfile('" + n.actor_id + "')";
+    }
+    /* A message: the conversation with whoever sent it, about the post it was
+       about (database/live_updates.sql). kxStartChat finds the existing thread
+       for that pair and post, the same way ส่งข้อความ on a listing does. */
+    if(n.kind === 'new_message' && n.actor_id){
+      return "kxStartChat('" + n.actor_id + "'," + (n.link_post_id ? "'" + n.link_post_id + "'" : 'null') + ")";
     }
     /* The post's own kind decides which detail page opens. This used to read
        `n.kind === 'new_request' ? 'offer' : 'rfq'` — a guess from the kind of
@@ -9645,10 +9674,73 @@ html, body{
     if(window.kxApplyIcons) window.kxApplyIcons(list);
   }
 
+  /* ---- live: the page asks, so nobody has to refresh ----
+     Notifications were read once, at sign-in, and messages only while ข้อความ
+     was open. A question or a message that arrived after that was invisible
+     until the next reload — "ต้องกดรีเฟรชหลายรอบ". Every LIVE_MS while the tab
+     is on screen, and the moment it comes back to the front, one RPC
+     (kx_unread_counts, database/live_updates.sql) answers both counts. A
+     count that went up reloads the list behind it and says so once. Without
+     the RPC (not run yet) it falls back to reloading the notification list,
+     which is what it could always do — just never did. */
+  var LIVE_MS = 20000;
+  var liveTimer = null, liveLast = null, liveRpcMissing = false, liveBusy = false;
+  window.kxLiveCheck = async function(){
+    if(!window.kxSession || liveBusy || document.hidden) return;
+    liveBusy = true;
+    try{
+      var counts = null;
+      if(!liveRpcMissing){
+        var r = await sb.rpc('kx_unread_counts');
+        if(r.error){
+          if(/kx_unread_counts|schema cache/i.test(r.error.message || '')) liveRpcMissing = true;
+          else console.error('kx_unread_counts failed', r.error);
+        }else counts = r.data || null;
+      }
+      if(!counts){
+        // no RPC: reload the notifications outright, and count from the rows
+        await kxLoadNotifications();
+        counts = { notifications: NOTIFS.filter(function(x){ return !x.is_read; }).length, messages: null };
+      }else{
+        var active = (document.querySelector('.app-page.active') || {}).id;
+        var more = liveLast && counts.notifications > liveLast.notifications;
+        // the list on screen, and the bell, follow the count; on the first
+        // pass the list was loaded at sign-in so only a change is worth a fetch
+        if(more || (liveLast && counts.notifications !== liveLast.notifications) || active === 'page-notifications') await kxLoadNotifications();
+        if(more && active !== 'page-notifications') kxToast('🔔 มีแจ้งเตือนใหม่');
+        if(counts.messages != null){
+          window.kxSetMsgBadge(counts.messages);
+          if(liveLast && counts.messages > (liveLast.messages || 0) && active !== 'page-messages') kxToast('💬 มีข้อความใหม่');
+        }
+      }
+      liveLast = counts;
+    }catch(e){ console.error('kxLiveCheck', e); }
+    finally{ liveBusy = false; }
+  };
+  window.kxLiveStart = function(){
+    window.kxLiveStop();
+    liveLast = null;
+    liveTimer = setInterval(window.kxLiveCheck, LIVE_MS);
+    window.kxLiveCheck();
+  };
+  window.kxLiveStop = function(){ if(liveTimer){ clearInterval(liveTimer); liveTimer = null; } liveLast = null; };
+  // back to the front: ask now rather than up to LIVE_MS later
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && liveTimer) window.kxLiveCheck(); });
+  window.addEventListener('focus', function(){ if(liveTimer) window.kxLiveCheck(); });
+
+  /* The unread-message count, from wherever it was learned. The top bar has
+     no 💬 (search, bell and account only — messages live in the rail, the
+     drawer and the bottom bar), so this feeds those three through the chat
+     block's own badge painter, which the rail also calls after each rebuild. */
+  window.kxSetMsgBadge = function(n){
+    window.kxMsgUnread = +n || 0;
+    if(window.kxApplyChatBadges) window.kxApplyChatBadges();
+  };
+
   // the bell in every navbar and the count beside แจ้งเตือน in every sidebar
   window.kxApplyNotifBadges = function(){
     var n = NOTIFS.filter(function(x){ return !x.is_read; }).length;
-    Array.prototype.forEach.call(document.querySelectorAll('.icon-btn .badge'), function(b){
+    Array.prototype.forEach.call(document.querySelectorAll('.icon-btn .badge:not(.msg-badge)'), function(b){
       b.textContent = n;
       b.style.display = n ? '' : 'none';
     });
@@ -20550,8 +20642,10 @@ body.kx-guest #load-more-offers { display: none !important; }
         window.renderSidebars((document.querySelector('.app-page.active') || {}).id);
       }
       // the bell is on every page, so its count is loaded at sign-in rather
-      // than only when the notifications page is opened
+      // than only when the notifications page is opened — and kept current
+      // from then on (kxLiveStart), which is the part that was missing
       if(window.kxLoadNotifications) window.kxLoadNotifications();
+      if(window.kxLiveStart) window.kxLiveStart();
       // and the feed needs to know what is saved before it draws its bookmarks
       if(window.kxLoadSavedIds) window.kxLoadSavedIds();
       // the rows loaded as a visitor lack the averages and the saved marks
@@ -20740,6 +20834,8 @@ body.kx-guest #load-more-offers { display: none !important; }
       // one's answers already in the แก้ไขโปรไฟล์ fields
       if(window.kxProfileReset) window.kxProfileReset();
       if(window.kxFeedInvalidate) window.kxFeedInvalidate();
+      if(window.kxLiveStop) window.kxLiveStop();
+      if(window.kxSetMsgBadge) window.kxSetMsgBadge(0);
       /* Only off pages that need an account. This event also arrives once at
          startup when there is no session at all, and it used to navigate
          unconditionally — so a visitor arriving on a shared listing was thrown

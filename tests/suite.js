@@ -1762,6 +1762,105 @@
     });
   });
 
+  /* "มีข้อความและคำถามเข้ามาเหมือนไม่เตือนเลย ต้องกดรีเฟรชหลายรอบ" — the
+     notifications were read once at sign-in and never again; messages only
+     while ข้อความ was open. The page asks now (kx_unread_counts, every 20 s
+     while visible), and a new message has a notification of its own. */
+  describe('แจ้งเตือนสด — หน้าเว็บถามเอง ไม่ต้องรีเฟรช', function () {
+    function counts(w, list) {
+      var i = 0;
+      return plan(w, {
+        _rpc: { kx_unread_counts: function () { return { data: list[Math.min(i++, list.length - 1)], error: null }; } },
+        notifications: { _: { data: [], error: null } }
+      });
+    }
+    function said(w) { var m = []; var real = w.kxToast; w.kxToast = function (t) { m.push(t); }; return { m: m, done: function () { w.kxToast = real; } }; }
+    function rpcCalls(sb) { return sb._calls.filter(function (c) { return c.rpc === 'kx_unread_counts'; }).length; }
+
+    it('starts with the session and stops with it', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain('if(window.kxLiveStart) window.kxLiveStart();');
+      expect(html).toContain('if(window.kxLiveStop) window.kxLiveStop();');
+      expect(typeof w.kxLiveCheck).toBe('function');
+    });
+    it('asks one RPC for both counts, and says nothing on the first answer', async function (w) {
+      var sb = counts(w, [{ notifications: 2, messages: 1 }]);
+      signIn(w);
+      var t = said(w);
+      try { w.kxLiveStop(); await w.kxLiveCheck(); } finally { t.done(); w.kxSession = null; restore(w); }
+      expect(rpcCalls(sb)).toBe(1);
+      expect(t.m.length).toBe(0, 'the first pass is a baseline, not news');
+    });
+    /* The top bar has no 💬 — messages are reached from the rail, the drawer
+       and the bottom bar — so that is where the count goes. */
+    it('a message count in the rail and on the bottom bar, that survives a rebuild', async function (w) {
+      counts(w, [{ notifications: 0, messages: 3 }]);
+      signIn(w); w.kxAuthChecked = true;
+      try {
+        w.kxLiveStop(); await w.kxLiveCheck();
+        var rail = function () {
+          var l = Array.prototype.filter.call(w.document.querySelectorAll('.side-link'), function (a) { return a.textContent.indexOf('ข้อความ') > -1; })[0];
+          return l && l.querySelector('.side-count');
+        };
+        expect(rail().textContent).toBe('3');
+        expect(rail().style.display).toBe('');
+        var bottom = w.document.querySelector('.mobile-bottom-nav .mbn-badge');
+        expect(bottom.textContent).toBe('3');
+        // the rail is rebuilt on every navigation; the count must not reset
+        w.renderSidebars('page-feed');
+        expect(rail().textContent).toBe('3', 'after a rebuild');
+        w.kxSetMsgBadge(0);
+        expect(rail().style.display).toBe('none', 'and gone at zero');
+        expect(bottom.style.display).toBe('none');
+      } finally { w.kxSession = null; w.kxMsgUnread = null; restore(w); }
+    });
+    it('the bell keeps its own count — writing it does not touch the message count', function (w) {
+      signIn(w); w.kxAuthChecked = true;
+      try {
+        w.kxSetMsgBadge(5);
+        w.kxApplyNotifBadges();
+        var l = Array.prototype.filter.call(w.document.querySelectorAll('.side-link'), function (a) { return a.textContent.indexOf('ข้อความ') > -1; })[0];
+        expect(l.querySelector('.side-count').textContent).toBe('5');
+      } finally { w.kxSetMsgBadge(0); w.kxMsgUnread = null; w.kxSession = null; }
+    });
+    it('a count that went up reloads the list and says so once', async function (w) {
+      var sb = counts(w, [{ notifications: 1, messages: 0 }, { notifications: 2, messages: 1 }, { notifications: 2, messages: 1 }]);
+      signIn(w);
+      w.navigateTo('page-feed', true);
+      var t = said(w);
+      try {
+        w.kxLiveStop();
+        await w.kxLiveCheck();
+        var before = sb._calls.filter(function (c) { return c.table === 'notifications'; }).length;
+        await w.kxLiveCheck();
+        var after = sb._calls.filter(function (c) { return c.table === 'notifications'; }).length;
+        await w.kxLiveCheck();
+      } finally { t.done(); w.kxSession = null; restore(w); w.kxSetMsgBadge(0); w.kxMsgUnread = null; }
+      expect(after).toBe(before + 1, 'the notification list is fetched when the count changes');
+      expect(t.m).toEqual(['🔔 มีแจ้งเตือนใหม่', '💬 มีข้อความใหม่'], 'once each, not on the unchanged third pass');
+    });
+    it('without the RPC, falls back to reloading the notifications', async function (w) {
+      var sb = plan(w, {
+        _rpc: { kx_unread_counts: { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.kx_unread_counts' } } },
+        notifications: { _: { data: [], error: null } }
+      });
+      signIn(w);
+      try { w.kxLiveStop(); await w.kxLiveCheck(); await w.kxLiveCheck(); } finally { w.kxSession = null; restore(w); }
+      expect(rpcCalls(sb)).toBe(1, 'asked once, then remembered it is missing');
+      expect(sb._calls.filter(function (c) { return c.table === 'notifications'; }).length).toBe(2);
+    });
+    it('routes a message notification to the conversation with its sender', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain("if(n.kind === 'new_message' && n.actor_id){");
+      expect(html).toContain('return "kxStartChat(\'" + n.actor_id + "\',"');
+      expect(html).toContain("new_message:      ['blue',  '💬']");
+    });
+    it('opening a conversation reads its message notifications', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain(".eq('kind', 'new_message').eq('actor_id', otherId).eq('is_read', false)");
+    });
+  });
+
   /* The dropdown under the avatar had แก้ไขโปรไฟล์, ตั้งค่า and ออกจากระบบ —
      and no way to simply look at your own profile, the page the picture
      stands for. The owner asked for it (2026-09-14); it goes first. */
