@@ -82,6 +82,7 @@ let T = {}, DURATION = 0;
 
 /* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
 const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
+const VOICE_SPEED = 1.22;      // the narrator reads slowly; a fifth faster is a natural pace
 const LINE_OF = { hook: 'hook', s1: 'idea', s1b: 'shots', s2: 'buyer', s3: 'seller', s4: 'easy', s5: 'trust', outro: 'outro' };
 function applyVoice(m) {
   const LEAD = .6, TAIL = .7;     // a beat of picture before the voice starts, and after it stops

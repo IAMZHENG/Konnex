@@ -431,6 +431,12 @@ async function music(seconds, voice) {
    frame so a clip can size its scenes to the lines — applyVoice(manifest),
    if the page defines it, is called with the parsed manifest (or null) and
    may change T, DURATION and each line's `at`. */
+/* A clip may also set VOICE_SPEED (1 = as synthesised; 1.2 = a fifth faster).
+   The narrator the clips use speaks slowly, and the service cannot be asked
+   for a quicker read, so the lines are time-stretched here — pitch kept, the
+   pauses and syllables shortened — and the manifest's durations are scaled
+   to match before applyVoice() sizes the scenes. */
+const voiceSpeed = () => (typeof VOICE_SPEED === 'number' && VOICE_SPEED > 0) ? VOICE_SPEED : 1;
 async function loadVoiceManifest() {
   if (typeof VOICE_MANIFEST === 'undefined' || !VOICE_MANIFEST) return null;
   try {
@@ -438,18 +444,58 @@ async function loadVoiceManifest() {
     if (!r.ok) throw new Error(r.status);
     const m = await r.json();
     m.base = VOICE_MANIFEST.replace(/[^/]*$/, '');
+    const sp = voiceSpeed();
+    if (sp !== 1) for (const ln of m.lines) { ln.duration /= sp; for (const f of ln.files) f.duration /= sp; }
     return m;
   } catch (e) { log('ไม่มีเสียงพูด (' + VOICE_MANIFEST + ' — ' + (e.message || e) + ') เรนเดอร์แบบไม่มีเสียงพูด'); return null; }
+}
+/* WSOLA time-stretch: the output is built from ~21 ms windows of the input,
+   each taken from near where a uniform speed-up would put it but nudged to
+   the offset that continues the previous window most smoothly, so periods
+   line up and the voice keeps its pitch. Speech only; `rate` > 1 is faster. */
+function stretchBuffer(ctxA, buf, rate) {
+  if (Math.abs(rate - 1) < 1e-3) return buf;
+  const N = 1024, HOP = N / 2, SEARCH = 220, CMP = 300;
+  const win = new Float32Array(N);
+  for (let i = 0; i < N; i++) win[i] = .5 - .5 * Math.cos(2 * Math.PI * i / N);
+  const outLen = Math.floor(buf.length / rate);
+  const out = ctxA.createBuffer(buf.numberOfChannels, outLen, buf.sampleRate);
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const x = buf.getChannelData(ch), y = out.getChannelData(ch), norm = new Float32Array(outLen);
+    let prev = 0;
+    for (let pos = 0; pos < outLen; pos += HOP) {
+      const nominal = Math.round(pos * rate);
+      let best = 0;
+      if (pos > 0) {
+        // the natural continuation of the last window is HOP further into the input
+        const tpl = prev + HOP;
+        let bestScore = -Infinity;
+        for (let d = -SEARCH; d <= SEARCH; d += 2) {
+          const c = nominal + d;
+          if (c < 0 || c + CMP >= x.length || tpl + CMP >= x.length) continue;
+          let sc = 0;
+          for (let i = 0; i < CMP; i += 2) sc += x[c + i] * x[tpl + i];
+          if (sc > bestScore) { bestScore = sc; best = d; }
+        }
+      }
+      const src = Math.max(0, nominal + best);
+      prev = src;
+      for (let i = 0; i < N && pos + i < outLen && src + i < x.length; i++) { y[pos + i] += x[src + i] * win[i]; norm[pos + i] += win[i]; }
+    }
+    for (let i = 0; i < outLen; i++) if (norm[i] > 1e-3) y[i] /= norm[i];
+  }
+  return out;
 }
 async function decodeVoice(m) {
   if (!m) return null;
   const dec = new OfflineAudioContext(1, 1, 48000);
+  const sp = voiceSpeed();
   const lines = [];
   for (const ln of m.lines) {
     const parts = [];
     for (const f of ln.files) {
       const ab = await (await fetch(m.base + f.file)).arrayBuffer();
-      parts.push({ buffer: await dec.decodeAudioData(ab) });
+      parts.push({ buffer: stretchBuffer(dec, await dec.decodeAudioData(ab), sp) });
     }
     lines.push({ at: ln.at, parts });
   }
