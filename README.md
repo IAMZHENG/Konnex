@@ -3491,7 +3491,7 @@ throttled tab as a hang.
 Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `intro` (~55 s) is for people who have never heard of it: the old way (ring
+the site. `intro` (~70 s, narrated) is for people who have never heard of it: the old way (ring
 every supplier, crossed out), the idea as a diagram (one post, offers coming up to it), what
 each side gets, why it is easy, the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ — and the
 site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
@@ -3503,6 +3503,16 @@ budget, deadline), ask under ❓ คำถามเกี่ยวกับง�
 เสนอราคาสำหรับงานนี้ with a quotation and other files attached, then find it again on
 ใบเสนอราคา ที่ส่ง — what was quoted, to whom, for how much. The Facebook copy that goes with each clip is
 `marketing/facebook-posts.md`, written from what the app actually does today.
+
+The intro clip is narrated. The lines live in `tools/clip/intro.voice.json`;
+`node tools/build-voice.js intro` turns them into MP3s under `marketing/voice/intro/` plus a
+manifest with each line's measured length, and the clip page reads that manifest before
+its first frame and stretches any scene whose line runs longer (`applyVoice`), so the
+voice never spills into the next picture. The music ducks under each line. The voice is
+the Thai female narrator behind Google Translate's speaker button, fetched one phrase
+at a time — the only thing that leaves the machine is the text of the lines. Windows has
+only Pattara (Thai, male) installed here, and Microsoft's Edge read-aloud voice
+(Premwadee) now answers 401 to the token Edge used to send, so neither was usable.
 
 None is a screen recording. `tools/clip/lib.js` is a shared drawing kit — framing,
 brand colours and the app's own fonts, phone frame, cards, an offer row, a synthesised

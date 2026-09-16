@@ -59,17 +59,30 @@ const EASY_POINTS = [
   ['💬', 'คุยกันได้ในที่เดียว',              'ถาม-ตอบใต้ประกาศ หรือแชตส่วนตัวกับอีกฝ่าย']
 ];
 
-/* ---- timeline (seconds) ---- */
-const T = {
-  hook: [0, 6.0],
-  s1:   [6.0, 16.0],
-  s2:   [16.0, 24.5],
-  s3:   [24.5, 33.0],
-  s4:   [33.0, 41.0],
-  s5:   [41.0, 49.5],
-  outro:[49.5, 55.0]
-};
-const DURATION = T.outro[1];
+/* ---- timeline (seconds) ----
+   These are the scene lengths without narration. With it, applyVoice()
+   below stretches any scene whose line runs longer, so the voice never
+   spills into the next picture; the lengths here are the minimums. */
+const BASE = { hook: 6.0, s1: 10.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
+const ORDER = ['hook', 's1', 's2', 's3', 's4', 's5', 'outro'];
+let T = {}, DURATION = 0;
+(function lay() { let t = 0; for (const k of ORDER) { T[k] = [t, t + BASE[k]]; t += BASE[k]; } DURATION = t; })();
+
+/* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
+const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
+const LINE_OF = { hook: 'hook', s1: 'idea', s2: 'buyer', s3: 'seller', s4: 'easy', s5: 'trust', outro: 'outro' };
+function applyVoice(m) {
+  const LEAD = .6, TAIL = .7;     // a beat of picture before the voice starts, and after it stops
+  let t = 0;
+  for (const k of ORDER) {
+    const ln = m && m.lines.find(l => l.id === LINE_OF[k]);
+    const len = Math.max(BASE[k], ln ? LEAD + ln.duration + TAIL : 0);
+    T[k] = [t, t + len];
+    if (ln) ln.at = t + LEAD;
+    t += len;
+  }
+  DURATION = t;
+}
 
 /* ---- clip-specific helpers ---- */
 function avatar(x, y, r, initial, bg, color) {

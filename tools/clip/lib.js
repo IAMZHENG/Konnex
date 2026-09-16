@@ -328,7 +328,11 @@ function offerRow(s, x, y, w, i, price, low, hl) {
    on the strong beats, a quiet kick and shaker for pace. Four chords over
    nine and a half seconds, repeated; rendered offline so it is the same on
    every run. Written here rather than licensed: a track nobody has to clear. */
-async function music(seconds) {
+/* `voice`, when given, is the decoded narration from decodeVoice(): the
+   lines are laid over the music at their times, and the music ducks under
+   each one — the bed sits between the instruments and the master so the
+   fade in and out stay on the master and the ducking on the bed. */
+async function music(seconds, voice) {
   const sr = 48000;
   const ac = new OfflineAudioContext(2, Math.ceil(seconds * sr), sr);
   const master = ac.createGain();
@@ -339,6 +343,24 @@ async function music(seconds) {
   master.gain.linearRampToValueAtTime(1.3, 1.2);
   master.gain.setValueAtTime(1.3, seconds - 2.8);
   master.gain.linearRampToValueAtTime(0, seconds - .15);
+  const bed = ac.createGain(); bed.connect(master);
+  const DUCK = .22;
+  if (voice && voice.lines.length) {
+    bed.gain.setValueAtTime(voice.lines[0].at < .5 ? DUCK : 1, 0);
+    const vg = ac.createGain(); vg.gain.value = .95; vg.connect(master);
+    for (const ln of voice.lines) {
+      let t = ln.at;
+      for (const p of ln.parts) {
+        const src = ac.createBufferSource(); src.buffer = p.buffer; src.connect(vg); src.start(t);
+        t += p.buffer.duration + .12;
+      }
+      const end = t - .12;
+      bed.gain.setValueAtTime(bed.gain.value, Math.max(0, ln.at - .45));
+      bed.gain.linearRampToValueAtTime(DUCK, Math.max(0, ln.at - .1));
+      bed.gain.setValueAtTime(DUCK, end + .15);
+      bed.gain.linearRampToValueAtTime(1, Math.min(seconds, end + .9));
+    }
+  }
 
   const bpm = 100, beat = 60 / bpm, bar = beat * 4;
   const midi = n => 440 * Math.pow(2, (n - 69) / 12);
@@ -350,11 +372,11 @@ async function music(seconds) {
   function osc(type, freq, t0, t1, gain, dest, detune) {
     const o = ac.createOscillator(); o.type = type; o.frequency.value = freq; if (detune) o.detune.value = detune;
     const g = ac.createGain(); g.gain.value = gain;
-    o.connect(g); g.connect(dest || master); o.start(t0); o.stop(t1);
+    o.connect(g); g.connect(dest || bed); o.start(t0); o.stop(t1);
     return g;
   }
   // pad through a gentle low-pass
-  const padLp = ac.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = .5; padLp.connect(master);
+  const padLp = ac.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 900; padLp.Q.value = .5; padLp.connect(bed);
   for (let b = 0; b < bars; b++) {
     const t0 = b * bar, t1 = t0 + bar + .6, ch = CHORDS[b % 4];
     ch.forEach(n => {
@@ -388,7 +410,7 @@ async function music(seconds) {
         const o = ac.createOscillator(); o.type = 'sine';
         o.frequency.setValueAtTime(140, s); o.frequency.exponentialRampToValueAtTime(45, s + .12);
         const g = ac.createGain(); g.gain.setValueAtTime(.32, s); g.gain.exponentialRampToValueAtTime(.001, s + .28);
-        o.connect(g); g.connect(master); o.start(s); o.stop(s + .3);
+        o.connect(g); g.connect(bed); o.start(s); o.stop(s + .3);
       }
       const sh = s + beat / 2;
       const len = .06, buf = ac.createBuffer(1, Math.ceil(len * sr), sr), d = buf.getChannelData(0);
@@ -396,10 +418,42 @@ async function music(seconds) {
       const src = ac.createBufferSource(); src.buffer = buf;
       const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
       const g = ac.createGain(); g.gain.value = .045;
-      src.connect(hp); hp.connect(g); g.connect(master); src.start(sh);
+      src.connect(hp); hp.connect(g); g.connect(bed); src.start(sh);
     }
   }
   return ac.startRendering();
+}
+
+/* ====================== NARRATION ====================== */
+/* A clip may set VOICE_MANIFEST to the manifest tools/build-voice.js wrote
+   (marketing/voice/<clip>/manifest.json). Missing file: the clip renders
+   without narration and says so. The manifest is loaded before the first
+   frame so a clip can size its scenes to the lines — applyVoice(manifest),
+   if the page defines it, is called with the parsed manifest (or null) and
+   may change T, DURATION and each line's `at`. */
+async function loadVoiceManifest() {
+  if (typeof VOICE_MANIFEST === 'undefined' || !VOICE_MANIFEST) return null;
+  try {
+    const r = await fetch(VOICE_MANIFEST);
+    if (!r.ok) throw new Error(r.status);
+    const m = await r.json();
+    m.base = VOICE_MANIFEST.replace(/[^/]*$/, '');
+    return m;
+  } catch (e) { log('ไม่มีเสียงพูด (' + VOICE_MANIFEST + ' — ' + (e.message || e) + ') เรนเดอร์แบบไม่มีเสียงพูด'); return null; }
+}
+async function decodeVoice(m) {
+  if (!m) return null;
+  const dec = new OfflineAudioContext(1, 1, 48000);
+  const lines = [];
+  for (const ln of m.lines) {
+    const parts = [];
+    for (const f of ln.files) {
+      const ab = await (await fetch(m.base + f.file)).arrayBuffer();
+      parts.push({ buffer: await dec.decodeAudioData(ab) });
+    }
+    lines.push({ at: ln.at, parts });
+  }
+  return { lines };
 }
 
 /* ====================== ENCODE ====================== */
@@ -431,8 +485,8 @@ async function encode() {
     fastStart: 'in-memory'
   });
 
-  log('กำลังสร้างดนตรี…');
-  const abuf = await music(DURATION);
+  log('กำลังสร้างดนตรี' + (VOICE ? 'และเสียงพูด' : '') + '…');
+  const abuf = await music(DURATION, VOICE ? await decodeVoice(VOICE) : null);
   const aenc = new AudioEncoder({ output: (ch, meta) => muxer.addAudioChunk(ch, meta), error: e => { throw e; } });
   aenc.configure(acfg);
   const CH = 2, STEP = 1024, N = abuf.length;
@@ -463,9 +517,12 @@ async function encode() {
 }
 
 /* Entry point: a clip page calls this after defining DURATION and draw(t). */
+let VOICE = null;
 async function boot() {
   try {
     await ready();
+    VOICE = await loadVoiceManifest();
+    if (typeof applyVoice === 'function') applyVoice(VOICE);
     // ?bare=1: the canvas at its true size in the top-left corner, for --frame screenshots
     if (q.has('bare')) { c.style.cssText = 'margin:0;max-width:none;max-height:none;width:' + W + 'px;height:' + H + 'px'; document.getElementById('log').hidden = true; }
     if (q.has('t')) { draw(parseFloat(q.get('t'))); document.title = 'frame'; return; }
