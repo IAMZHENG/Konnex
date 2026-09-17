@@ -208,6 +208,60 @@ function toast(label, cx, cy, u) {
   ctx.restore();
 }
 
+/* ---- line icons ----
+   Drawn with strokes in a 100-unit box centred on (0,0), so they scale to any
+   size and take any colour — the emoji they replace rendered in whatever
+   colour font the machine had, and read as stickers next to the brand type.
+   icon(name, x, y, size, color): size is the box's edge in pixels. */
+const ICONS = {
+  cart(c) { c.moveTo(-46, -34); c.lineTo(-30, -34); c.lineTo(-18, 18); c.lineTo(34, 18); c.lineTo(44, -16); c.lineTo(-24, -16); c.stroke();
+            c.beginPath(); c.arc(-12, 36, 7, 0, 7); c.stroke(); c.beginPath(); c.arc(28, 36, 7, 0, 7); c.stroke(); },
+  factory(c) { c.moveTo(-46, 40); c.lineTo(-46, -6); c.lineTo(-20, 10); c.lineTo(-20, -6); c.lineTo(6, 10); c.lineTo(6, -6); c.lineTo(32, 10); c.lineTo(32, 40); c.closePath(); c.stroke();
+               c.beginPath(); c.moveTo(34, -6); c.lineTo(34, -40); c.lineTo(46, -40); c.lineTo(46, 4); c.stroke(); },
+  bolt(c) { c.moveTo(8, -48); c.lineTo(-22, 6); c.lineTo(2, 6); c.lineTo(-8, 48); c.lineTo(24, -10); c.lineTo(0, -10); c.closePath(); c.stroke(); },
+  bulb(c) { c.arc(0, -10, 28, Math.PI * .8, Math.PI * 2.2); c.lineTo(12, 24); c.lineTo(-12, 24); c.closePath(); c.stroke();
+            c.beginPath(); c.moveTo(-12, 36); c.lineTo(12, 36); c.stroke(); c.beginPath(); c.moveTo(-8, 46); c.lineTo(8, 46); c.stroke(); },
+  device(c) { c.roundRect(-26, -48, 52, 96, 10); c.stroke(); c.beginPath(); c.moveTo(-10, 36); c.lineTo(10, 36); c.stroke(); },
+  doc(c) { c.moveTo(-32, -46); c.lineTo(12, -46); c.lineTo(32, -26); c.lineTo(32, 46); c.lineTo(-32, 46); c.closePath(); c.stroke();
+           c.beginPath(); c.moveTo(12, -46); c.lineTo(12, -26); c.lineTo(32, -26); c.stroke();
+           c.beginPath(); c.moveTo(-16, 0); c.lineTo(16, 0); c.moveTo(-16, 18); c.lineTo(16, 18); c.stroke(); },
+  chart(c) { c.moveTo(-46, 44); c.lineTo(46, 44); c.stroke();
+             c.beginPath(); c.roundRect(-36, 8, 18, 36, 3); c.roundRect(-9, -14, 18, 58, 3); c.roundRect(18, -40, 18, 84, 3); c.stroke(); },
+  check(c) { c.arc(0, 0, 44, 0, 7); c.stroke(); c.beginPath(); c.moveTo(-20, 2); c.lineTo(-6, 16); c.lineTo(22, -14); c.stroke(); },
+  search(c) { c.arc(-8, -8, 30, 0, 7); c.stroke(); c.beginPath(); c.moveTo(14, 14); c.lineTo(42, 42); c.stroke(); },
+  pen(c) { c.moveTo(-40, 26); c.lineTo(22, -36); c.lineTo(36, -22); c.lineTo(-26, 40); c.lineTo(-44, 44); c.closePath(); c.stroke();
+           c.beginPath(); c.moveTo(12, -26); c.lineTo(26, -12); c.stroke(); },
+  lock(c) { c.roundRect(-34, -6, 68, 50, 8); c.stroke(); c.beginPath(); c.arc(0, -14, 20, Math.PI, 0); c.stroke();
+            c.beginPath(); c.arc(0, 16, 5, 0, 7); c.stroke(); c.beginPath(); c.moveTo(0, 20); c.lineTo(0, 30); c.stroke(); },
+  globe(c) { c.arc(0, 0, 44, 0, 7); c.stroke(); c.beginPath(); c.ellipse(0, 0, 18, 44, 0, 0, 7); c.stroke();
+             c.beginPath(); c.moveTo(-44, 0); c.lineTo(44, 0); c.moveTo(-38, -22); c.lineTo(38, -22); c.moveTo(-38, 22); c.lineTo(38, 22); c.stroke(); },
+  eye(c) { c.moveTo(-46, 0); c.quadraticCurveTo(0, -44, 46, 0); c.quadraticCurveTo(0, 44, -46, 0); c.closePath(); c.stroke();
+           c.beginPath(); c.arc(0, 0, 13, 0, 7); c.stroke(); },
+  chat(c) { c.moveTo(-34, -40); c.lineTo(34, -40); c.quadraticCurveTo(46, -40, 46, -28); c.lineTo(46, 6); c.quadraticCurveTo(46, 18, 34, 18); c.lineTo(-6, 18); c.lineTo(-30, 40); c.lineTo(-28, 18);
+            c.quadraticCurveTo(-46, 18, -46, 6); c.lineTo(-46, -28); c.quadraticCurveTo(-46, -40, -34, -40); c.closePath(); c.stroke();
+            c.beginPath(); for (const x of [-16, 0, 16]) { c.moveTo(x + 3, -11); c.arc(x, -11, 3, 0, 7); } c.stroke(); },
+  balance(c) { c.moveTo(0, -46); c.lineTo(0, 40); c.moveTo(-24, 40); c.lineTo(24, 40); c.moveTo(-44, -28); c.lineTo(44, -28); c.stroke();
+               c.beginPath(); c.moveTo(-44, -28); c.lineTo(-30, 4); c.moveTo(-44, -28); c.lineTo(-58, 4); c.moveTo(44, -28); c.lineTo(30, 4); c.moveTo(44, -28); c.lineTo(58, 4); c.stroke();
+               c.beginPath(); c.arc(-44, 4, 14, 0, Math.PI); c.stroke(); c.beginPath(); c.arc(44, 4, 14, 0, Math.PI); c.stroke(); },
+  shield(c) { c.moveTo(0, -46); c.lineTo(40, -30); c.lineTo(40, 0); c.quadraticCurveTo(40, 32, 0, 46); c.quadraticCurveTo(-40, 32, -40, 0); c.lineTo(-40, -30); c.closePath(); c.stroke();
+              c.beginPath(); c.moveTo(-16, 0); c.lineTo(-4, 12); c.lineTo(18, -12); c.stroke(); },
+  clipboard(c) { c.roundRect(-32, -36, 64, 80, 8); c.stroke(); c.beginPath(); c.roundRect(-14, -46, 28, 18, 5); c.stroke();
+                 c.beginPath(); c.moveTo(-16, 0); c.lineTo(-6, 10); c.lineTo(16, -12); c.stroke(); },
+  tag(c) { c.moveTo(-44, -20); c.lineTo(-44, -44); c.lineTo(-20, -44); c.lineTo(44, 20); c.lineTo(20, 44); c.closePath(); c.stroke();
+           c.beginPath(); c.arc(-28, -28, 5, 0, 7); c.stroke(); },
+  handshake(c) { c.moveTo(-48, -10); c.lineTo(-24, -26); c.lineTo(2, -10); c.lineTo(20, -24); c.lineTo(48, -8); c.stroke();
+                 c.beginPath(); c.moveTo(-48, -10); c.lineTo(-20, 22); c.lineTo(-6, 12); c.moveTo(-6, 12); c.lineTo(8, 24); c.lineTo(20, 14); c.moveTo(20, 14); c.lineTo(48, -8); c.stroke(); }
+};
+function icon(name, x, y, size, color, width) {
+  const draw = ICONS[name];
+  if (!draw) return;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(size / 100, size / 100);
+  ctx.strokeStyle = color || BLUE; ctx.lineWidth = width || 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); draw(ctx);
+  ctx.restore();
+}
+
 /* ---- grounds ---- */
 function paper() { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H); }
 function blueGround(t) {
@@ -235,8 +289,9 @@ function stepHeader(n, title, sub, t, a) {
   const u = seg(t, a, a + .55, outBack);
   ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
   ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(h.x, h.y, h.badge * u, 0, Math.PI * 2); ctx.fill();
-  // n is usually a step number; a clip without steps passes an emoji instead
-  text(String(n), h.x, h.y + 2, { w: 700, px: typeof n === 'number' ? h.badge : h.badge * .9, color: '#fff', align: 'center', base: 'middle' });
+  // n is usually a step number; a clip without steps passes 'icon:<name>' (or an emoji) instead
+  if (typeof n === 'string' && n.startsWith('icon:')) icon(n.slice(5), h.x, h.y, h.badge * 1.15, '#fff', 9);
+  else text(String(n), h.x, h.y + 2, { w: 700, px: typeof n === 'number' ? h.badge : h.badge * .9, color: '#fff', align: 'center', base: 'middle' });
   const dx = lerp(40, 0, u);
   // a '|' in the title marks where the narrow left column of the square
   // framing breaks it; the other two have room for one line
