@@ -102,12 +102,12 @@ function avatar(x, y, r, initial, bg, color) {
 function pointCard(p, x, y, w, u) {
   ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
   ctx.translate(lerp(60, 0, clamp(u, 0, 1)), 0);
-  card(x, y, w, 270, 28);
-  ctx.fillStyle = BLUE_SOFT; rr(x + 34, y + 55, 160, 160, 36); ctx.fill();
-  icon(p[0], x + 114, y + 135, 96, BLUE, 8);
-  text(p[1], x + 230, y + 118, { w: 700, px: 36 });
-  const lines = wrapText(p[2], 400, 27, w - 264);
-  lines.forEach((ln, i) => text(ln, x + 230, y + 168 + i * 40, { w: 400, px: 27, color: INK_SOFT }));
+  card(x, y, w, 330, 28);
+  ctx.fillStyle = BLUE_SOFT; rr(x + 34, y + 75, 180, 180, 40); ctx.fill();
+  icon(p[0], x + 124, y + 165, 108, BLUE, 8);
+  text(p[1], x + 250, y + 132, { w: 700, px: 44 });
+  const lines = wrapText(p[2], 400, 32, w - 284);
+  lines.forEach((ln, i) => text(ln, x + 250, y + 192 + i * 46, { w: 400, px: 32, color: INK_SOFT }));
   ctx.restore();
 }
 /* Three points in a compact stack, the phone under them showing the page each
@@ -120,19 +120,19 @@ function pointsWithPhone(points, beats, t, a, b) {
     points.forEach((p, i) => {
       const cu = seg(t, a + .4 + i * .35, a + 1.0 + i * .35);
       if (cu <= 0) return;
-      const y = 10 + i * 162;
+      const y = 10 + i * 180;
       ctx.save(); ctx.globalAlpha *= cu; ctx.translate(lerp(40, 0, cu), 0);
-      card(0, y, BODY_W, 148, 24);
-      if (i === beat) { ctx.strokeStyle = BLUE; ctx.lineWidth = 5; rr(0, y, BODY_W, 148, 24); ctx.stroke(); }
-      ctx.fillStyle = BLUE_SOFT; rr(24, y + 26, 96, 96, 24); ctx.fill();
-      icon(p[0], 72, y + 74, 60, BLUE, 8);
-      text(p[1], 148, y + 64, { w: 700, px: 31 });
-      text(p[2], 148, y + 110, { w: 400, px: 24, color: INK_SOFT });
+      card(0, y, BODY_W, 166, 24);
+      if (i === beat) { ctx.strokeStyle = BLUE; ctx.lineWidth = 5; rr(0, y, BODY_W, 166, 24); ctx.stroke(); }
+      ctx.fillStyle = BLUE_SOFT; rr(24, y + 30, 106, 106, 26); ctx.fill();
+      icon(p[0], 77, y + 83, 66, BLUE, 8);
+      text(p[1], 156, y + 70, { w: 700, px: 35 });
+      text(p[2], 156, y + 122, { w: 400, px: 27, color: INK_SOFT });
       ctx.restore();
     });
     const pu = seg(t, a + .3, a + 1.0);
     ctx.save(); ctx.globalAlpha *= pu;
-    ctx.translate((BODY_W - 800 * .62) / 2, 520 + lerp(80, 0, pu)); ctx.scale(.62, .62);
+    ctx.translate((BODY_W - 800 * .6) / 2, 566 + lerp(80, 0, pu)); ctx.scale(.6, .6);
     const box = phone(0, 0, 800, 1180, { blank: true });
     // the previous page fades out under the new one
     const cur = beats[beat], prev = beats[beat - 1];
@@ -146,7 +146,7 @@ function pointsWithPhone(points, beats, t, a, b) {
 }
 function pointList(points, t, a) {
   body(() => {
-    points.forEach((p, i) => pointCard(p, 0, 80 + i * 330, BODY_W, seg(t, a + .4 + i * .45, a + 1.0 + i * .45)));
+    points.forEach((p, i) => pointCard(p, 0, 60 + i * 380, BODY_W, seg(t, a + .4 + i * .45, a + 1.0 + i * .45)));
   });
 }
 /* The old ways, drawn with strokes so they can shake and be crossed out:

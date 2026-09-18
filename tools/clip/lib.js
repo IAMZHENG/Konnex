@@ -38,9 +38,9 @@ function framing() {
   if (ar < 1.3) return {
     kind: 'square', twoCol: true,
     brand: { x: 60, y: 56, h: 50 },
-    header: { x: 60, y: 250, px: 46, badge: 42, twoLine: true, sub: { y: 370, px: 26, wrap: 400 } },
-    body: { x: 520, y: 120, s: .60 },
-    dots: { x: 250, y: H - 90 }
+    header: { x: 56, y: 230, px: 40, badge: 36, twoLine: true, sub: { y: 350, px: 25, wrap: 300 } },
+    body: { x: 410, y: 52, s: .75 },
+    dots: { x: 200, y: H - 80 }
   };
   return {
     kind: 'landscape', twoCol: true,
@@ -91,7 +91,17 @@ function measure(s, w, px) { ctx.font = font(w, px); return ctx.measureText(s).w
 function wrapText(s, w, px, maxW) {
   ctx.font = font(w, px);
   if (ctx.measureText(s).width <= maxW) return [s];
-  const words = s.split(' ');
+  // a run with no space in it that is wider than the line is broken by
+  // character — after its combining marks, never before one, so no vowel or
+  // tone mark is orphaned onto the next line
+  const clusters = w => w.match(/[^ัิ-ฺ็-๎][ัิ-ฺ็-๎]*/g) || [w];
+  const words = [];
+  for (const wd of s.split(' ')) {
+    if (ctx.measureText(wd).width <= maxW) { words.push(wd); continue; }
+    let piece = '';
+    for (const c of clusters(wd)) { if (piece && ctx.measureText(piece + c).width > maxW) { words.push(piece); piece = c; } else piece += c; }
+    if (piece) words.push(piece);
+  }
   const lines = []; let cur = '';
   for (const wd of words) {
     const test = cur ? cur + ' ' + wd : wd;
@@ -293,26 +303,28 @@ function stepHeader(n, title, sub, t, a) {
   if (typeof n === 'string' && n.startsWith('icon:')) icon(n.slice(5), h.x, h.y, h.badge * 1.15, '#fff', 9);
   else text(String(n), h.x, h.y + 2, { w: 700, px: typeof n === 'number' ? h.badge : h.badge * .9, color: '#fff', align: 'center', base: 'middle' });
   const dx = lerp(40, 0, u);
-  // a '|' in the title marks where the narrow left column of the square
-  // framing breaks it; the other two have room for one line
-  // the square framing always breaks there; the others only when one line
-  // would run into the body column (or off the right edge)
+  /* The title fits its column: a '|' marks the preferred break, the square
+     framing always takes it, and any line still wider than the column is
+     wrapped further at its spaces. Only a single word too wide for the column
+     shrinks the type (never below 70%). The caption then sits under however
+     many lines that made, so nothing can run into the body or over itself. */
   const left = h.x + h.badge + 34;
   const maxW = (F.twoCol ? F.body.x - 40 : W - 40) - left;
-  const twoLine = title.includes('|') && (h.twoLine || measure(title.replace('|', ''), 700, h.px) > maxW);
-  const lines = twoLine ? title.split('|') : [title.replace('|', '')];
-  // a line still wider than its column shrinks to fit (down to 70%), rather than run into the body
-  const widest = Math.max(...lines.map(ln => measure(ln.trim(), 700, h.px)));
+  const flat = title.replace('|', ' ').replace(/\s+/g, ' ').trim();
+  let lines;
+  if (h.twoLine && title.includes('|')) lines = title.split('|').map(s => s.trim());
+  else lines = measure(flat, 700, h.px) <= maxW ? [flat] : (title.includes('|') ? title.split('|').map(s => s.trim()) : [flat]);
+  lines = lines.flatMap(ln => wrapText(ln, 700, h.px, maxW));
+  const widest = Math.max(...lines.map(ln => measure(ln, 700, h.px)));
   const px = widest > maxW ? h.px * Math.max(.7, maxW / widest) : h.px;
-  if (lines.length === 1) text(lines[0], h.x + h.badge + 34 + dx, h.y + 2, { w: 700, px, base: 'middle' });
-  else lines.forEach((ln, i) => text(ln.trim(), h.x + h.badge + 34 + dx, h.y + 2 + (i - .5) * px * 1.3, { w: 700, px, base: 'middle' }));
+  const lh = px * 1.3;
+  lines.forEach((ln, i) => text(ln, left + dx, h.y + 2 + (i - (lines.length - 1) / 2) * lh, { w: 700, px, base: 'middle' }));
   ctx.restore();
   if (sub) {
     const su = seg(t, a + .4, a + .9);
-    const lines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
-    // a title that broke onto two lines in a framing laid out for one pushes the caption down
-    const shift = twoLine && !h.twoLine ? h.px * 1.3 : 0;
-    lines.forEach((ln, i) => text(ln, h.x - h.badge, h.sub.y + shift + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
+    const subLines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
+    const top = h.y + ((lines.length - 1) / 2) * lh + px * 1.25;
+    subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
   }
 }
 function dots(step, n) {
