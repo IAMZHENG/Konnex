@@ -64,7 +64,7 @@ const TRUST_POINTS = [
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 5.0, s1: 6.0, s2: 6.5, outro: 5.0 };
+const BASE = { hook: 5.0, s1: 6.0, s2: 9.5, outro: 5.0 };
 const ORDER = ['hook', 's1', 's2', 'outro'];
 
 /* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
@@ -73,7 +73,7 @@ const ORDER = ['hook', 's1', 's2', 'outro'];
 let SHOTS = null;
 async function prepare() {
   try {
-    const names = ['compose', 'compare'];
+    const names = ['feed', 'detail', 'compose', 'compare', 'mybids'];
     await Promise.all(names.map(n => loadImg('shot_' + n, '/marketing/shots/' + n + '.png')));
     SHOTS = {}; names.forEach(n => { SHOTS[n] = IMG['shot_' + n]; });
   } catch (e) { log('ไม่มีภาพหน้าเว็บ (marketing/shots) — ข้ามฉากหน้าเว็บจริง; รัน node tools/build-shots.js ก่อน'); }
@@ -120,7 +120,8 @@ function pointCard(p, x, y, w, u) {
    scene, so a scene stretched for its narration keeps the same shape. */
 function pointsWithPhone(points, beats, t, a, b) {
   const L = b - a, u = clamp((t - a) / L, 0, 1);
-  const beat = Math.min(2, Math.floor(u * 3)), bu = u * 3 - beat;
+  const n = beats.length, beat = Math.min(n - 1, Math.floor(u * n)), bu = u * n - beat;
+  const lit = beats[beat].card == null ? beat : beats[beat].card;
   body(() => {
     points.forEach((p, i) => {
       const cu = seg(t, a + .3 + i * .25, a + .8 + i * .25);
@@ -128,7 +129,7 @@ function pointsWithPhone(points, beats, t, a, b) {
       const y = 10 + i * 180;
       ctx.save(); ctx.globalAlpha *= cu; ctx.translate(lerp(40, 0, cu), 0);
       card(0, y, BODY_W, 166, 24);
-      if (i === beat) { ctx.strokeStyle = BLUE; ctx.lineWidth = 5; rr(0, y, BODY_W, 166, 24); ctx.stroke(); }
+      if (i === lit) { ctx.strokeStyle = BLUE; ctx.lineWidth = 5; rr(0, y, BODY_W, 166, 24); ctx.stroke(); }
       ctx.fillStyle = BLUE_SOFT; rr(24, y + 30, 106, 106, 26); ctx.fill();
       icon(p[0], 77, y + 83, 66, BLUE, 8);
       text(p[1], 156, y + 70, { w: 700, px: 35 });
@@ -292,7 +293,14 @@ function scene2(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
   stepHeader('icon:chart', 'ใช้งานจริง| เป็นแบบนี้', 'ราคาที่ได้ เป็นกลาง โปร่งใส ตรวจสอบได้ — เพราะมาจากผู้ขายหลายรายที่แข่งกันเสนอ', t, a + .1);
-  if (SHOTS) pointsWithPhone(HOW_POINTS, [{ img: 'compose', from: 0, to: 600 }, { img: 'compare', from: 2500, to: 3000 }, { img: 'compare', from: 3100, to: 3700 }], t, a, b);
+  // the phone walks the site: browse, open a listing, post one, compare the offers, look back at what was sent
+  if (SHOTS) pointsWithPhone(HOW_POINTS, [
+    { img: 'feed',    from: 0,    to: 1400, card: 0 },
+    { img: 'detail',  from: 0,    to: 900,  card: 0 },
+    { img: 'compose', from: 0,    to: 500,  card: 0 },
+    { img: 'compare', from: 2500, to: 3300, card: 1 },
+    { img: 'mybids',  from: 0,    to: 700,  card: 2 }
+  ], t, a, b);
   else pointList(HOW_POINTS, t, a);
   ctx.restore();
 }
@@ -324,14 +332,26 @@ function sceneOutro(t) {
   ctx.restore();
 }
 
+const SCENES = [['hook', sceneHook], ['s1', scene1], ['s2', scene2], ['outro', t => sceneOutro(Math.min(t, DURATION - 1e-3))]];
+const XFADE = .6;
 function draw(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, W, H);
-  if (t < T.hook[1]) sceneHook(t);
-  else if (t < T.s1[1]) scene1(t);
-  else if (t < T.s2[1]) scene2(t);
-  else sceneOutro(Math.min(t, DURATION - 1e-3));
+  let i = SCENES.findIndex(([k]) => t < T[k][1]);
+  if (i < 0) i = SCENES.length - 1;
+  SCENES[i][1](t);
+  /* Over the last moments of a scene the next one is painted on top with rising
+     alpha. Its own contents have not started (they key off its start time), so
+     what comes up is its ground — blue under paper, paper under blue — and the
+     outgoing scene's contents are already fading. No hard cut between grounds. */
+  const end = T[SCENES[i][0]][1];
+  if (i + 1 < SCENES.length && t > end - XFADE) {
+    ctx.save(); ctx.globalAlpha = (t - (end - XFADE)) / XFADE;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    SCENES[i + 1][1](t);
+    ctx.restore();
+  }
 }
 
 boot();
