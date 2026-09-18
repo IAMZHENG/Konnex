@@ -301,8 +301,11 @@ function stepHeader(n, title, sub, t, a) {
   const maxW = (F.twoCol ? F.body.x - 40 : W - 40) - left;
   const twoLine = title.includes('|') && (h.twoLine || measure(title.replace('|', ''), 700, h.px) > maxW);
   const lines = twoLine ? title.split('|') : [title.replace('|', '')];
-  if (lines.length === 1) text(lines[0], h.x + h.badge + 34 + dx, h.y + 2, { w: 700, px: h.px, base: 'middle' });
-  else lines.forEach((ln, i) => text(ln.trim(), h.x + h.badge + 34 + dx, h.y + 2 + (i - .5) * h.px * 1.3, { w: 700, px: h.px, base: 'middle' }));
+  // a line still wider than its column shrinks to fit (down to 70%), rather than run into the body
+  const widest = Math.max(...lines.map(ln => measure(ln.trim(), 700, h.px)));
+  const px = widest > maxW ? h.px * Math.max(.7, maxW / widest) : h.px;
+  if (lines.length === 1) text(lines[0], h.x + h.badge + 34 + dx, h.y + 2, { w: 700, px, base: 'middle' });
+  else lines.forEach((ln, i) => text(ln.trim(), h.x + h.badge + 34 + dx, h.y + 2 + (i - .5) * px * 1.3, { w: 700, px, base: 'middle' }));
   ctx.restore();
   if (sub) {
     const su = seg(t, a + .4, a + .9);

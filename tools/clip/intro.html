@@ -50,22 +50,17 @@ const SELLER_POINTS = [
   ['lock',    'ราคาปิดผนึก',                     'ผู้ขายรายอื่นมองไม่เห็นราคาของคุณ']
 ];
 const TRUST_POINTS = [
-  ['balance', 'เป็นกลาง',      'QubeQuote ไม่ใช่ผู้ขาย และไม่เลือกผู้ชนะแทนคุณ — คุณตัดสินใจเอง'],
-  ['eye',     'โปร่งใส',      'ทุกข้อเสนอเห็นครบ ทั้งราคา เงื่อนไข และเอกสารแนบ ไม่มีอะไรซ่อน'],
-  ['clipboard', 'ตรวจสอบได้', 'ข้อเสนอ ถาม-ตอบ และรีวิว เก็บไว้ในระบบ ย้อนดูได้ทุกเมื่อ']
-];
-const EASY_POINTS = [
-  ['globe',   'เปิดเว็บก็ใช้ได้เลย',             'ไม่ต้องติดตั้งแอป ใช้ได้ทั้งมือถือและคอม'],
-  ['eye',     'ดูประกาศได้โดยไม่ต้องสมัคร',      'สมัครฟรีเมื่อพร้อมโพสต์หรือเสนอราคา'],
-  ['chat',    'คุยกันได้ในที่เดียว',              'ถาม-ตอบใต้ประกาศ หรือแชตส่วนตัวกับอีกฝ่าย']
+  ['balance',   'ราคาที่เป็นกลาง',   'มาจากผู้ขายหลายรายที่เสนอมาโดยอิสระ — ไม่มีใครชี้นำ QubeQuote ไม่ใช่ผู้ขาย'],
+  ['eye',       'ราคาที่โปร่งใส',    'เห็นทุกราคา พร้อมเงื่อนไขและเอกสารแนบ เทียบกันได้ตรง ๆ'],
+  ['clipboard', 'ราคาที่ตรวจสอบได้', 'ทุกข้อเสนอและเอกสารเก็บไว้ในระบบ ย้อนดูและใช้อ้างอิงได้ทุกเมื่อ']
 ];
 
 /* ---- timeline (seconds) ----
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 8.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s4: 8.0, s5: 8.5, outro: 5.5 };
-const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's4', 's5', 'outro'];
+const BASE = { hook: 8.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s5: 9.0, outro: 5.5 };
+const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's5', 'outro'];
 
 /* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
    Loaded before the first frame; if they are missing the scene is skipped
@@ -84,7 +79,7 @@ let T = {}, DURATION = 0;
 /* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
 const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
 const VOICE_SPEED = 1.15;      // the narrator reads slowly; a fifth faster is a natural pace
-const LINE_OF = { hook: 'hook', s1: 'idea', s1b: 'shots', s2: 'buyer', s3: 'seller', s4: 'easy', s5: 'trust', outro: 'outro' };
+const LINE_OF = { hook: 'hook', s1: 'idea', s1b: 'shots', s2: 'buyer', s3: 'seller', s5: 'trust', outro: 'outro' };
 function applyVoice(m) {
   const LEAD = .6, TAIL = .7;     // a beat of picture before the voice starts, and after it stops
   let t = 0;
@@ -345,22 +340,12 @@ function scene3(t) {
   ctx.restore();
 }
 
-function scene4(t) {
-  const [a, b] = T.s4;
-  paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
-  topBrand(false);
-  stepHeader('icon:bolt', 'ง่ายตั้งแต่| วันแรก', 'ไม่ต้องเรียนรู้อะไรใหม่ — เปิดเว็บแล้วเริ่มได้เลย', t, a + .1);
-  pointList(EASY_POINTS, t, a);
-  ctx.restore();
-}
-
 function scene5(t) {
   const [a, b] = T.s5;
   paper();
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader('icon:shield', 'เป็นกลาง โปร่งใส| ตรวจสอบได้', 'หลักที่ QubeQuote ยึดไว้ ทั้งกับผู้ซื้อและผู้ขาย', t, a + .1);
+  stepHeader('icon:shield', 'ราคาที่คุณได้| เป็นกลาง โปร่งใส ตรวจสอบได้', 'เพราะมาจากผู้ขายหลายรายที่แข่งกันเสนอ ไม่ใช่จากใครคนเดียว', t, a + .1);
   pointList(TRUST_POINTS, t, a);
   ctx.restore();
 }
@@ -386,7 +371,7 @@ function sceneOutro(t) {
   // the site's own tagline
   text('โพสต์ความต้องการ ให้ตลาดเสนอให้คุณ', W / 2, P.sy + lerp(30, 0, su), { w: 700, px: P.spx * .92, color: '#fff', align: 'center', alpha: su });
   const tu = seg(t, a + 1.5, a + 2.1);
-  text('เป็นกลาง · โปร่งใส · ตรวจสอบได้', W / 2, P.ty + lerp(20, 0, tu), { w: 500, px: P.tpx, color: 'rgba(255,255,255,.9)', align: 'center', alpha: tu });
+  text('ราคาที่เป็นกลาง · โปร่งใส · ตรวจสอบได้', W / 2, P.ty + lerp(20, 0, tu), { w: 500, px: P.tpx, color: 'rgba(255,255,255,.9)', align: 'center', alpha: tu });
   pill('qubequote.com', W / 2, P.py, { align: 'center', px: P.ppx, padX: 48, bg: '#fff', color: BLUE, alpha: seg(t, a + 2.0, a + 2.6) });
   text('ดูประกาศได้ทันที · สมัครฟรี · ไม่ต้องติดตั้งแอป', W / 2, P.ny, { w: 400, px: P.npx, color: 'rgba(255,255,255,.85)', align: 'center', alpha: seg(t, a + 2.5, a + 3.1) });
   ctx.restore();
@@ -401,7 +386,6 @@ function draw(t) {
   else if (t < T.s1b[1]) scene1b(t);
   else if (t < T.s2[1]) scene2(t);
   else if (t < T.s3[1]) scene3(t);
-  else if (t < T.s4[1]) scene4(t);
   else if (t < T.s5[1]) scene5(t);
   else sceneOutro(Math.min(t, DURATION - 1e-3));
 }
