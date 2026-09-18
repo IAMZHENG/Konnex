@@ -3491,19 +3491,13 @@ throttled tab as a hang.
 Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `intro` (~85 s, narrated) is for people who have never heard of it: the old ways (ring, e-mail, LINE each supplier, or not know where to look — all crossed out — and
-never be sure the price you got is the market's), the idea as a diagram (one post, offers coming up to it), what
-each side gets, why it is easy, a scene of the real app inside a phone frame (the feed scrolling, a listing, the sign-in
-page), and the buyer and seller scenes each pair their three points with the page that point
-is about (โพสต์ประกาศ and เปรียบเทียบข้อเสนอ for the buyer; the listing, the quote form and
-ใบเสนอราคา ที่ส่ง for the seller). Those pages are `marketing/shots/*.png` from
-`node tools/build-shots.js`, which is `tools/shots/sample.html`: index.html in an iframe with
-its Supabase client swapped for the test suite's fake and a fake session, drawing invented
-listings, offers and questions — so signed-in pages can be shot without an account and
-nobody real appears (the product pictures are Unsplash photographs in `marketing/photos/`,
-listed in `credits.md` there, with drawn tiles as the fallback; no profile has a photo; the live feed showed the owner's own name and
-face, which is why it is not used). The scene is skipped if the shots are absent, the three principles — เป็นกลาง โปร่งใส ตรวจสอบได้ —
-and the site's own tagline — no phone screens. `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
+the site. `intro` (~25 s, narrated) is for people who have never heard of it, cut to fit a feed: the old
+ways (ring, e-mail, LINE, or not know where to look — crossed out), the idea as a diagram (one
+post, three prices coming up to it), one scene of how it is used — post free, every price on one
+page, and the price you get เป็นกลาง โปร่งใส ตรวจสอบได้ because several sellers bid
+independently — beside the real app on sample data inside a phone frame, and the closing line
+โพสต์ความต้องการ ให้ตลาดเสนอให้คุณ. Every emoji in the clips' headers and cards was replaced by a
+line-icon set in lib.js (`icon(name, …)`, ~20 glyphs drawn with strokes). `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
 offers, chat with the seller — with a stopwatch in the corner that is still under a minute
 when the outro freezes it. `sell` (~60 s) is the seller's side, through the pages as they

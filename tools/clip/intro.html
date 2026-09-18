@@ -17,7 +17,7 @@
 <script src="/tools/clip/lib.js"></script>
 <script>
 /* ============================================================================
- * "QubeQuote คืออะไร" — the introduction, ~55 seconds, drawn frame by frame.
+ * "QubeQuote คืออะไร" — the introduction, ~30 seconds, drawn frame by frame.
  *
  * The other clips are for people who already know the site and want to see
  * a page. This one is for people who have never heard of it: the old way
@@ -39,6 +39,11 @@ const SELLERS = [
   { name: 'บจก. ทีเค เมทัล ซัพพลาย', price: '฿41,200', bg: '#fff1d6' }
 ];
 // [icon name from lib.js ICONS, title, one line under it]
+const HOW_POINTS = [
+  ['doc',    'โพสต์ความต้องการ ฟรี',            'หน่วยงานรัฐ บริษัทเอกชน หรือบุคคลทั่วไป'],
+  ['chart',  'เห็นทุกราคาในหน้าเดียว',           'ราคา เงื่อนไข เอกสารแนบ ของทุกรายเทียบกันได้'],
+  ['shield', 'เป็นกลาง โปร่งใส ตรวจสอบได้',      'ผู้ขายหลายรายเสนอมาโดยอิสระ ย้อนดูได้ทุกเมื่อ']
+];
 const BUYER_POINTS = [
   ['doc',     'โพสต์ความต้องการ ฟรี',            'บอกว่าต้องการอะไร ที่ไหน งบเท่าไร แล้วรอ'],
   ['chart',   'เปรียบเทียบทุกข้อเสนอในหน้าเดียว', 'ราคา เงื่อนไข เอกสารแนบ ของทุกรายอยู่ที่เดียว'],
@@ -59,8 +64,8 @@ const TRUST_POINTS = [
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 8.0, s1: 10.0, s1b: 12.0, s2: 8.5, s3: 8.5, s5: 9.0, outro: 5.5 };
-const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's5', 'outro'];
+const BASE = { hook: 5.0, s1: 6.0, s2: 6.5, outro: 5.0 };
+const ORDER = ['hook', 's1', 's2', 'outro'];
 
 /* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
    Loaded before the first frame; if they are missing the scene is skipped
@@ -68,7 +73,7 @@ const ORDER = ['hook', 's1', 's1b', 's2', 's3', 's5', 'outro'];
 let SHOTS = null;
 async function prepare() {
   try {
-    const names = ['feed', 'detail', 'auth', 'compose', 'compare', 'quote', 'mybids'];
+    const names = ['compose', 'compare'];
     await Promise.all(names.map(n => loadImg('shot_' + n, '/marketing/shots/' + n + '.png')));
     SHOTS = {}; names.forEach(n => { SHOTS[n] = IMG['shot_' + n]; });
   } catch (e) { log('ไม่มีภาพหน้าเว็บ (marketing/shots) — ข้ามฉากหน้าเว็บจริง; รัน node tools/build-shots.js ก่อน'); }
@@ -79,13 +84,13 @@ let T = {}, DURATION = 0;
 /* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
 const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
 const VOICE_SPEED = 1.15;      // the narrator reads slowly; a fifth faster is a natural pace
-const LINE_OF = { hook: 'hook', s1: 'idea', s1b: 'shots', s2: 'buyer', s3: 'seller', s5: 'trust', outro: 'outro' };
+const LINE_OF = { hook: 'hook', s1: 'idea', s2: 'how', outro: 'outro' };
 function applyVoice(m) {
-  const LEAD = .6, TAIL = .7;     // a beat of picture before the voice starts, and after it stops
+  const LEAD = .4, TAIL = .5;     // a beat of picture before the voice starts, and after it stops
   let t = 0;
   for (const k of ORDER) {
     const ln = m && m.lines.find(l => l.id === LINE_OF[k]);
-    const len = k === 's1b' && !SHOTS ? 0 : Math.max(BASE[k], ln ? LEAD + ln.duration + TAIL : 0);
+    const len = Math.max(BASE[k], ln ? LEAD + ln.duration + TAIL : 0);
     T[k] = [t, t + len];
     if (ln) ln.at = t + LEAD;
     t += len;
@@ -118,7 +123,7 @@ function pointsWithPhone(points, beats, t, a, b) {
   const beat = Math.min(2, Math.floor(u * 3)), bu = u * 3 - beat;
   body(() => {
     points.forEach((p, i) => {
-      const cu = seg(t, a + .4 + i * .35, a + 1.0 + i * .35);
+      const cu = seg(t, a + .3 + i * .25, a + .8 + i * .25);
       if (cu <= 0) return;
       const y = 10 + i * 180;
       ctx.save(); ctx.globalAlpha *= cu; ctx.translate(lerp(40, 0, cu), 0);
@@ -196,7 +201,7 @@ function sceneHook(t) {
   const L = b - a, X = a + L * .74;
   const WAYS = [['phone', 'โทรถาม'], ['mail', 'ส่งอีเมล'], ['line', 'ส่งไลน์'], ['where', 'หาที่ไหน?']];
   WAYS.forEach(([kind, label], i) => {
-    const u = seg(t, a + .2 + i * .22, a + .8 + i * .22, outBack);
+    const u = seg(t, a + .15 + i * .14, a + .6 + i * .14, outBack);
     if (u <= 0) return;
     const ring = t > a + 1.0 ? Math.sin((t - a) * 22 + i) * .12 * fadeInOut(t, a + 1.0, X - .2, .3) : 0;
     const crossed = seg(t, X + i * .15, X + .6 + i * .15, u => clamp(u, 0, 1));
@@ -206,7 +211,7 @@ function sceneHook(t) {
     if (F.kind === 'landscape') text(label, px + 100 * P.hs + 24, py + 10, { w: 500, px: P.lpx, color: 'rgba(255,255,255,.85)', alpha: u });
     else text(label, px, py + 100 * P.hs + 44, { w: 500, px: P.lpx, color: 'rgba(255,255,255,.85)', align: 'center', alpha: u });
   });
-  const l1 = seg(t, a + 1.2, a + 1.8), l2 = seg(t, a + 1.6, a + 2.2), l3 = seg(t, a + L * .38, a + L * .38 + .6), l4 = seg(t, X + .7, X + 1.3);
+  const l1 = seg(t, a + .7, a + 1.2), l2 = seg(t, a + 1.0, a + 1.5), l3 = seg(t, a + L * .36, a + L * .36 + .5), l4 = seg(t, X + .5, X + 1.0);
   text('จัดซื้อ ขอใบเสนอราคา สืบราคา', P.tx, P.y1 + lerp(40, 0, l1), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l1 });
   text('ยังไล่ถามทีละเจ้าอยู่ไหม?', P.tx, P.y2 + lerp(40, 0, l2), { w: 700, px: P.px, color: '#fff', align: P.align, alpha: l2 });
   wrapText('หน่วยงานรัฐ บริษัทเอกชน หรือบุคคลทั่วไป — ไม่รู้จะหาผู้ขายจากที่ไหน และราคาที่ได้มา ใช่ราคาตลาดจริงหรือเปล่า?', 500, P.mpx, P.wrap)
@@ -221,10 +226,11 @@ function scene1(t) {
   paper();
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader('icon:bulb', 'QubeQuote| คืออะไร', 'ตลาดกลางที่ผู้ซื้อโพสต์ความต้องการ แล้วผู้ขายเสนอราคามาหา — ลดเวลา ลดความยุ่งยาก ได้ราคาที่เป็นจริง', t, a + .1);
+  stepHeader('icon:bulb', 'QubeQuote| คืออะไร', 'โพสต์ความต้องการครั้งเดียว ผู้ขายหลายรายเสนอราคามาหาคุณ', t, a + .1);
+  const L = b - a;
   body(() => {
     // the buyer's post
-    const pu = seg(t, a + .4, a + 1.0, outBack);
+    const pu = seg(t, a + .3, a + .8, outBack);
     ctx.save(); ctx.globalAlpha *= clamp(pu, 0, 1);
     const px = 90, py = 40 + lerp(-60, 0, clamp(pu, 0, 1)), pw = BODY_W - 180;
     card(px, py, pw, 230, 28);
@@ -239,14 +245,14 @@ function scene1(t) {
     const sy = 1120;
     SELLERS.forEach((s, i) => {
       const sx = 150 + i * 280;
-      const su = seg(t, a + 1.2 + i * .2, a + 1.7 + i * .2, outBack);
+      const su = seg(t, a + .8 + i * .15, a + 1.2 + i * .15, outBack);
       if (su <= 0) return;
       ctx.save(); ctx.globalAlpha *= clamp(su, 0, 1); ctx.translate(sx, sy); ctx.scale(su, su);
       avatar(0, 0, 54, s.name.replace(/^(บจก\. |ร้าน)/, '').charAt(0), s.bg, INK);
       ctx.restore();
       wrapText(s.name, 500, 22, 260).forEach((ln, k) => text(ln, sx, sy + 90 + k * 28, { w: 500, px: 22, color: INK_SOFT, align: 'center', alpha: su }));
       // the offer travels up the dashed line to sit under the post
-      const ou = seg(t, a + 2.6 + i * .7, a + 3.6 + i * .7, inOutCubic);
+      const ou = seg(t, a + L * (.3 + i * .12), a + L * (.3 + i * .12) + .8, inOutCubic);
       if (ou <= 0) return;
       ctx.save(); ctx.strokeStyle = '#c9d3ea'; ctx.lineWidth = 3; ctx.setLineDash([12, 12]);
       ctx.beginPath(); ctx.moveTo(sx, sy - 60); ctx.lineTo(sx, 300 + i * 0 + 240); ctx.stroke(); ctx.restore();
@@ -259,7 +265,7 @@ function scene1(t) {
       text(s.price, ox + ow - 26, oy + 62, { w: 700, px: 34, color: ou > .9 ? INK : BLUE, align: 'right' });
       ctx.restore();
     });
-    const du = seg(t, a + 6.2, a + 6.8, outBack);
+    const du = seg(t, a + L * .72, a + L * .72 + .5, outBack);
     if (du > 0) {
       ctx.save(); ctx.globalAlpha *= clamp(du, 0, 1); ctx.translate(BODY_W / 2, 900); ctx.scale(du, du);
       ctx.fillStyle = BLUE; rr(-400, -60, 800, 120, 36); ctx.fill();
@@ -279,74 +285,15 @@ function screen(img, box, scroll, alpha) {
   ctx.drawImage(img, 0, sy, img.width, sh, box.x, box.y, box.w, box.h);
   ctx.restore();
 }
-/* The real site, as it is today: the feed, a listing, the sign-in page. */
-function scene1b(t) {
-  const [a, b] = T.s1b;
-  paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
-  topBrand(false);
-  stepHeader('icon:device', 'หน้าเว็บจริง| เป็นแบบนี้', 'ภาพจากเว็บจริง — ฟีดประกาศ หน้ารายละเอียด และหน้าเข้าสู่ระบบ', t, a + .1);
-  const pu = seg(t, a + .3, a + 1.0);
-  const L = b - a, u = (t - a) / L;                 // beats as fractions of the scene, so a stretched scene keeps its shape
-  const B = [0, .40, .72, 1];
-  body(() => {
-    ctx.globalAlpha *= pu;
-    const box = phone(30, 30 + lerp(120, 0, pu), 800, 1180, { blank: true });
-    // feed: scroll down through the listings
-    if (u < B[1] + .06) {
-      const k = clamp((u - .05) / (B[1] - .12), 0, 1);
-      screen(SHOTS.feed, box, inOutCubic(k) * 1900, 1 - clamp((u - B[1]) / .06, 0, 1));
-    }
-    // listing: slides in, scrolls a little
-    if (u >= B[1] && u < B[2] + .06) {
-      const k = clamp((u - B[1]) / (B[2] - B[1]), 0, 1);
-      ctx.save(); ctx.translate(lerp(box.w, 0, outCubic(clamp(k * 4, 0, 1))), 0);
-      screen(SHOTS.detail, box, inOutCubic(clamp((k - .3) / .7, 0, 1)) * 900, 1 - clamp((u - B[2]) / .06, 0, 1));
-      ctx.restore();
-    }
-    // sign-in: fades in
-    if (u >= B[2]) {
-      const k = clamp((u - B[2]) / (1 - B[2]), 0, 1);
-      screen(SHOTS.auth, box, 330, clamp(k * 5, 0, 1));
-    }
-    const cap = u < B[1] ? '👀 ฟีดประกาศ — ดูได้โดยไม่ต้องสมัคร' : u < B[2] ? '📄 หน้ารายละเอียด — สเปก ไฟล์แนบ ถาม-ตอบ' : '🔑 เข้าสู่ระบบด้วย Google หรือ LINE';
-    const cu = Math.min(seg(t, a + .8, a + 1.3), 1);
-    ctx.save(); ctx.globalAlpha *= cu; ctx.translate(box.x + box.w / 2, box.y + box.h - 70);
-    pill(cap, 0, -36, { align: 'center', px: 27, bg: INK, color: '#fff' });
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
+/* How it is used, in one scene: post, see every price, trust the price you get. */
 function scene2(t) {
   const [a, b] = T.s2;
   paper();
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader('icon:cart', 'สำหรับ| ผู้ซื้อ', 'หน่วยงานรัฐ บริษัทเอกชน ร้านค้า หรือบุคคลทั่วไป — ใครก็ตามที่ต้องหาของ หาผู้รับเหมา', t, a + .1);
-  if (SHOTS) pointsWithPhone(BUYER_POINTS, [{ img: 'compose', from: 0, to: 700 }, { img: 'compare', from: 2500, to: 3100 }, { img: 'compare', from: 3300, to: 3900 }], t, a, b);
-  else pointList(BUYER_POINTS, t, a);
-  ctx.restore();
-}
-
-function scene3(t) {
-  const [a, b] = T.s3;
-  paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
-  topBrand(false);
-  stepHeader('icon:factory', 'สำหรับ| ผู้ขาย', 'ผู้ผลิต ผู้จัดจำหน่าย ผู้รับเหมา ช่าง และผู้ให้บริการ', t, a + .1);
-  if (SHOTS) pointsWithPhone(SELLER_POINTS, [{ img: 'detail', from: 0, to: 700 }, { img: 'quote', from: 900, to: 1400 }, { img: 'mybids', from: 0, to: 600 }], t, a, b);
-  else pointList(SELLER_POINTS, t, a);
-  ctx.restore();
-}
-
-function scene5(t) {
-  const [a, b] = T.s5;
-  paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
-  topBrand(false);
-  stepHeader('icon:shield', 'ราคาที่คุณได้| เป็นกลาง โปร่งใส ตรวจสอบได้', 'เพราะมาจากผู้ขายหลายรายที่แข่งกันเสนอ ไม่ใช่จากใครคนเดียว', t, a + .1);
-  pointList(TRUST_POINTS, t, a);
+  stepHeader('icon:chart', 'ใช้งานจริง| เป็นแบบนี้', 'ราคาที่ได้ เป็นกลาง โปร่งใส ตรวจสอบได้ — เพราะมาจากผู้ขายหลายรายที่แข่งกันเสนอ', t, a + .1);
+  if (SHOTS) pointsWithPhone(HOW_POINTS, [{ img: 'compose', from: 0, to: 600 }, { img: 'compare', from: 2500, to: 3000 }, { img: 'compare', from: 3100, to: 3700 }], t, a, b);
+  else pointList(HOW_POINTS, t, a);
   ctx.restore();
 }
 
@@ -367,10 +314,10 @@ function sceneOutro(t) {
   ctx.save(); ctx.globalAlpha *= wu;
   wordmark(W / 2 - wordmarkWidth(P.wpx) / 2, P.wy, P.wpx, true);
   ctx.restore();
-  const su = seg(t, a + 1.1, a + 1.7);
+  const su = seg(t, a + .8, a + 1.3);
   // the site's own tagline
   text('โพสต์ความต้องการ ให้ตลาดเสนอให้คุณ', W / 2, P.sy + lerp(30, 0, su), { w: 700, px: P.spx * .92, color: '#fff', align: 'center', alpha: su });
-  const tu = seg(t, a + 1.5, a + 2.1);
+  const tu = seg(t, a + 1.2, a + 1.7);
   text('ราคาที่เป็นกลาง · โปร่งใส · ตรวจสอบได้', W / 2, P.ty + lerp(20, 0, tu), { w: 500, px: P.tpx, color: 'rgba(255,255,255,.9)', align: 'center', alpha: tu });
   pill('qubequote.com', W / 2, P.py, { align: 'center', px: P.ppx, padX: 48, bg: '#fff', color: BLUE, alpha: seg(t, a + 2.0, a + 2.6) });
   text('ดูประกาศได้ทันที · สมัครฟรี · ไม่ต้องติดตั้งแอป', W / 2, P.ny, { w: 400, px: P.npx, color: 'rgba(255,255,255,.85)', align: 'center', alpha: seg(t, a + 2.5, a + 3.1) });
@@ -383,10 +330,7 @@ function draw(t) {
   ctx.clearRect(0, 0, W, H);
   if (t < T.hook[1]) sceneHook(t);
   else if (t < T.s1[1]) scene1(t);
-  else if (t < T.s1b[1]) scene1b(t);
   else if (t < T.s2[1]) scene2(t);
-  else if (t < T.s3[1]) scene3(t);
-  else if (t < T.s5[1]) scene5(t);
   else sceneOutro(Math.min(t, DURATION - 1e-3));
 }
 
