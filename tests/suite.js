@@ -1861,6 +1861,38 @@
     });
   });
 
+  /* The banner at the top of the feed, drawn to the owner's mock-up: three
+     lines that say what a buyer does here, and one button that does it. */
+  describe('ป้ายบนฟีด — ลงความต้องการซื้อ รับข้อเสนอ เปรียบเทียบ', function () {
+    it('sits above the feed header with the three lines and the button', function (w) {
+      var hero = w.document.getElementById('feedHero');
+      expect(!!hero).toBe(true);
+      var lines = Array.prototype.map.call(hero.querySelectorAll('.fh-line'), function (l) { return l.textContent.trim(); });
+      expect(lines).toEqual(['ลงความต้องการซื้อ', 'รับข้อเสนอจากผู้ขาย', 'เปรียบเทียบก่อนตัดสินใจ']);
+      expect(hero.querySelector('.fh-btn').textContent.trim()).toBe('เริ่มใช้งาน');
+      var header = w.document.querySelector('#page-feed .feed-header');
+      expect(hero.compareDocumentPosition(header) & 4).toBeTruthy('the banner comes before the page header');
+    });
+    it('sends a visitor to sign up, and remembers the feed', function (w) {
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      w.kxSession = null; w.kxAuthChecked = true;
+      try {
+        w.navigateTo('page-feed', true);
+        w.kxHeroStart();
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-auth');
+        expect(w.sessionStorage.getItem('kx.afterLogin')).toBe('#page-feed');
+      } finally { w.kxSession = had; try { w.sessionStorage.removeItem('kx.afterLogin'); } catch (e) {} if (was) w.navigateTo(was, true); }
+    });
+    it('takes a member straight to โพสต์ประกาศ', function (w) {
+      var had = w.kxSession, was = (w.document.querySelector('.app-page.active') || {}).id;
+      signIn(w); w.kxAuthChecked = true;
+      try {
+        w.kxHeroStart();
+        expect((w.document.querySelector('.app-page.active') || {}).id).toBe('page-create-post');
+      } finally { w.kxSession = had; if (was) w.navigateTo(was, true); }
+    });
+  });
+
   /* The dropdown under the avatar had แก้ไขโปรไฟล์, ตั้งค่า and ออกจากระบบ —
      and no way to simply look at your own profile, the page the picture
      stands for. The owner asked for it (2026-09-14); it goes first. */

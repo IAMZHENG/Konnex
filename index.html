@@ -7254,6 +7254,38 @@ html, body{
    later rule that sizes the description would otherwise put it back. */
 #page-company-profile .kx-wall .post-chips{ display:none !important; }
 #page-company-profile .kx-wall .post-desc{ display:none !important; }
+/* ---- ป้ายบนฟีด ---- */
+.feed-hero{
+  position:relative; overflow:hidden; display:flex; align-items:center;
+  margin:0 0 18px; padding:26px 28px; border-radius:18px; min-height:196px;
+  background:linear-gradient(112deg,#0a1f52 0%,#0b2f80 48%,#0a4dd6 100%);
+  box-shadow:0 14px 34px rgba(10,40,110,.22);
+  color:#fff;
+}
+.feed-hero::before{
+  /* a soft light from the top-right, where the head works */
+  content:""; position:absolute; right:-60px; top:-80px; width:360px; height:360px; border-radius:50%;
+  background:radial-gradient(circle, rgba(120,170,255,.35) 0%, rgba(120,170,255,0) 65%);
+  pointer-events:none;
+}
+.feed-hero .fh-text{ position:relative; z-index:1; max-width:62%; }
+.feed-hero .fh-line{ font-size:23px; font-weight:700; line-height:1.55; letter-spacing:.1px; text-shadow:0 1px 2px rgba(0,0,0,.25); }
+.feed-hero .fh-btn{
+  margin-top:16px; padding:12px 34px; border:0; border-radius:999px; cursor:pointer;
+  background:#1a6bff; color:#fff; font-size:17px; font-weight:700; line-height:1.2; font-family:inherit;
+  box-shadow:0 8px 20px rgba(0,60,180,.45), inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .12s ease, background .15s ease;
+}
+.feed-hero .fh-btn:hover{ background:#2f7bff; transform:translateY(-1px); }
+.feed-hero .fh-btn:active{ transform:translateY(0); }
+.feed-hero .fh-visual{ position:absolute; right:0; top:0; bottom:0; width:52%; pointer-events:none; }
+.feed-hero .fh-art{ position:absolute; right:-6px; bottom:-8px; height:112%; width:auto; max-width:none; }
+@media (max-width:640px){
+  .feed-hero{ padding:22px 20px; min-height:170px; }
+  .feed-hero .fh-text{ max-width:80%; }
+  .feed-hero .fh-line{ font-size:19px; }
+  .feed-hero .fh-visual{ width:56%; opacity:.4; right:-30px; }
+}
 /* ประกาศที่หมดเขตแล้ว — ยังอยู่บนฟีด แต่บอกให้รู้ */
 .post-card.pc-expired{opacity:.72}
 .post-card.pc-expired:hover{opacity:1}
@@ -7350,6 +7382,53 @@ html, body{
 
     <!-- MAIN FEED -->
     <div>
+      <!-- The pitch, in three lines, drawn to the owner's mock-up: what a buyer
+           does here and why. Shown to everyone; the button reads the viewer —
+           a visitor is taken to sign up, a member straight to the composer. -->
+      <section class="feed-hero" id="feedHero" aria-label="เริ่มใช้งาน QubeQuote">
+        <div class="fh-text">
+          <div class="fh-line">ลงความต้องการซื้อ</div>
+          <div class="fh-line">รับข้อเสนอจากผู้ขาย</div>
+          <div class="fh-line">เปรียบเทียบก่อนตัดสินใจ</div>
+          <button type="button" class="fh-btn" onclick="kxHeroStart()">เริ่มใช้งาน</button>
+        </div>
+        <div class="fh-visual" aria-hidden="true">
+          <svg class="fh-art" viewBox="0 0 420 220" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="fhArm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8d6f5"/><stop offset="1" stop-color="#6f86bf"/></linearGradient>
+              <linearGradient id="fhHead" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9efff"/><stop offset="1" stop-color="#8fa5db"/></linearGradient>
+              <linearGradient id="fhBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".95"/><stop offset="1" stop-color="#7fb4ff" stop-opacity=".15"/></linearGradient>
+              <radialGradient id="fhGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset=".35" stop-color="#8ec5ff" stop-opacity=".45"/><stop offset="1" stop-color="#8ec5ff" stop-opacity="0"/></radialGradient>
+              <linearGradient id="fhPlate" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1b3f8f"/><stop offset="1" stop-color="#0f2a63"/></linearGradient>
+            </defs>
+            <!-- gantry beam and column -->
+            <rect x="150" y="18" width="270" height="22" rx="6" fill="url(#fhArm)" opacity=".9"/>
+            <rect x="372" y="18" width="30" height="150" rx="6" fill="url(#fhArm)" opacity=".75"/>
+            <rect x="160" y="26" width="250" height="4" rx="2" fill="#ffffff" opacity=".35"/>
+            <!-- carriage + head -->
+            <rect x="228" y="12" width="64" height="44" rx="8" fill="url(#fhHead)"/>
+            <rect x="244" y="52" width="32" height="46" rx="6" fill="url(#fhHead)"/>
+            <path d="M246 98 h28 l-8 22 h-12 z" fill="#dfe8ff"/>
+            <circle cx="260" cy="34" r="6" fill="#0056fd" opacity=".8"/>
+            <!-- beam -->
+            <path d="M257 120 L263 120 L266 178 L254 178 Z" fill="url(#fhBeam)"/>
+            <!-- plate -->
+            <path d="M80 176 L330 176 L360 206 L50 206 Z" fill="url(#fhPlate)" opacity=".95"/>
+            <path d="M80 176 L330 176 L360 206 L50 206 Z" fill="none" stroke="#9ab6ff" stroke-opacity=".35"/>
+            <path d="M118 190 L300 190" stroke="#9ab6ff" stroke-opacity=".25" stroke-dasharray="14 10"/>
+            <!-- glow + sparks -->
+            <ellipse cx="260" cy="178" rx="70" ry="26" fill="url(#fhGlow)"/>
+            <g fill="#ffffff">
+              <circle cx="238" cy="160" r="1.8"/><circle cx="286" cy="156" r="1.6"/><circle cx="222" cy="170" r="1.3"/>
+              <circle cx="298" cy="168" r="1.4"/><circle cx="248" cy="148" r="1.2"/><circle cx="276" cy="146" r="1.1"/>
+              <circle cx="212" cy="184" r="1.2"/><circle cx="312" cy="182" r="1.3"/>
+            </g>
+            <g stroke="#cfe3ff" stroke-width="1.4" stroke-linecap="round" opacity=".8">
+              <path d="M240 168 l-14 -12"/><path d="M282 166 l16 -13"/><path d="M252 162 l-6 -18"/><path d="M270 162 l7 -17"/>
+            </g>
+          </svg>
+        </div>
+      </section>
       <div class="feed-header">
         <div>
           <h1>ค้นหางานและบริการ</h1>
@@ -13571,6 +13650,18 @@ var currentPage = null;
   if(document.readyState!=='loading') window.kxApplyIcons(document.body);
   else document.addEventListener('DOMContentLoaded', function(){ window.kxApplyIcons(document.body); });
 })();
+/* เริ่มใช้งาน on the feed's banner. A visitor is sent to sign up (and
+   brought back here after); a member goes straight to โพสต์ประกาศ, which is
+   what the three lines above the button promise. */
+window.kxHeroStart = function(){
+  if(!window.kxSession){
+    if(window.kxRememberReturn) kxRememberReturn();
+    navigateTo('page-auth');
+    if(typeof authTab === 'function') authTab('register');
+    return;
+  }
+  newPost();
+};
 function newPost(){
   if(window.cpNewPost) window.cpNewPost();
   else { var h=document.getElementById('cpHeading'); if(h) h.textContent='โพสต์ประกาศ'; }
