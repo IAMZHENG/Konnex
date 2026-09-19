@@ -7280,6 +7280,12 @@ html, body{
 .feed-hero .fh-btn:active{ transform:translateY(0); }
 .feed-hero .fh-visual{ position:absolute; right:0; top:0; bottom:0; width:52%; pointer-events:none; }
 .feed-hero .fh-art{ position:absolute; right:-6px; bottom:-8px; height:112%; width:auto; max-width:none; }
+/* the photograph: bleeds to the right edge, fades into the ground on the left so the text keeps its contrast */
+.feed-hero .fh-photo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:60% 70%; display:none;
+  -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 35%, #000 70%); mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.55) 35%, #000 70%); }
+.feed-hero .fh-visual.has-photo .fh-photo{ display:block; }
+.feed-hero .fh-visual.has-photo .fh-art{ display:none; }
+.feed-hero .fh-visual.has-photo{ width:58%; }
 @media (max-width:640px){
   .feed-hero{ padding:22px 20px; min-height:170px; }
   .feed-hero .fh-text{ max-width:80%; }
@@ -7393,6 +7399,10 @@ html, body{
           <button type="button" class="fh-btn" onclick="kxHeroStart()">เริ่มใช้งาน</button>
         </div>
         <div class="fh-visual" aria-hidden="true">
+          <!-- assets/img/feed-hero.jpg: a laser head at work, from Unsplash
+               (photo KshEaH06rV8, Unsplash licence — free to use, no attribution
+               required). The drawing below stands in whenever the file fails. -->
+          <img class="fh-photo" src="assets/img/feed-hero.jpg" alt="" onload="this.parentNode.classList.add('has-photo')" onerror="this.remove()">
           <svg class="fh-art" viewBox="0 0 420 220" aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="fhArm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8d6f5"/><stop offset="1" stop-color="#6f86bf"/></linearGradient>
@@ -16036,6 +16046,7 @@ body.kx-auth .kx-burger{ display:none !important; }
    but a post here is mostly a title, a row of numbers and pictures — the
    pictures were the thing being squeezed. The outer rail-plus-content frame
    widens with it below so the column is not sitting in two wide margins. */
+#page-feed .feed-hero,
 #page-feed .feed-list,
 #page-feed .feed-header,
 #page-feed .filter-tabs,
@@ -16049,6 +16060,7 @@ body.kx-auth .kx-burger{ display:none !important; }
 
 @media (max-width: 1024px){
   /* the column is already the screen width here */
+  #page-feed .feed-hero,
   #page-feed .feed-list,
   #page-feed .feed-header,
   #page-feed .filter-tabs,
