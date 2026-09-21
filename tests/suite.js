@@ -1869,7 +1869,7 @@
       expect(!!hero).toBe(true);
       var lines = Array.prototype.map.call(hero.querySelectorAll('.fh-line'), function (l) { return l.textContent.trim(); });
       expect(lines).toEqual(['ลงความต้องการซื้อ', 'รับข้อเสนอจากผู้ขาย', 'เปรียบเทียบก่อนตัดสินใจ']);
-      expect(hero.querySelector('.fh-btn').textContent.trim()).toBe('เริ่มใช้งาน');
+      expect(hero.querySelector('.fh-btn').textContent.trim()).toBe('เริ่มใช้งานฟรี');
       var header = w.document.querySelector('#page-feed .feed-header');
       expect(hero.compareDocumentPosition(header) & 4).toBeTruthy('the banner comes before the page header');
     });
