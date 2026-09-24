@@ -259,13 +259,18 @@ const ICONS = {
                  c.beginPath(); c.moveTo(-16, 0); c.lineTo(-6, 10); c.lineTo(16, -12); c.stroke(); },
   tag(c) { c.moveTo(-44, -20); c.lineTo(-44, -44); c.lineTo(-20, -44); c.lineTo(44, 20); c.lineTo(20, 44); c.closePath(); c.stroke();
            c.beginPath(); c.arc(-28, -28, 5, 0, 7); c.stroke(); },
-  pricetag(c) { c.moveTo(-40, -16); c.lineTo(-40, -42); c.lineTo(-14, -42); c.lineTo(44, 16); c.lineTo(18, 42); c.closePath(); c.stroke();
-             c.beginPath(); c.arc(-26, -28, 5, 0, 7); c.stroke();
-             c.beginPath(); c.moveTo(-2, 6); c.quadraticCurveTo(8, -4, 16, 4); c.quadraticCurveTo(22, 10, 12, 18); c.stroke();
-             c.beginPath(); c.arc(8, 30, 3.5, 0, 7); c.stroke(); },
-  findbuyer(c) { c.arc(-8, -10, 34, 0, 7); c.stroke(); c.beginPath(); c.moveTo(18, 16); c.lineTo(46, 44); c.stroke();
-             c.beginPath(); c.arc(-8, -20, 10, 0, 7); c.stroke();
-             c.beginPath(); c.moveTo(-24, 6); c.quadraticCurveTo(-8, -4, 8, 6); c.stroke(); },
+  /* A basket of shopping with a question over it: is this the right price? */
+  cartq(c) { c.moveTo(-48, -20); c.lineTo(-34, -20); c.lineTo(-22, 22); c.lineTo(26, 22); c.lineTo(36, -6); c.lineTo(-28, -6); c.stroke();
+             c.beginPath(); c.arc(-16, 38, 7, 0, 7); c.stroke(); c.beginPath(); c.arc(20, 38, 7, 0, 7); c.stroke();
+             // the question mark, drawn rather than set, so it takes the icon's colour and weight
+             c.beginPath(); c.arc(34, -40, 13, Math.PI * .95, Math.PI * 2.15); c.stroke();
+             c.beginPath(); c.moveTo(37, -28); c.lineTo(37, -23); c.stroke();
+             c.beginPath(); c.arc(37, -13, 3.5, 0, 7); c.stroke(); },
+  /* An arrow in the centre of a target: the customers who want exactly this. */
+  target(c) { c.arc(0, 0, 44, 0, 7); c.stroke(); c.beginPath(); c.arc(0, 0, 26, 0, 7); c.stroke();
+             c.beginPath(); c.arc(0, 0, 5, 0, 7); c.stroke();
+             c.beginPath(); c.moveTo(20, -20); c.lineTo(52, -52); c.stroke();
+             c.beginPath(); c.moveTo(52, -52); c.lineTo(38, -50); c.moveTo(52, -52); c.lineTo(50, -38); c.stroke(); },
   handshake(c) { c.moveTo(-48, -10); c.lineTo(-24, -26); c.lineTo(2, -10); c.lineTo(20, -24); c.lineTo(48, -8); c.stroke();
                  c.beginPath(); c.moveTo(-48, -10); c.lineTo(-20, 22); c.lineTo(-6, 12); c.moveTo(-6, 12); c.lineTo(8, 24); c.lineTo(20, 14); c.moveTo(20, 14); c.lineTo(48, -8); c.stroke(); }
 };

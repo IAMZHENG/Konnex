@@ -197,12 +197,12 @@ function sceneHook(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
   topBrand(true);
   let P;
-  if (F.kind === 'portrait')    P = { cy: 800, ir: 140, chip: 46, px: 48, spx: 32, cw: 480, gap: 40, top: 320 };
-  else if (F.kind === 'square') P = { cy: 660, ir: 120, chip: 40, px: 42, spx: 28, cw: 460, gap: 40, top: 290 };
-  else                          P = { cy: H / 2 + 80, ir: 120, chip: 40, px: 42, spx: 28, cw: 520, gap: 60, top: 250 };
+  if (F.kind === 'portrait')    P = { cy: 810, ir: 150, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 310 };
+  else if (F.kind === 'square') P = { cy: 670, ir: 128, chip: 34, px: 42, spx: 28, cw: 460, gap: 40, top: 280 };
+  else                          P = { cy: H / 2 + 90, ir: 128, chip: 34, px: 42, spx: 28, cw: 520, gap: 60, top: 240 };
   const SIDES = [
-    { chip: 'สำหรับผู้ซื้อ', icon: 'pricetag',  head: 'ซื้อของชิ้นหนึ่ง',       head2: 'แน่ใจได้ยังไง ว่าได้ราคาที่เหมาะสม?', sub: 'ราคาเดียวที่ได้มา เทียบกับอะไรไม่ได้เลย' },
-    { chip: 'สำหรับผู้ขาย', icon: 'findbuyer', head: 'มีของพร้อมขาย',          head2: 'แต่จะไปหา ลูกค้าจากที่ไหน?',        sub: 'อยากเจอคนที่ต้องการ ของคุณจริง ๆ' }
+    { chip: 'สำหรับผู้ซื้อ', icon: 'cartq',  head: 'ซื้อของชิ้นหนึ่ง',       head2: 'แน่ใจได้ยังไง ว่าได้ราคาที่เหมาะสม?', sub: 'ราคาเดียวที่ได้มา เทียบกับอะไรไม่ได้เลย' },
+    { chip: 'สำหรับผู้ขาย', icon: 'target', head: 'มีของพร้อมขาย',          head2: 'แต่จะไปหา ลูกค้าจากที่ไหน?',        sub: 'อยากเจอคนที่ต้องการ ของคุณพอดี' }
   ];
   SIDES.forEach((side, i) => {
     const u = seg(t, a + .2 + i * .35, a + .9 + i * .35, outBack);
@@ -214,7 +214,7 @@ function sceneHook(t) {
     const inner = P.cw - 56;
     const head2 = wrapText(side.head2, 700, P.px, inner);
     const sub = wrapText(side.sub, 400, P.spx, inner);
-    const chipH = P.chip * 1.5;
+    const chipH = P.chip * 1.75;
     const H1 = P.px * 1.22, H2 = P.spx * 1.45;
     const contentH = chipH + 26 + P.ir + 26 + H1 + head2.length * H1 + 14 + sub.length * H2;
     const ch = contentH + 56;
@@ -224,9 +224,9 @@ function sceneHook(t) {
     ctx.fillStyle = 'rgba(255,255,255,.10)'; rr(-P.cw / 2, -ch / 2, P.cw, ch, 40); ctx.fill();
     ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 3; rr(-P.cw / 2, -ch / 2, P.cw, ch, 40); ctx.stroke();
     let y = -ch / 2 + 28;
-    pill(side.chip, 0, y, { align: 'center', px: P.chip * .62, h: chipH, padX: 26, bg: 'rgba(255,255,255,.2)', color: '#fff', border: 'rgba(255,255,255,.6)' });
+    pill(side.chip, 0, y, { align: 'center', px: P.chip, h: chipH, padX: 34, bg: '#fff', color: BLUE });
     y += chipH + 26;
-    icon(side.icon, 0, y + P.ir / 2, P.ir, '#fff', 8);
+    icon(side.icon, 0, y + P.ir / 2, P.ir, '#fff', 9);
     y += P.ir + 26 + P.px * .85;
     text(side.head, 0, y, { w: 700, px: P.px, color: 'rgba(255,255,255,.88)', align: 'center' });
     head2.forEach((ln, k) => text(ln, 0, y + H1 * (k + 1), { w: 700, px: P.px, color: '#fff', align: 'center' }));
