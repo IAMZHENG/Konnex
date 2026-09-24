@@ -259,6 +259,13 @@ const ICONS = {
                  c.beginPath(); c.moveTo(-16, 0); c.lineTo(-6, 10); c.lineTo(16, -12); c.stroke(); },
   tag(c) { c.moveTo(-44, -20); c.lineTo(-44, -44); c.lineTo(-20, -44); c.lineTo(44, 20); c.lineTo(20, 44); c.closePath(); c.stroke();
            c.beginPath(); c.arc(-28, -28, 5, 0, 7); c.stroke(); },
+  pricetag(c) { c.moveTo(-40, -16); c.lineTo(-40, -42); c.lineTo(-14, -42); c.lineTo(44, 16); c.lineTo(18, 42); c.closePath(); c.stroke();
+             c.beginPath(); c.arc(-26, -28, 5, 0, 7); c.stroke();
+             c.beginPath(); c.moveTo(-2, 6); c.quadraticCurveTo(8, -4, 16, 4); c.quadraticCurveTo(22, 10, 12, 18); c.stroke();
+             c.beginPath(); c.arc(8, 30, 3.5, 0, 7); c.stroke(); },
+  findbuyer(c) { c.arc(-8, -10, 34, 0, 7); c.stroke(); c.beginPath(); c.moveTo(18, 16); c.lineTo(46, 44); c.stroke();
+             c.beginPath(); c.arc(-8, -20, 10, 0, 7); c.stroke();
+             c.beginPath(); c.moveTo(-24, 6); c.quadraticCurveTo(-8, -4, 8, 6); c.stroke(); },
   handshake(c) { c.moveTo(-48, -10); c.lineTo(-24, -26); c.lineTo(2, -10); c.lineTo(20, -24); c.lineTo(48, -8); c.stroke();
                  c.beginPath(); c.moveTo(-48, -10); c.lineTo(-20, 22); c.lineTo(-6, 12); c.moveTo(-6, 12); c.lineTo(8, 24); c.lineTo(20, 14); c.moveTo(20, 14); c.lineTo(48, -8); c.stroke(); }
 };

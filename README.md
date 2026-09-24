@@ -3491,13 +3491,13 @@ throttled tab as a hang.
 Four short clips, each in three framings (9:16 for Reels/TikTok/LINE, 16:9 for YouTube,
 1:1 for the Facebook feed), rendered by `node tools/build-clip.js <clip> [framing|all]`
 into `marketing/` — which is git-ignored and asset-ignored, so nothing here ships with
-the site. `intro` (~25 s, narrated) is for people who have never heard of it, cut to fit a feed: the old
-ways (ring, e-mail, LINE, or not know where to look — crossed out), the idea as a diagram (one
-post, three prices coming up to it), one scene of how it is used — post free, every price on one
-page, and the price you get เป็นกลาง โปร่งใส ตรวจสอบได้ because several sellers bid
-independently — beside the real app on sample data inside a phone frame, and the closing line
-โพสต์ความต้องการ ให้ตลาดเสนอให้คุณ. Every emoji in the clips' headers and cards was replaced by a
-line-icon set in lib.js (`icon(name, …)`, ~20 glyphs drawn with strokes). `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
+the site. `intro` (~29 s, narrated) is for people who have never heard of it, cut to fit a feed: both sides
+of the market side by side (the buyer who cannot tell whether one price is a fair one, the seller
+who cannot find the customers who want what they sell), the idea as a diagram (one post, three
+prices coming up to it), the phone walking five real pages — feed, listing, โพสต์ประกาศ,
+เปรียบเทียบข้อเสนอ, ใบเสนอราคาที่ส่ง — beside three points, and the closing line โพสต์ความต้องการ
+ให้ตลาดเสนอให้คุณ. Scenes cross-fade rather than cut. Every emoji in the clips' headers and cards
+was replaced by a line-icon set in lib.js (`icon(name, …)`, ~20 glyphs drawn with strokes). `4-steps` (~34 s) sells the idea: post, wait, compare, decide. `start` (~60 s)
 shows the hands: open qubequote.com, sign in with one tap on LINE, post a listing, get
 offers, chat with the seller — with a stopwatch in the corner that is still under a minute
 when the outro freezes it. `sell` (~60 s) is the seller's side, through the pages as they
