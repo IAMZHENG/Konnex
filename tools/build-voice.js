@@ -45,15 +45,25 @@ const old = fs.existsSync(manifestFile) ? JSON.parse(fs.readFileSync(manifestFil
 const LANG = flags.lang || 'th';
 const LIMIT = 190;
 
-/* Phrases of at most LIMIT characters, broken at the spaces Thai uses
-   between clauses — never inside a word. */
+/* Phrases of at most LIMIT characters, broken at the spaces Thai uses between
+   clauses — never inside a word. A '|' in the line is the author asking for a
+   breath: the phrases on either side are separate requests, and the gap after
+   the one before it is PAUSE rather than the seam between two halves of a
+   sentence the service split for length. The service reads a line straight
+   through whatever its punctuation, so a pause has to be made here. */
+const PAUSE = .42, SEAM = .12;
 function phrases(text) {
-  const out = []; let cur = '';
-  for (const w of text.split(/\s+/).filter(Boolean)) {
-    const test = cur ? cur + ' ' + w : w;
-    if (test.length <= LIMIT || !cur) cur = test; else { out.push(cur); cur = w; }
-  }
-  if (cur) out.push(cur);
+  const out = [];
+  const segments = text.split('|').map(s => s.trim()).filter(Boolean);
+  segments.forEach((seg, si) => {
+    const pieces = []; let cur = '';
+    for (const w of seg.split(/\s+/).filter(Boolean)) {
+      const test = cur ? cur + ' ' + w : w;
+      if (test.length <= LIMIT || !cur) cur = test; else { pieces.push(cur); cur = w; }
+    }
+    if (cur) pieces.push(cur);
+    pieces.forEach((p, i) => out.push({ text: p, gap: i < pieces.length - 1 ? SEAM : (si < segments.length - 1 ? PAUSE : 0) }));
+  });
   return out;
 }
 
@@ -109,15 +119,18 @@ function mp3Duration(b) {
     process.stdout.write('  ' + ln.id + ': ' + parts.length + ' ท่อน… ');
     const files = [];
     for (let k = 0; k < parts.length; k++) {
-      const mp3 = await fetchTts(parts[k]);
+      const mp3 = await fetchTts(parts[k].text);
       const file = ln.id + (parts.length > 1 ? '-' + (k + 1) : '') + '.mp3';
       fs.writeFileSync(path.join(OUT, file), mp3);
-      files.push({ file, duration: mp3Duration(mp3), text: parts[k] });
+      files.push({ file, duration: mp3Duration(mp3), gap: parts[k].gap, text: parts[k].text });
       await new Promise(r => setTimeout(r, 400));   // be a polite client
     }
-    const duration = files.reduce((s, f) => s + f.duration, 0);
-    out.lines.push({ id: ln.id, at: ln.at, files, duration, hash, text: ln.text });
-    console.log(duration.toFixed(1) + ' วิ');
+    /* `audio` is speech only and stretches with VOICE_SPEED; `gaps` is silence
+       and does not, so the clip keeps them apart when it sizes a scene. */
+    const audio = files.reduce((s, f) => s + f.duration, 0);
+    const gaps = files.reduce((s, f) => s + (f.gap || 0), 0);
+    out.lines.push({ id: ln.id, at: ln.at, files, audio, gaps, duration: audio + gaps, hash, text: ln.text });
+    console.log(files.length + ' ท่อน ' + (audio + gaps).toFixed(1) + ' วิ');
   }
   fs.writeFileSync(manifestFile, JSON.stringify(out, null, 2));
   console.log('เขียน ' + path.relative(ROOT, manifestFile));

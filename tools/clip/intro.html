@@ -64,7 +64,7 @@ const TRUST_POINTS = [
    These are the scene lengths without narration. With it, applyVoice()
    below stretches any scene whose line runs longer, so the voice never
    spills into the next picture; the lengths here are the minimums. */
-const BASE = { hook: 6.0, s1: 6.0, s2: 8.5, outro: 5.0 };
+const BASE = { hook: 6.0, s1: 6.0, s2: 7.8, outro: 5.0 };
 const ORDER = ['hook', 's1', 's2', 'outro'];
 
 /* ---- the real site: marketing/shots/*.png from node tools/build-shots.js ----
@@ -83,10 +83,10 @@ let T = {}, DURATION = 0;
 
 /* ---- narration: tools/clip/intro.voice.json → node tools/build-voice.js intro ---- */
 const VOICE_MANIFEST = '/marketing/voice/intro/manifest.json';
-const VOICE_SPEED = 1.28;      // the narrator reads slowly; a fifth faster is a natural pace
+const VOICE_SPEED = 1.35;      // the narrator reads slowly; a fifth faster is a natural pace
 const LINE_OF = { hook: 'hook', s1: 'idea', s2: 'how', outro: 'outro' };
 function applyVoice(m) {
-  const LEAD = .4, TAIL = .5;     // a beat of picture before the voice starts, and after it stops
+  const LEAD = .3, TAIL = .4;     // a beat of picture before the voice starts, and after it stops
   let t = 0;
   for (const k of ORDER) {
     const ln = m && m.lines.find(l => l.id === LINE_OF[k]);

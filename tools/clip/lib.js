@@ -434,9 +434,9 @@ async function music(seconds, voice) {
       let t = ln.at;
       for (const p of ln.parts) {
         const src = ac.createBufferSource(); src.buffer = p.buffer; src.connect(vg); src.start(t);
-        t += p.buffer.duration + .12;
+        t += p.buffer.duration + p.gap;
       }
-      const end = t - .12;
+      const end = t;
       bed.gain.setValueAtTime(bed.gain.value, Math.max(0, ln.at - .45));
       bed.gain.linearRampToValueAtTime(DUCK, Math.max(0, ln.at - .1));
       bed.gain.setValueAtTime(DUCK, end + .15);
@@ -527,7 +527,12 @@ async function loadVoiceManifest() {
     const m = await r.json();
     m.base = VOICE_MANIFEST.replace(/[^/]*$/, '');
     const sp = voiceSpeed();
-    if (sp !== 1) for (const ln of m.lines) { ln.duration /= sp; for (const f of ln.files) f.duration /= sp; }
+    for (const ln of m.lines) {
+      const audio = ln.audio != null ? ln.audio : ln.files.reduce((s, f) => s + f.duration, 0);
+      const gaps = ln.gaps != null ? ln.gaps : 0;
+      ln.duration = audio / sp + gaps;          // silence is not sped up
+      for (const f of ln.files) f.duration /= sp;
+    }
     return m;
   } catch (e) { log('ไม่มีเสียงพูด (' + VOICE_MANIFEST + ' — ' + (e.message || e) + ') เรนเดอร์แบบไม่มีเสียงพูด'); return null; }
 }
@@ -577,7 +582,7 @@ async function decodeVoice(m) {
     const parts = [];
     for (const f of ln.files) {
       const ab = await (await fetch(m.base + f.file)).arrayBuffer();
-      parts.push({ buffer: stretchBuffer(dec, await dec.decodeAudioData(ab), sp) });
+      parts.push({ buffer: stretchBuffer(dec, await dec.decodeAudioData(ab), sp), gap: f.gap != null ? f.gap : .12 });
     }
     lines.push({ at: ln.at, parts });
   }

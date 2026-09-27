@@ -3508,8 +3508,12 @@ budget, deadline), ask under ❓ คำถามเกี่ยวกับง�
 `marketing/facebook-posts.md`, written from what the app actually does today.
 
 The intro clip is narrated. The lines live in `tools/clip/intro.voice.json`;
+A `|` in a line asks for a breath: the phrases on either
+side are synthesised separately and the clip leaves a real pause between them, because the
+service reads a line straight through whatever its punctuation.
 `node tools/build-voice.js intro` turns them into MP3s under `marketing/voice/intro/` plus a
-manifest with each line's measured length, and the clip page reads that manifest before
+manifest that keeps each line's speech and its silence apart (speech stretches with
+VOICE_SPEED, silence does not), with the measured length, and the clip page reads that manifest before
 its first frame and stretches any scene whose line runs longer (`applyVoice`), so the
 voice never spills into the next picture. The music ducks under each line. The voice is
 the Thai female narrator behind Google Translate's speaker button, fetched one phrase
