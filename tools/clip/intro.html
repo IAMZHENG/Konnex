@@ -197,12 +197,12 @@ function sceneHook(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
   topBrand(true);
   let P;
-  if (F.kind === 'portrait')    P = { cy: 810, ir: 150, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 310 };
-  else if (F.kind === 'square') P = { cy: 670, ir: 128, chip: 34, px: 42, spx: 28, cw: 460, gap: 40, top: 280 };
-  else                          P = { cy: H / 2 + 90, ir: 128, chip: 34, px: 42, spx: 28, cw: 520, gap: 60, top: 240 };
+  if (F.kind === 'portrait')    P = { cy: 960, ir: 150, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 360, foot: 1470 };
+  else if (F.kind === 'square') P = { cy: 640, ir: 120, chip: 32, px: 40, spx: 26, cw: 450, gap: 36, top: 270, foot: 990 };
+  else                          P = { cy: H / 2 + 60, ir: 120, chip: 32, px: 40, spx: 26, cw: 520, gap: 60, top: 230, foot: H - 110 };
   const SIDES = [
-    { chip: 'สำหรับผู้ซื้อ', icon: 'cartq',  head: 'ซื้อของชิ้นหนึ่ง',       head2: 'แน่ใจได้ยังไง ว่าได้ราคาที่เหมาะสม?', sub: 'ราคาเดียวที่ได้มา เทียบกับอะไรไม่ได้เลย' },
-    { chip: 'สำหรับผู้ขาย', icon: 'target', head: 'มีของพร้อมขาย',          head2: 'แต่จะไปหา ลูกค้าจากที่ไหน?',        sub: 'อยากเจอคนที่ต้องการ ของคุณพอดี' }
+    { chip: 'ผู้ซื้อ', icon: 'cartq',  head: 'ประกาศสิ่งที่ต้องการ', head2: 'รับข้อเสนอจากผู้ขาย' },
+    { chip: 'ผู้ขาย', icon: 'target', head: 'พบความต้องการซื้อ',   head2: 'เสนอสินค้าให้ลูกค้า' }
   ];
   SIDES.forEach((side, i) => {
     const u = seg(t, a + .2 + i * .35, a + .9 + i * .35, outBack);
@@ -212,11 +212,12 @@ function sceneHook(t) {
        into a fixed box: chip, icon, headline, one line under it — measured
        first, so nothing can spill past the rounded edge in any framing. */
     const inner = P.cw - 56;
+    const head = wrapText(side.head, 700, P.px, inner);
     const head2 = wrapText(side.head2, 700, P.px, inner);
-    const sub = wrapText(side.sub, 400, P.spx, inner);
     const chipH = P.chip * 1.75;
-    const H1 = P.px * 1.22, H2 = P.spx * 1.45;
-    const contentH = chipH + 26 + P.ir + 26 + H1 + head2.length * H1 + 14 + sub.length * H2;
+    const H1 = P.px * 1.22;
+    const ARROW = P.px * 1.5;
+    const contentH = chipH + 26 + P.ir + 30 + head.length * H1 + ARROW + head2.length * H1;
     const ch = contentH + 56;
     ctx.save();
     ctx.globalAlpha *= clamp(u, 0, 1);
@@ -227,15 +228,21 @@ function sceneHook(t) {
     pill(side.chip, 0, y, { align: 'center', px: P.chip, h: chipH, padX: 34, bg: '#fff', color: BLUE });
     y += chipH + 26;
     icon(side.icon, 0, y + P.ir / 2, P.ir, '#fff', 9);
-    y += P.ir + 26 + P.px * .85;
-    text(side.head, 0, y, { w: 700, px: P.px, color: 'rgba(255,255,255,.88)', align: 'center' });
-    head2.forEach((ln, k) => text(ln, 0, y + H1 * (k + 1), { w: 700, px: P.px, color: '#fff', align: 'center' }));
-    y += H1 * head2.length + 14 + P.spx;
-    sub.forEach((ln, k) => text(ln, 0, y + k * H2, { w: 400, px: P.spx, color: 'rgba(255,255,255,.82)', align: 'center' }));
+    y += P.ir + 30 + P.px * .85;
+    head.forEach((ln, k) => text(ln, 0, y + H1 * k, { w: 700, px: P.px, color: '#fff', align: 'center' }));
+    y += H1 * (head.length - 1) + ARROW * .62;
+    // a down arrow: what the action gives back
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(0, y - P.px * .5); ctx.lineTo(0, y + P.px * .3);
+    ctx.moveTo(-13, y + P.px * .1); ctx.lineTo(0, y + P.px * .3); ctx.lineTo(13, y + P.px * .1); ctx.stroke(); ctx.restore();
+    y += ARROW * .38 + P.px * .85;
+    head2.forEach((ln, k) => text(ln, 0, y + H1 * k, { w: 700, px: P.px, color: '#fff', align: 'center' }));
     ctx.restore();
   });
-  const tu = seg(t, a + 1.1, a + 1.7);
-  text('ทั้งสองฝั่ง มาเจอกันที่เดียว', W / 2, P.top, { w: 700, px: P.px * 1.15, color: '#fff', align: 'center', alpha: tu });
+  const tu = seg(t, a + .15, a + .75), fu = seg(t, a + 1.5, a + 2.1);
+  wrapText('อยากซื้ออะไร? ให้ผู้ขายเข้ามาเสนอราคา', 700, P.px * 1.2, W - 120)
+    .forEach((ln, i) => text(ln, W / 2, P.top + i * P.px * 1.5, { w: 700, px: P.px * 1.2, color: '#fff', align: 'center', alpha: tu }));
+  text('ซื้ออย่างมีข้อมูล • ขายได้ตรงความต้องการ', W / 2, P.foot, { w: 600, px: P.spx * 1.25, color: 'rgba(255,255,255,.9)', align: 'center', alpha: fu });
   ctx.restore();
 }
 
