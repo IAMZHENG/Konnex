@@ -7221,10 +7221,28 @@ html, body{
    promises an action that is not there. */
 #page-company-profile .hero-logo:has(img){ cursor:pointer; }
 #page-company-profile .cover[src]:not([src^="data:"]){ cursor:pointer; }
-.oa-lightbox .lb-nav{ position:absolute; bottom:26px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:20px; cursor:default; }
-.oa-lightbox .lb-arrow{ width:48px; height:48px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#1c1a18; font-size:28px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+/* The three controls used to sit in one row along the bottom, over the widest
+   part of the picture and a long way from where a hand rests. They are on the
+   picture now: the count in the top-right corner, the two arrows halfway down
+   the left and right edges. The layer itself takes no clicks, so dragging a
+   zoomed picture and clicking the backdrop to close both still work through it. */
+.oa-lightbox .lb-nav{ position:absolute; inset:0; cursor:default; pointer-events:none; }
+.oa-lightbox .lb-arrow{
+  position:absolute; top:50%; transform:translateY(-50%); pointer-events:auto;
+  width:48px; height:48px; border-radius:50%; border:none;
+  background:rgba(255,255,255,.92); color:#1c1a18; font-size:28px; line-height:1;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+}
+.oa-lightbox .lb-arrow:first-child{ left:18px; }
+.oa-lightbox .lb-arrow:last-child{ right:18px; }
 .oa-lightbox .lb-arrow:hover{ background:#fff; }
-.oa-lightbox .lb-count{ color:#fff; font-size:15px; font-weight:600; min-width:56px; text-align:center; }
+/* a pill, not bare text: the corner it sits in may be a white picture */
+.oa-lightbox .lb-count{
+  position:absolute; top:18px; right:18px;
+  padding:5px 14px; border-radius:999px; background:rgba(10,15,25,.62);
+  color:#fff; font-size:14px; font-weight:600; text-align:center;
+}
 #page-feed .post-thumb, #page-rfq-offers .rfq-thumb, #page-my-offers .offer-thumb{ cursor:pointer; }
 /* file attachments on cards */
 .post-files{ display:flex; flex-wrap:wrap; gap:7px; margin-top:9px; }
@@ -14647,8 +14665,17 @@ body.kx-auth .kx-burger{ display:none !important; }
 .oa-lightbox .lb-hint{
   position:absolute; top:calc(14px + env(safe-area-inset-top)); left:0; right:0;
   text-align:center; color:rgba(255,255,255,.72); font-size:13px; pointer-events:none;
+  /* room for the count, which shares this corner */
+  padding:0 72px; box-sizing:border-box;
 }
-.oa-lightbox .lb-nav{ bottom:calc(20px + env(safe-area-inset-bottom)); }
+/* clear of a notch; env() is zero on a desktop, so this is the one place the
+   corner is set rather than two rules disagreeing about it */
+.oa-lightbox .lb-count{ top:calc(18px + env(safe-area-inset-top)); right:18px; }
+@media (max-width: 480px){
+  .oa-lightbox .lb-arrow{ width:42px; height:42px; font-size:24px; }
+  .oa-lightbox .lb-arrow:first-child{ left:10px; }
+  .oa-lightbox .lb-arrow:last-child{ right:10px; }
+}
 
 /* ===== Navbar: search button + real avatar ===== */
 .kx-searchbtn{ cursor:pointer; }

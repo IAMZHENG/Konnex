@@ -4047,6 +4047,74 @@
      '', its other opener was never called, and the third added a button to rows
      that did not exist yet. Removed rather than rebuilt, because the data model
      has no line items to rebuild it from. */
+  /* The count and the two arrows were a row along the bottom edge, over the
+     widest part of the picture. The owner moved them (2026-09-27): the count
+     into the top-right corner, the arrows halfway down the two sides. */
+  describe('ตัวควบคุมในหน้าจอดูรูป', function () {
+    function open(w, n) {
+      var imgs = [];
+      for (var i = 0; i < n; i++) imgs.push('data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==');
+      w.lbImgs = imgs;
+      w.document.getElementById('oaLightbox').classList.add('open');
+      w.lbShow(0);
+      var nav = w.document.getElementById('lbNav');
+      return {
+        nav: nav,
+        count: w.document.getElementById('lbCount'),
+        arrows: Array.prototype.slice.call(nav.querySelectorAll('.lb-arrow'))
+      };
+    }
+    function shut(w) {
+      w.document.getElementById('oaLightbox').classList.remove('open');
+      w.lbImgs = [];
+    }
+    it('puts the count in the top-right corner', function (w) {
+      var el = open(w, 3);
+      try {
+        var r = el.count.getBoundingClientRect();
+        var vw = w.document.documentElement.clientWidth, vh = w.innerHeight;
+        expect(el.count.textContent).toBe('1 / 3');
+        expect(vw - r.right < 40).toBe(true, 'against the right edge (' + Math.round(vw - r.right) + 'px)');
+        expect(r.top < vh * 0.15).toBe(true, 'and the top (' + Math.round(r.top) + 'px)');
+      } finally { shut(w); }
+    });
+    it('puts the arrows halfway down the left and right edges', function (w) {
+      var el = open(w, 3);
+      try {
+        var vw = w.document.documentElement.clientWidth, vh = w.innerHeight;
+        var prev = el.arrows[0].getBoundingClientRect(), next = el.arrows[1].getBoundingClientRect();
+        expect(prev.left < 40).toBe(true, 'prev against the left edge (' + Math.round(prev.left) + 'px)');
+        expect(vw - next.right < 40).toBe(true, 'next against the right edge');
+        [prev, next].forEach(function (r) {
+          expect(Math.abs((r.top + r.bottom) / 2 - vh / 2) < 4).toBe(true, 'centred down the side');
+        });
+      } finally { shut(w); }
+    });
+    /* The layer covers the whole viewer, so it must not swallow the drag that
+       pans a zoomed picture or the click on the backdrop that closes it. */
+    it('lets everything but the controls through to the picture', function (w) {
+      var el = open(w, 3);
+      try {
+        expect(w.getComputedStyle(el.nav).pointerEvents).toBe('none');
+        el.arrows.forEach(function (a) { expect(w.getComputedStyle(a).pointerEvents).toBe('auto'); });
+        var r = el.arrows[1].getBoundingClientRect();
+        var hit = w.document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        expect(hit && hit.className).toBe('lb-arrow', 'the arrow itself takes the click');
+      } finally { shut(w); }
+    });
+    it('still steps, and hides itself for a single picture', function (w) {
+      var el = open(w, 3);
+      try {
+        w.lbStep(1);
+        expect(el.count.textContent).toBe('2 / 3');
+        w.lbStep(-1); w.lbStep(-1);
+        expect(el.count.textContent).toBe('3 / 3', 'and wraps');
+      } finally { shut(w); }
+      var one = open(w, 1);
+      try { expect(one.nav.style.display).toBe('none', 'nothing to step through'); } finally { shut(w); }
+    });
+  });
+
   describe('the demo quotation is gone', function () {
     it('has no quotation modal left in the page', function (w) {
       expect(w.document.getElementById('quotePdfModal')).toBeFalsy();
