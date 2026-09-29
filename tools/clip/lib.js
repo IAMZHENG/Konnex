@@ -31,21 +31,21 @@ function framing() {
   if (ar < .8) return {
     kind: 'portrait', twoCol: false,
     brand: { x: 70, y: 76, h: 62 },
-    header: { x: 120, y: 250, px: 66, badge: 56, sub: { y: 330, px: 32 } },
+    header: { x: 120, y: 250, px: 66, badge: 56, sub: { y: 330, px: 40, wrap: W - 140 } },
     body: { x: 110, y: 400, s: 1 },
     dots: { x: W / 2, y: H - 130 }
   };
   if (ar < 1.3) return {
     kind: 'square', twoCol: true,
     brand: { x: 60, y: 56, h: 50 },
-    header: { x: 56, y: 230, px: 40, badge: 36, twoLine: true, sub: { y: 350, px: 25, wrap: 300 } },
+    header: { x: 56, y: 230, px: 40, badge: 36, twoLine: true, sub: { y: 350, px: 33, wrap: 340 } },
     body: { x: 410, y: 52, s: .75 },
     dots: { x: 200, y: H - 80 }
   };
   return {
     kind: 'landscape', twoCol: true,
     brand: { x: 100, y: 70, h: 64 },
-    header: { x: 100, y: 380, px: 66, badge: 56, sub: { y: 460, px: 32, wrap: 760 } },
+    header: { x: 100, y: 380, px: 66, badge: 56, sub: { y: 460, px: 40, wrap: 800 } },
     body: { x: 990, y: 60, s: .74 },
     dots: { x: 480, y: H - 100 }
   };
@@ -336,7 +336,7 @@ function stepHeader(n, title, sub, t, a) {
     const su = seg(t, a + .4, a + .9);
     const subLines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
     const top = h.y + ((lines.length - 1) / 2) * lh + px * 1.25;
-    subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * h.sub.px * 1.5, { w: 400, px: h.sub.px, color: INK_SOFT, alpha: su }));
+    subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * h.sub.px * 1.45, { w: 500, px: h.sub.px, color: '#3d4354', alpha: su }));
   }
 }
 function dots(step, n) {
