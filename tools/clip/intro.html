@@ -34,9 +34,9 @@
 /* ---- copy. Every name here is invented; no real account appears. ---- */
 const ITEM = 'ชั้นวางสินค้าเหล็ก 20 ชุด';
 const SELLERS = [
-  { name: 'บจก. สยาม สตีล แร็ค',    price: '฿39,800', bg: '#dbe7ff' },
-  { name: 'ร้านช่างเหล็กบางนา',     price: '฿36,500', bg: '#e6f6ea' },
-  { name: 'บจก. ทีเค เมทัล ซัพพลาย', price: '฿41,200', bg: '#fff1d6' }
+  { name: 'บจก. สยาม สตีล แร็ค',    price: '฿39,800', bg: '#dbe7ff', tag: 'รวมติดตั้ง',  tagBg: '#fff1d6', tagFg: '#b45309' },
+  { name: 'ร้านช่างเหล็กบางนา',     price: '฿36,500', bg: '#e6f6ea', tag: 'ราคาต่ำสุด', tagBg: GREEN_SOFT, tagFg: GREEN },
+  { name: 'บจก. ทีเค เมทัล ซัพพลาย', price: '฿41,200', bg: '#fff1d6', tag: 'ส่งเร็วสุด', tagBg: BLUE_SOFT, tagFg: BLUE }
 ];
 // [icon name from lib.js ICONS, title, one line under it]
 const HOW_POINTS = [
@@ -286,9 +286,11 @@ function scene1(t) {
       const oy = lerp(sy - 130, ty, ou), ox = lerp(sx - 130, 90, ou), ow = lerp(260, BODY_W - 180, ou);
       ctx.save(); ctx.globalAlpha *= clamp(ou * 2, 0, 1);
       card(ox, oy, ow, 100, 22);
-      text('💬', ox + 24, oy + 54, { px: 30, base: 'middle' });
-      text(s.name, ox + 70, oy + 60, { w: 600, px: 25, alpha: ou });
-      text(s.price, ox + ow - 26, oy + 62, { w: 700, px: 34, color: ou > .9 ? INK : BLUE, align: 'right' });
+      icon('chat', ox + 46, oy + 50, 44, '#8a90a3', 7);
+      text(s.name, ox + 78, oy + 60, { w: 600, px: 25, alpha: ou });
+      // the badge sits at the right edge once the row has arrived, the price beside it
+      const tw = ou > .85 ? pill(s.tag, ox + ow - 26, oy + 30, { align: 'right', px: 21, h: 40, padX: 16, bg: s.tagBg, color: s.tagFg, alpha: (ou - .85) / .15 }) + 20 : 0;
+      text(s.price, ox + ow - 26 - tw, oy + 62, { w: 700, px: 34, color: ou > .9 ? INK : BLUE, align: 'right' });
       ctx.restore();
     });
     const du = seg(t, a + L * .72, a + L * .72 + .5, outBack);
