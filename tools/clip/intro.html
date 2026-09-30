@@ -197,12 +197,12 @@ function sceneHook(t) {
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
   topBrand(true);
   let P;
-  if (F.kind === 'portrait')    P = { cy: 960, ir: 150, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 360, foot: 1470 };
-  else if (F.kind === 'square') P = { cy: 640, ir: 120, chip: 32, px: 40, spx: 26, cw: 450, gap: 36, top: 270, foot: 990 };
-  else                          P = { cy: H / 2 + 60, ir: 120, chip: 32, px: 40, spx: 26, cw: 520, gap: 60, top: 230, foot: H - 110 };
+  if (F.kind === 'portrait')    P = { cy: 980, ir: 150, sh: 300, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 330, foot: 1560 };
+  else if (F.kind === 'square') P = { cy: 650, ir: 120, sh: 230, chip: 32, px: 40, spx: 26, cw: 450, gap: 36, top: 240, foot: 1010 };
+  else                          P = { cy: H / 2 + 70, ir: 120, sh: 230, chip: 32, px: 40, spx: 26, cw: 520, gap: 60, top: 205, foot: H - 70 };
   const SIDES = [
-    { chip: 'ผู้ซื้อ', icon: 'cartq',  head: 'ประกาศสิ่งที่ต้องการ', head2: 'รับข้อเสนอจากผู้ขาย' },
-    { chip: 'ผู้ขาย', icon: 'target', head: 'พบความต้องการซื้อ',   head2: 'เสนอสินค้าให้ลูกค้า' }
+    { chip: 'ผู้ซื้อ', icon: 'cartq',  head: 'ประกาศสิ่งที่ต้องการ', head2: 'รับข้อเสนอจากผู้ขาย', shot: 'compare', scroll: 2530 },
+    { chip: 'ผู้ขาย', icon: 'target', head: 'พบความต้องการซื้อ',   head2: 'เสนอสินค้าให้ลูกค้า', shot: 'detail',  scroll: 250 }
   ];
   SIDES.forEach((side, i) => {
     const u = seg(t, a + .2 + i * .35, a + .9 + i * .35, outBack);
@@ -217,7 +217,12 @@ function sceneHook(t) {
     const chipH = P.chip * 1.75;
     const H1 = P.px * 1.22;
     const ARROW = P.px * 1.5;
-    const contentH = chipH + 26 + P.ir + 30 + head.length * H1 + ARROW + head2.length * H1;
+    /* Where the big icon stood, the page that side of the market actually uses:
+       a crop of the real app on sample data, so a first-time viewer sees what
+       they are being asked to open. Without the shots the icon comes back. */
+    const shot = SHOTS && SHOTS[side.shot];
+    const artH = shot ? P.sh : P.ir;
+    const contentH = chipH + 26 + artH + 30 + head.length * H1 + ARROW + head2.length * H1;
     const ch = contentH + 56;
     ctx.save();
     ctx.globalAlpha *= clamp(u, 0, 1);
@@ -227,8 +232,21 @@ function sceneHook(t) {
     let y = -ch / 2 + 28;
     pill(side.chip, 0, y, { align: 'center', px: P.chip, h: chipH, padX: 34, bg: '#fff', color: BLUE });
     y += chipH + 26;
-    icon(side.icon, 0, y + P.ir / 2, P.ir, '#fff', 9);
-    y += P.ir + 30 + P.px * .85;
+    if (shot) {
+      const box = { x: -inner / 2, y, w: inner, h: P.sh };
+      ctx.save();
+      ctx.shadowColor = 'rgba(4,26,70,.30)'; ctx.shadowBlur = 26; ctx.shadowOffsetY = 8;
+      ctx.fillStyle = '#fff'; rr(box.x, box.y, box.w, box.h, 18); ctx.fill();
+      ctx.restore();
+      screen(shot, box, side.scroll, 1, 18);
+      ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; rr(box.x, box.y, box.w, box.h, 18); ctx.stroke();
+      // the side's mark, small, over the corner of its page
+      ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(box.x + box.w - 40, box.y + 40, 30, 0, Math.PI * 2); ctx.fill();
+      icon(side.icon, box.x + box.w - 40, box.y + 40, 38, '#fff', 8);
+    } else {
+      icon(side.icon, 0, y + P.ir / 2, P.ir, '#fff', 9);
+    }
+    y += artH + 30 + P.px * .85;
     head.forEach((ln, k) => text(ln, 0, y + H1 * k, { w: 700, px: P.px, color: '#fff', align: 'center' }));
     y += H1 * (head.length - 1) + ARROW * .62;
     // a down arrow: what the action gives back
@@ -305,11 +323,11 @@ function scene1(t) {
 }
 
 /* A screenshot inside the phone, cropped to the screen and scrolled by `scroll` source pixels. */
-function screen(img, box, scroll, alpha) {
+function screen(img, box, scroll, alpha, radius) {
   const sh = img.width * box.h / box.w;
   const sy = clamp(scroll, 0, Math.max(0, img.height - sh));
   ctx.save(); ctx.globalAlpha *= clamp(alpha == null ? 1 : alpha, 0, 1);
-  rr(box.x, box.y, box.w, box.h, 50); ctx.clip();
+  rr(box.x, box.y, box.w, box.h, radius == null ? 50 : radius); ctx.clip();
   ctx.drawImage(img, 0, sy, img.width, sh, box.x, box.y, box.w, box.h);
   ctx.restore();
 }
