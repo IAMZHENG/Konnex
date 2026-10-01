@@ -7313,6 +7313,7 @@ html, body{
 /* ประกาศที่หมดเขตแล้ว — ยังอยู่บนฟีด แต่บอกให้รู้ */
 .post-card.pc-expired{opacity:.72}
 .post-card.pc-expired:hover{opacity:1}
+.pc-renew-chip{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:#eaf7ee;color:#15803d;font-size:12px;font-weight:600;vertical-align:1px;white-space:nowrap}
 .pc-expired-chip{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:#fff1f0;color:#b42318;font-size:12px;font-weight:600;vertical-align:1px;white-space:nowrap}
 #page-rfq-offers .rfq-chips{ display:none !important; }
 #page-my-offers .offer-tags{ display:none !important; }
@@ -20202,6 +20203,12 @@ body.kx-guest #load-more-offers { display: none !important; }
 
       if(wasEditing){
         kxToast('บันทึกการแก้ไขเรียบร้อย');
+        /* An edit can change where the listing sits on the feed — pushing the
+           deadline out renews it, and a renewed listing sorts to the top
+           (database/bump_on_renew.sql). The feed in memory is now a page the
+           database would not answer with, so throw it away rather than let the
+           staleness timer decide when the owner may see their own change. */
+        if(window.kxFeedInvalidate) window.kxFeedInvalidate();
         kxOpenPost(postId, isRfq ? 'rfq' : 'offer');
       }else{
         kxToast('โพสต์ประกาศสำเร็จ');
@@ -21880,7 +21887,9 @@ body.kx-guest #load-more-offers { display: none !important; }
        match/near/fresh buckets reorders the page, and reading a feed labelled
        "ล่าสุด" that isn't in time order is just wrong. score() still runs
        either way, because paint() and the rail's tooltips are written from it. */
-    var when = function(c){ return +(c.getAttribute('data-created') || 0); };
+    // the renewal time where there is one, the posting time otherwise — the
+    // same key the server paged by, so the two cannot disagree
+    var when = function(c){ return +(c.getAttribute('data-bumped') || c.getAttribute('data-created') || 0); };
     var sortMode = (typeof currentFeedSort === 'string') ? currentFeedSort : 'recent';
 
     var cards;
@@ -22344,6 +22353,12 @@ body.kx-guest #load-more-offers { display: none !important; }
     // else's Offer you are asking them for a quote, and on their RFQ you are
     // giving one. Only the owner is the one reviewing what came in.
     var expired = !!post.deadline && new Date(post.deadline).getTime() < Date.now();
+    /* Renewed: the deadline was pushed out after posting, so bumped_at moved.
+       An hour of slack, because a listing edited right after it was posted is
+       not a renewal — it is someone fixing a typo. */
+    var createdMs = post.created_at ? +new Date(post.created_at) : 0;
+    var bumpedMs  = post.bumped_at  ? +new Date(post.bumped_at)  : 0;
+    var renewed = !!(bumpedMs && createdMs && bumpedMs - createdMs > 3600000);
     var actionLabel = isRfq
       ? (mine ? 'ดูข้อเสนอ' : (expired ? 'ดูรายละเอียด' : 'เสนอราคา'))
       : (mine ? 'ดูคำขอใบเสนอราคา' : 'ขอใบเสนอราคา');
@@ -22353,7 +22368,9 @@ body.kx-guest #load-more-offers { display: none !important; }
       ' data-location="' + esc(loc) + '"' +
       // the real posting time, so ordering never has to read "10 ชั่วโมงที่แล้ว"
       // back out of the card or trust the order the DOM happens to be in
-      ' data-created="' + (post.created_at ? +new Date(post.created_at) : 0) + '"' +
+      ' data-created="' + createdMs + '"' +
+      // what the feed is ordered by; the same as data-created until a renewal
+      ' data-bumped="' + (bumpedMs || createdMs) + '"' +
       ' style="cursor:pointer;" onclick="' + openCall + '">' +
       '<div class="pc-head">' +
         // the poster's name and picture open their profile — a card tells you
@@ -22364,7 +22381,8 @@ body.kx-guest #load-more-offers { display: none !important; }
           ' onclick="event.stopPropagation();kxViewProfile(\'' + post.owner_id + '\')">' + esc(ownerName) + '</span></span>' +
           '<span class="pc-sub">' + (isRfq ? 'ผู้ซื้อ' : 'ผู้ขาย') + (loc ? ' · ' + esc(loc) : '') +
             ' · ' + relTime(post.created_at) +
-            (expired ? ' <span class="pc-expired-chip">หมดเขตรับข้อเสนอแล้ว</span>' : '') + '</span></span>' +
+            (expired ? ' <span class="pc-expired-chip">หมดเขตรับข้อเสนอแล้ว</span>'
+             : renewed ? ' <span class="pc-renew-chip">ต่ออายุแล้ว</span>' : '') + '</span></span>' +
         /* The icon is drawn here rather than left as an emoji for a later pass
            to convert. The pass that does that runs before the feed has any cards,
            so the emoji survived — and an emoji is at the mercy of the system font:
@@ -24031,6 +24049,11 @@ body.kx-guest #load-more-offers { display: none !important; }
 
   var loaded = false;
   var feedQaMissing = false;
+  /* bump_on_renew.sql not run yet — fall back to the posting time. On window
+     rather than hidden in here so a tab that learned this before the migration
+     was run can be told to forget it (kxFeedInvalidate does, on the next
+     sign-in or edit) instead of sorting by the old key until it is reloaded. */
+  window.kxFeedBumpMissing = false;
 
   /* หน้าหลัก used to load once per page load and never again: `loaded` was set
      true and nothing reset it, so leaving the feed and coming back showed the
@@ -24049,6 +24072,9 @@ body.kx-guest #load-more-offers { display: none !important; }
   var feedReloadAfter = false;
   window.kxFeedInvalidate = function(){
     loaded = false; feedLoadedAt = 0; feedOffset = 0; feedDone = false;
+    // and ask for the renewal order again: the migration may have been run
+    // since this tab last looked
+    window.kxFeedBumpMissing = false;
     /* The front page is the feed, so on a cold start it is already loading —
        as a visitor — when getSession answers. kxRefreshFeedIfStale stands
        down while a load is in flight, so the member would keep the visitor's
@@ -24109,15 +24135,26 @@ body.kx-guest #load-more-offers { display: none !important; }
     // this embed means — the direct "who posted this" one.
     var feedBase = '*, profiles!posts_owner_id_fkey(company_name,avatar_url), post_images(url,sort), post_attachments(file_name,file_url,file_kind,file_size), quotes(price)';
     var from = feedOffset, to = feedOffset + FEED_PAGE - 1;
-    var res = await window.kxRfqOnly(sb.from('posts')
-      .select(feedBase + (feedQaMissing ? '' : ', post_questions(id)'))
-      .eq('status', 'open'))
-      .order('created_at', { ascending:false })
-      .range(from, to);
+    /* Ordered by bumped_at, not created_at: a listing whose deadline was pushed
+       back out is wanted again, and that is the one thing the feed can know
+       about it. The column equals created_at until a renewal moves it, so for
+       everything that has never been renewed this is the order it always was.
+       See database/bump_on_renew.sql. */
+    function askFeed(sel, col){
+      return window.kxRfqOnly(sb.from('posts').select(sel).eq('status', 'open'))
+        .order(col, { ascending:false })
+        .range(from, to);
+    }
+    var cols = function(){ return feedBase + (feedQaMissing ? '' : ', post_questions(id)'); };
+    var res = await askFeed(cols(), window.kxFeedBumpMissing ? 'created_at' : 'bumped_at');
     if(res.error && /post_questions/i.test(res.error.message || '')){
       feedQaMissing = true;
-      res = await window.kxRfqOnly(sb.from('posts').select(feedBase)
-        .eq('status', 'open')).order('created_at', { ascending:false }).range(from, to);
+      res = await askFeed(feedBase, window.kxFeedBumpMissing ? 'created_at' : 'bumped_at');
+    }
+    // the migration has not been run: sort by the posting time, as before
+    if(res.error && /bumped_at/i.test(res.error.message || '')){
+      window.kxFeedBumpMissing = true;
+      res = await askFeed(cols(), 'created_at');
     }
     // clear the in-flight flag on the way out, or a single failed load would
     // stop the feed from ever refreshing again

@@ -2993,6 +2993,91 @@
   });
 
   // ============================================================ feed ordering ===
+  /* A listing that ran out of time, was renewed, and had nothing to show for
+     it: it left the หมดเขต group at the bottom and settled back into its
+     place by posting date, which for a month-old listing is the bottom
+     anyway. bumped_at is the sort key now (database/bump_on_renew.sql). */
+  describe('ต่ออายุประกาศแล้วดันขึ้นบนฟีด', function () {
+    var DAY = 86400000;
+    function card(w, o) {
+      var d = w.document.createElement('div');
+      d.innerHTML = w.kxPostCardHTML({
+        id: o.id, kind: 'rfq', status: 'open', title: o.title, description: 'x',
+        province: 'เชียงใหม่', owner_id: OTHER, quote_count: 0, post_images: [],
+        profiles: { company_name: 'p' },
+        created_at: new Date(Date.now() - o.ageDays * DAY).toISOString(),
+        bumped_at: o.bumpDays == null ? null : new Date(Date.now() - o.bumpDays * DAY).toISOString(),
+        deadline: new Date(Date.now() + (o.dueDays == null ? 7 : o.dueDays) * DAY).toISOString()
+      });
+      return d.firstElementChild;
+    }
+    it('asks the database for the renewal order, and copes without the column', async function (w) {
+      var tries = [];
+      // from() has already pushed by the time the plan is asked, so the first
+      // query is the one answered while tries.length is 1
+      var sb = KX.makeSb({ posts: { _: function () {
+        return tries.length === 1
+          ? { data: null, error: { code: '42703', message: 'column posts.bumped_at does not exist' } }
+          : { data: [], error: null };
+      } } });
+      var from = sb.from;
+      sb.from = function (t) { var node = from.call(sb, t); tries.push(node); return node; };
+      w.sb = sb; signIn(w);
+      // the flag is sticky on purpose, so this test must not inherit it
+      w.kxFeedBumpMissing = false;
+      await w.kxLoadFeed();
+      restore(w);
+      var orders = sb._calls.filter(function (c) { return c.table === 'posts'; })
+        .map(function (c) { return (c.filters.join(' ').match(/order\(([a-z_]+)/) || [])[1]; });
+      expect(orders[0]).toBe('bumped_at', 'the renewal order first');
+      expect(orders[1]).toBe('created_at', 'then the posting time, when the migration has not been run');
+      expect(w.kxFeedBumpMissing).toBe(true, 'and it remembers, rather than asking again every page');
+      // a tab that learned it before the migration was run is told to forget
+      w.kxFeedInvalidate();
+      expect(w.kxFeedBumpMissing).toBe(false);
+    });
+    it('carries the sort key on the card, and says a listing was renewed', function (w) {
+      var had = w.kxSession; signIn(w);
+      var fresh = card(w, { id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', title: 'ใหม่', ageDays: 2 });
+      var renewed = card(w, { id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', title: 'ต่ออายุ', ageDays: 27, bumpDays: 0 });
+      w.kxSession = had;
+      expect(+fresh.getAttribute('data-bumped')).toBe(+fresh.getAttribute('data-created'),
+        'never renewed: the two are the same moment');
+      expect(fresh.querySelector('.pc-renew-chip')).toBeFalsy();
+      expect(+renewed.getAttribute('data-bumped') > +renewed.getAttribute('data-created')).toBe(true);
+      expect(renewed.querySelector('.pc-renew-chip').textContent).toBe('ต่ออายุแล้ว');
+      expect(renewed.querySelector('.pc-sub').textContent).toContain('27 วันที่แล้ว',
+        'the age shown is still the real posting date');
+    });
+    it('sorts a renewed listing above newer ones under ล่าสุด', function (w) {
+      var had = w.kxSession; signIn(w);
+      var list = w.document.querySelector('#page-feed .feed-list');
+      var keep = list.innerHTML;
+      try {
+        list.innerHTML = '';
+        [{ id: 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', title: 'เมื่อวาน', ageDays: 1 },
+         { id: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', title: 'เก่าแต่ต่ออายุ', ageDays: 27, bumpDays: 0 },
+         { id: 'cccccccc-3333-4333-8333-cccccccccccc', title: 'เก่า', ageDays: 20 }
+        ].forEach(function (o) { list.appendChild(card(w, o)); });
+        w.setFeedSort('recent', (w.document.querySelector('#fddSort .fdd-menu') || {}).firstElementChild, 'ล่าสุด');
+        var titles = Array.prototype.map.call(list.querySelectorAll('.post-card'),
+          function (c) { return c.querySelector('.post-title').textContent; });
+        expect(titles).toEqual(['เก่าแต่ต่ออายุ', 'เมื่อวาน', 'เก่า'],
+          'renewed today beats posted yesterday; untouched old stays last');
+      } finally { list.innerHTML = keep; w.kxSession = had; }
+    });
+    /* An edit can move the listing, so the copy of the feed in memory is no
+       longer a page the database would answer with. */
+    it('throws the loaded feed away after an edit', function (w) {
+      var html = w.document.documentElement.innerHTML;
+      expect(html).toContain("kxToast('บันทึกการแก้ไขเรียบร้อย');");
+      var at = html.indexOf("kxToast('บันทึกการแก้ไขเรียบร้อย');");
+      var after = html.slice(at, at + 600);
+      expect(after).toContain('kxFeedInvalidate()', 'the loaded feed is dropped on the way out of an edit');
+      expect(after).toContain('kxOpenPost(postId');
+    });
+  });
+
   describe('kxRankFeed — the sort chip decides, and ล่าสุด means posting time', function () {
     var H = 3600000;
     function seed(w, specs) {
