@@ -3527,7 +3527,9 @@ music bed, and a WebCodecs + mp4-muxer encoder — and each clip page (`intro.ht
 `start.html`, `sell.html`) is only its story: a `draw(t)` that is a pure function of time. Headless
 Chrome encodes the frames to H.264 and the music to AAC and posts the MP4 back to the
 build script; no ffmpeg anywhere. `--frame 12.5,30 --out <dir>` writes those moments as
-PNGs instead of a video, which is how a layout gets checked without a two-minute render.
+PNGs instead of a video, which is how a layout gets checked without a two-minute render — and
+how the upload covers in `marketing/covers/` are made (`--frame 4.6 --out marketing/covers`),
+so the platforms do not pick a blurred mid-transition frame themselves.
 Every company name in either clip is invented.
 
 ## Known wrinkles

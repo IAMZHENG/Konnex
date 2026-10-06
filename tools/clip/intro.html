@@ -143,8 +143,14 @@ function pointsWithPhone(points, beats, t, a, b) {
     // the previous page fades out under the new one
     const cur = beats[beat], prev = beats[beat - 1];
     if (prev && bu < .15) screen(SHOTS[prev.img], box, prev.to, 1);
+    /* The incoming page slides in from the right. screen() clips to the box it is
+       given, and that clip moved with the page — so the new page spilled out past
+       the phone's edge across the screen. The phone's own clip is set here first;
+       the two intersect, and nothing can leave the handset again. */
     const slide = beat > 0 ? lerp(box.w, 0, outCubic(clamp(bu * 4, 0, 1))) : 0;
-    ctx.save(); ctx.translate(slide, 0);
+    ctx.save();
+    rr(box.x, box.y, box.w, box.h, 50); ctx.clip();
+    ctx.translate(slide, 0);
     screen(SHOTS[cur.img], box, lerp(cur.from, cur.to, inOutCubic(clamp((bu - .2) / .7, 0, 1))), 1);
     ctx.restore();
     ctx.restore();
@@ -337,7 +343,7 @@ function scene2(t) {
   paper();
   ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
   topBrand(false);
-  stepHeader('icon:chart', 'ใช้งานจริง| เป็นแบบนี้', 'ราคาที่ได้ มาจากผู้ขายหลายรายที่แข่งกันเสนอ', t, a + .1);
+  stepHeader('icon:chart', 'ใช้งานจริง| เป็นแบบนี้', 'ราคาที่ได้ มาจากผู้ขายหลายราย ที่แข่งกันเสนอ', t, a + .1);
   // the phone walks the site: browse, open a listing, post one, compare the offers, look back at what was sent
   if (SHOTS) pointsWithPhone(HOW_POINTS, [
     { img: 'feed',    from: 0,    to: 1400, card: 0 },
@@ -378,6 +384,19 @@ function sceneOutro(t) {
   ctx.restore();
 }
 
+/* Someone who scrolls past halfway and wants in has nowhere to go: the address
+   is only on the end card. This keeps it in the corner the whole way through,
+   opposite the brand, and steps aside once the end card carries it larger. */
+function urlChip(t) {
+  const end = T.outro[0] - XFADE;
+  const u = Math.min(seg(t, T.hook[0] + 1.2, T.hook[0] + 1.8), 1 - seg(t, end - .4, end, x => clamp(x, 0, 1)));
+  if (u <= 0) return;
+  // bottom-left: the only corner free of content in all three framings
+  const h = Math.round(F.brand.h * .8);
+  pill('qubequote.com', F.brand.x, H - h - Math.round(F.brand.y * .7), {
+    align: 'left', px: Math.round(h * .46), h, padX: 22, bg: 'rgba(28,26,24,.82)', color: '#fff', alpha: u });
+}
+
 const SCENES = [['hook', sceneHook], ['s1', scene1], ['s2', scene2], ['outro', t => sceneOutro(Math.min(t, DURATION - 1e-3))]];
 const XFADE = .6;
 function draw(t) {
@@ -398,6 +417,8 @@ function draw(t) {
     SCENES[i + 1][1](t);
     ctx.restore();
   }
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  urlChip(t);
 }
 
 boot();

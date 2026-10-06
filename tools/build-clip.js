@@ -55,7 +55,7 @@ const clip = CLIPS[args[0]] ? args.shift() : '4-steps';
 const want = args[0] && args[0] !== 'all' ? [args[0]] : Object.keys(FRAMINGS);
 for (const f of want) if (!FRAMINGS[f]) { console.error('ไม่รู้จักกรอบ ' + f + ' — ใช้ ' + Object.keys(FRAMINGS).join(', ')); process.exit(1); }
 const frames = flags.frame ? flags.frame.split(',').map(Number) : null;
-const FRAME_DIR = flags.out || path.join(OUT_DIR, 'frames');
+const FRAME_DIR = flags.out ? path.resolve(ROOT, flags.out) : path.join(OUT_DIR, 'frames');
 const outFor = f => path.join(OUT_DIR, 'qubequote-' + clip + '-' + f + '.mp4');
 
 function findChrome() {
