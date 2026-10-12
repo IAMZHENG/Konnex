@@ -200,7 +200,7 @@ function oldWay(kind, x, y, s, wobble, crossed) {
 function sceneHook(t) {
   const [a, b] = T.hook;
   blueGround(t);
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .5);
+  ctx.save(); ctx.globalAlpha = seg(t, a, a + .4);
   topBrand(true);
   let P;
   if (F.kind === 'portrait')    P = { cy: 980, ir: 150, sh: 300, chip: 40, px: 48, spx: 32, cw: 480, gap: 40, top: 330, foot: 1560 };
@@ -274,7 +274,7 @@ function sceneHook(t) {
 function scene1(t) {
   const [a, b] = T.s1;
   paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = seg(t, a, a + .3);
   topBrand(false);
   stepHeader('icon:bulb', 'QubeQuote| คืออะไร', 'แพลตฟอร์มขอราคา และเปรียบเทียบราคา', t, a + .1);
   const L = b - a;
@@ -341,14 +341,13 @@ function screen(img, box, scroll, alpha, radius) {
 function scene2(t) {
   const [a, b] = T.s2;
   paper();
-  ctx.save(); ctx.globalAlpha = fadeInOut(t, a, b, .4);
+  ctx.save(); ctx.globalAlpha = seg(t, a, a + .3);
   topBrand(false);
   stepHeader('icon:chart', 'ใช้งานจริง| เป็นแบบนี้', 'ราคาที่ได้ มาจากผู้ขายหลายราย ที่แข่งกันเสนอ', t, a + .1);
   // the phone walks the site: browse, open a listing, post one, compare the offers, look back at what was sent
   if (SHOTS) pointsWithPhone(HOW_POINTS, [
-    { img: 'feed',    from: 0,    to: 1400, card: 0 },
+    { img: 'compose', from: 0,    to: 600,  card: 0 },
     { img: 'detail',  from: 0,    to: 900,  card: 0 },
-    { img: 'compose', from: 0,    to: 500,  card: 0 },
     { img: 'compare', from: 2500, to: 3300, card: 1 },
     { img: 'mybids',  from: 0,    to: 700,  card: 2 }
   ], t, a, b);
@@ -398,7 +397,7 @@ function urlChip(t) {
 }
 
 const SCENES = [['hook', sceneHook], ['s1', scene1], ['s2', scene2], ['outro', t => sceneOutro(Math.min(t, DURATION - 1e-3))]];
-const XFADE = .6;
+const XFADE = .45;
 function draw(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
