@@ -306,8 +306,15 @@ function topBrand(white) {
 
 /* Step header: badge, title and a one-line caption. In the two-column
    framings this is the whole left column. */
+/* A clip that sets HEADER_ROOMY = true gets a tidier block: the badge's left
+   edge on the brand mark's, so the column has one left margin, and the caption
+   clear of the badge by a fixed gap instead of tucked under its rim. Opt-in
+   because the older clips' layouts (and two-line captions) were sized to the
+   original spacing. */
+const headerRoomy = () => typeof HEADER_ROOMY !== 'undefined' && HEADER_ROOMY;
 function stepHeader(n, title, sub, t, a) {
-  const h = F.header;
+  const h0 = F.header, roomy = headerRoomy();
+  const h = roomy ? Object.assign({}, h0, { x: F.brand.x + h0.badge }) : h0;
   const u = seg(t, a, a + .55, outBack);
   ctx.save(); ctx.globalAlpha *= clamp(u, 0, 1);
   ctx.fillStyle = BLUE; ctx.beginPath(); ctx.arc(h.x, h.y, h.badge * u, 0, Math.PI * 2); ctx.fill();
@@ -320,7 +327,7 @@ function stepHeader(n, title, sub, t, a) {
      wrapped further at its spaces. Only a single word too wide for the column
      shrinks the type (never below 70%). The caption then sits under however
      many lines that made, so nothing can run into the body or over itself. */
-  const left = h.x + h.badge + 34;
+  const left = h.x + h.badge + (roomy ? Math.min(34, h.badge * .6) : 34);
   const maxW = (F.twoCol ? F.body.x - 40 : W - 40) - left;
   const flat = title.replace('|', ' ').replace(/\s+/g, ' ').trim();
   let lines;
@@ -334,9 +341,19 @@ function stepHeader(n, title, sub, t, a) {
   ctx.restore();
   if (sub) {
     const su = seg(t, a + .4, a + .9);
-    const subLines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
-    const top = h.y + ((lines.length - 1) / 2) * lh + px * 1.25;
-    subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * h.sub.px * 1.45, { w: 500, px: h.sub.px, color: '#3d4354', alpha: su }));
+    if (!roomy) {
+      const subLines = h.sub.wrap ? wrapText(sub, 400, h.sub.px, h.sub.wrap) : [sub];
+      const top = h.y + ((lines.length - 1) / 2) * lh + px * 1.25;
+      subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * h.sub.px * 1.45, { w: 500, px: h.sub.px, color: '#3d4354', alpha: su }));
+    } else {
+      // below whichever reaches lower, the badge or the title, by half a caption line
+      const spx = F.twoCol && F.kind === 'square' ? Math.min(h.sub.px, 30) : h.sub.px;
+      const wrapW = (F.twoCol ? F.body.x - 40 : W - F.brand.x) - (h.x - h.badge);
+      const subLines = wrapText(sub, 500, spx, wrapW);
+      const bottom = h.y + Math.max(h.badge, ((lines.length - 1) / 2) * lh + px * .55);
+      const top = bottom + spx * .55 + spx * .95;
+      subLines.forEach((ln, i) => text(ln, h.x - h.badge, top + i * spx * 1.45, { w: 500, px: spx, color: '#3d4354', alpha: su }));
+    }
   }
 }
 function dots(step, n) {
