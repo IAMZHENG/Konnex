@@ -7357,6 +7357,13 @@ html, body{
    ground with no navbar at all, so that offset had nothing to clear: it pushed
    the bar down and left an empty band across the top of the page. */
 #page-terms .kx-backbar, #page-privacy .kx-backbar{ top:0; }
+/* On a desktop screen the side menu is always in view and the browser has its own
+   back button, so the bar only repeated both. It stays where neither exists —
+   phone and tablet widths — and on the two document pages, which have no menu. */
+@media (min-width:981px){
+  .kx-backbar{ display:none; }
+  #page-terms .kx-backbar, #page-privacy .kx-backbar{ display:flex; }
+}
 </style>
 </head>
 <body>
